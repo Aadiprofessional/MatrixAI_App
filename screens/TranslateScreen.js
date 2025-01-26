@@ -695,9 +695,14 @@ import { Alert } from 'react-native';
                             <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
                         </View>
 
-                        <View style={[styles.controls, { opacity: scrollY._value > 100 ? 0 : 1 }]}>
-                            {playerHeight._value > 60 && (
-                                <>
+                        <Animated.View style={[styles.controls, { 
+                            opacity: playerHeight.interpolate({
+                                inputRange: [60, 120],
+                                outputRange: [0, 1],
+                                extrapolate: 'clamp'
+                            })
+                        }]}>
+                           
                                     <TouchableOpacity onPress={() => seekAudio(-5)}>
                                         <Image
                                             source={require('../assets/backward.png')}
@@ -716,9 +721,8 @@ import { Alert } from 'react-native';
                                             style={styles.navIcon}
                                         />
                                     </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
+                            
+                         </Animated.View>
                        
                 </Animated.View>
             )}
@@ -1135,7 +1139,7 @@ flexDirection:'row',
         minHeight: 80,
       },
       waveformBox: {
-        backgroundColor: '#9D0505FF',
+        backgroundColor: '#FFFFFFFF',
       },
       timeContainer: {
         flexDirection: 'row',
@@ -1170,7 +1174,7 @@ flexDirection:'row',
         flexDirection: 'row',
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 1,
       },
       icon: {
         width: 30,
