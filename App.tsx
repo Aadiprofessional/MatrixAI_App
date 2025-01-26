@@ -35,6 +35,7 @@ import ReferralScreen from './screens/coins/ReferralScreen.js';
 import SubscriptionScreen from './screens/coins/SubscriptionScreen.js';
 import TransactionScreen from './screens/coins/TransactionScreen.js';
 import ManageProductsScreen from './screens/ManageProductsScreen.js';
+import TransactionScreen2 from './screens/coins/TransactionScreen copy.js';
 
 
 
@@ -123,6 +124,7 @@ const App = () => {
         <Stack.Screen name="ReferralScreen" component={ReferralScreen}options={{ headerShown: false }}  />
         <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen}options={{ headerShown: false }}  />
         <Stack.Screen name="TransactionScreen" component={TransactionScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TransactionScreen2" component={TransactionScreen2} options={{ headerShown: false }} />
     </Stack.Navigator>
 </NavigationContainer>
 

@@ -10,7 +10,9 @@ const transactions = [
   { id: '6', type: 'Image', coins: 2 },
 ];
 
-const TransactionScreen = () => {
+const TransactionScreen = ({ route, navigation }) => {
+  const { coinCount } = route.params;
+
   const renderItem = ({ item }) => (
     <View style={styles.transactionItem}>
       <Image source={require('../../assets/coin.png')} style={styles.image} />
@@ -24,33 +26,57 @@ const TransactionScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Back button */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Image source={require('../../assets/back.png')} style={styles.backIcon} />
+      </TouchableOpacity>
+
+      {/* Header with full background */}
       <View style={styles.header}>
-        <Text style={styles.coinCount}>12 Coins</Text>
-        <Image source={require('../../assets/avatar.png')} style={styles.coinImage} />
+        <Image source={require('../../assets/Header.png')} style={styles.headerImage} />
+        <Text style={styles.coinCount}>{coinCount} Coins</Text>
       </View>
 
+      {/* Action buttons */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Image source={require('../../assets/convert_copy.png')} style={styles.actionIcon} />
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('TransactionScreen2')}>
+            <Image source={require('../../assets/convert_copy.png')} style={styles.actionIcon} />
+          </TouchableOpacity>
           <Text style={styles.actionText}>Transaction</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Image source={require('../../assets/export.png')} style={styles.actionIcon} />
+        </View>
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('WatchAdScreen')}>
+            <Image source={require('../../assets/export.png')} style={styles.actionIcon} />
+          </TouchableOpacity>
           <Text style={styles.actionText}>Watch Ad</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Image source={require('../../assets/money-send.png')} style={styles.actionIcon} />
+        </View>
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('BuyCoinsScreen')}>
+            <Image source={require('../../assets/money-send.png')} style={styles.actionIcon} />
+          </TouchableOpacity>
           <Text style={styles.actionText}>Buy Coins</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Image source={require('../../assets/add-circle.png')} style={styles.actionIcon} />
+        </View>
+        <View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('InviteScreen')}>
+            <Image source={require('../../assets/add-circle.png')} style={styles.actionIcon} />
+          </TouchableOpacity>
           <Text style={styles.actionText}>Invite</Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Transaction List */}
       <View style={styles.transactionsHeader}>
         <Text style={styles.subtitle}>Last Transaction</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('TransactionScreen2')}>
           <Text style={styles.viewAllText}>View All</Text>
         </TouchableOpacity>
       </View>
@@ -70,24 +96,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fc',
     padding: 20,
+    marginTop: 50,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1,
+  },
+  backIcon: {
+    width: 30,
+    height: 30,
   },
   header: {
-    backgroundColor: '#4169E1',
-    borderRadius: 15,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
+    position: 'relative',
+    height: 200,
+    marginBottom: 40,
+  },
+  headerImage: {
+    width: '105%',
+    height: '130%',
+    resizeMode: 'contain',
   },
   coinCount: {
+    position: 'absolute',
+    top: 110,
+    left: 20,
     color: '#fff',
     fontSize: 28,
     fontWeight: 'bold',
-    flex: 1,
-  },
-  coinImage: {
-    width: 60,
-    height: 60,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -96,15 +133,27 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    width: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   actionIcon: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     marginBottom: 5,
   },
   actionText: {
     fontSize: 14,
-    color: '#6b6b6b',
+    color: '#4169E1',
+    textAlign: 'center',
+    marginTop: 5,
   },
   transactionsHeader: {
     flexDirection: 'row',
@@ -126,10 +175,7 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingVertical: 10,
   },
   image: {
     width: 50,

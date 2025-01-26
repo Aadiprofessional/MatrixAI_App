@@ -13,7 +13,9 @@ const Header = ({ coinCount, navigation }) => {
       {/* Coin Display with Coin Icon */}
       <TouchableOpacity
         style={styles.coinContainer}
-        onPress={() => navigation.navigate('TransactionScreen')} // Navigate to Subscription Screen
+        onPress={() =>
+          navigation.navigate('TransactionScreen', { coinCount }) // Pass coinCount to TransactionScreen
+        }
       >
         <Image source={require('../assets/coin.png')} style={styles.coinIcon} />
         <Text style={styles.coinText}>{coinCount?.toString()}</Text>
@@ -49,9 +51,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 5,
     paddingHorizontal: 10,
-    borderWidth: 1,          // Gray stroke
+    borderWidth: 1, // Gray stroke
     borderColor: '#C9C9C9', // Light gray color
-    borderRadius: 15,       // Rounded corners
+    borderRadius: 15, // Rounded corners
   },
   coinIcon: {
     width: 20,
