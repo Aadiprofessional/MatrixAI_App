@@ -27,7 +27,7 @@ import RNFS from 'react-native-fs';
 import { Alert } from 'react-native';
 
   import { useNavigation } from '@react-navigation/native';
-  import AudioPlayer from '../components/AudioPlayer';
+  import Sound from 'react-native-sound';
   import ForceDirectedGraph from '../components/mindMap';
   import ForceDirectedGraph2 from '../components/mindMap2';
   import { Picker } from '@react-native-picker/picker';
@@ -91,6 +91,10 @@ import { Alert } from 'react-native';
       const[XMLData,setXMLData]=useState('');
     
       const [showDropdown, setShowDropdown] = useState(false);
+      const [audioPosition, setAudioPosition] = useState(0);
+      const [audioDuration, setAudioDuration] = useState(0);
+      const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+      const [sound, setSound] = useState(null);
      
     
      
@@ -455,6 +459,79 @@ import { Alert } from 'react-native';
     };
 
 
+    // Audio player functions
+    const loadAudio = () => {
+        if (sound) {
+            sound.release();
+        }
+        
+        const newSound = new Sound(audioUrl, null, (error) => {
+            if (error) {
+                console.error('Failed to load sound', error);
+                return;
+            }
+            setAudioDuration(newSound.getDuration());
+            setSound(newSound);
+        });
+    };
+
+    const toggleAudioPlayback = () => {
+        if (!sound) return;
+        
+        if (isAudioPlaying) {
+            sound.pause();
+        } else {
+            sound.play((success) => {
+                if (success) {
+                    setIsAudioPlaying(false);
+                    setAudioPosition(0);
+                } else {
+                    console.error('Playback failed');
+                }
+            });
+        }
+        setIsAudioPlaying(!isAudioPlaying);
+    };
+
+    const seekAudio = (seconds) => {
+        if (!sound) return;
+        
+        const newPosition = Math.max(0, Math.min(audioPosition + seconds, audioDuration));
+        sound.setCurrentTime(newPosition);
+        setAudioPosition(newPosition);
+    };
+
+    useEffect(() => {
+        if (audioUrl) {
+            loadAudio();
+        }
+        
+        return () => {
+            if (sound) {
+                sound.release();
+            }
+        };
+    }, [audioUrl]);
+
+    useEffect(() => {
+        let interval;
+        if (isAudioPlaying) {
+            interval = setInterval(() => {
+                if (sound) {
+                    sound.getCurrentTime((seconds) => {
+                        setAudioPosition(seconds);
+                        onAudioProgress({
+                            currentTime: seconds,
+                            duration: audioDuration
+                        });
+                    });
+                }
+            }, 100);
+        }
+        
+        return () => clearInterval(interval);
+    }, [isAudioPlaying, sound]);
+
     const handleShare = async () => {
         try {
             await Share.share({
@@ -558,14 +635,92 @@ import { Alert } from 'react-native';
                         borderRadius: playerPadding,
                     }
                 ]}>
-                    <AudioPlayer
-                        url={audioUrl}
-                        onProgress={(progress) => {
-                            onAudioProgress(progress);
-                        }}
-                        waveformScale={waveformScale}
-                        scrollY={scrollY}
-                    />
+                    <Animated.View style={[
+                        styles.container2, 
+                        {
+                            height: playerHeight,
+                            padding: playerPadding,
+                            borderRadius: playerPadding
+                        }
+                    ]}>
+                        <View style={styles.waveformBox}>
+                            <View style={[styles.waveformContainer, { height: playerHeight._value - 40 }]}>
+                                {isAudioLoading ? (
+                                    <View style={styles.loadingContainer}>
+                                        <Text style={styles.loadingText}>Loading waveform...</Text>
+                                    </View>
+                                ) : (
+                                    <View style={[styles.waveform, { justifyContent: 'center' }]}>
+                                        {Array(100).fill(0).map((_, index) => {
+                                            const progress = audioPosition / audioDuration;
+                                            const isPlayed = index / 100 < progress;
+                                            // Generate random height between 40 and 180, with some variation
+                                            const randomHeight = Math.random() * (180 - 40) + 40;
+                                            const maxHeight = playerHeight._value - 40; // Adjust based on container height
+                                            const barHeight = Math.max(40, Math.min(randomHeight, maxHeight));
+                                            return (
+                                                <View
+                                                    key={index}
+                                                    style={[
+                                                        styles.waveformBar,
+                                                        { 
+                                                            height: barHeight,
+                                                            backgroundColor: isPlayed ? '#007bff' : '#e0e0e0',
+                                                            transform: [
+                                                                { 
+                                                                    scaleY: Math.max(0.8, (randomHeight / 180) * (1 - (scrollY._value / 300)))
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]}
+                                                />
+                                            );
+                                        })}
+                                        {playerHeight._value <= 60 && (
+                                            <View style={styles.smallPlayerControls}>
+                                                <TouchableOpacity onPress={toggleAudioPlayback}>
+                                                    <Image
+                                                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                                                        style={[styles.playIcon, { marginLeft: 10 }]}
+                                                    />
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+
+                        <View style={styles.timeContainer}>
+                            <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
+                            <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
+                        </View>
+
+                        <View style={[styles.controls, { opacity: scrollY._value > 100 ? 0 : 1 }]}>
+                            {playerHeight._value > 60 && (
+                                <>
+                                    <TouchableOpacity onPress={() => seekAudio(-5)}>
+                                        <Image
+                                            source={require('../assets/backward.png')}
+                                            style={styles.navIcon}
+                                        />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={toggleAudioPlayback}>
+                                        <Image
+                                            source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                                            style={styles.playIcon}
+                                        />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => seekAudio(5)}>
+                                        <Image
+                                            source={require('../assets/forward.png')}
+                                            style={styles.navIcon}
+                                        />
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                        </Animated.View>
                 </Animated.View>
             )}
             <View style={styles.buttonsContainer}>
@@ -919,6 +1074,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         marginTop: 50,
     },
+    container2: {
+        backgroundColor: '#2CF105FF',
+        paddingVertical: 10,
+      },
     headerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -967,7 +1126,92 @@ flexDirection:'row',
         paddingVertical: 10,
         paddingHorizontal: 5,
       },
-    
+      waveformContainer: {
+        borderRadius: 10,
+        overflow: 'hidden',
+        width: '100%',
+        position: 'relative',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        minHeight: 80,
+      },
+      waveformBox: {
+        backgroundColor: '#9D0505FF',
+      },
+      timeContainer: {
+        flexDirection: 'row',
+        width: '100%',
+        marginBottom: 10,
+        paddingHorizontal: 10,
+      },
+      leftTime: {
+        textAlign: 'left',
+        flex: 1,
+      },
+      rightTime: {
+        textAlign: 'right',
+        flex: 1,
+      },
+      timeText: {
+        fontSize: 14,
+        color: '#666',
+      },
+      loadingContainer: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+      },
+      loadingText: {
+        color: '#666',
+        fontSize: 16,
+      },
+      controls: {
+        flexDirection: 'row',
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+        marginTop: 10,
+      },
+      icon: {
+        width: 30,
+        height: 30,
+        tintColor: '#007bff',
+      },
+      progressContainer: {
+        marginHorizontal: 10,
+      },
+      transcriptContainer: {
+        marginTop: 20,
+        paddingHorizontal: 10,
+      },
+      transcriptText: {
+        fontSize: 16,
+        marginVertical: 2,
+      },
+      waveform: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+      },
+      waveformBar: {
+        width: 4,
+        backgroundColor: '#007bff',
+        marginHorizontal: 1,
+        borderRadius: 2,
+        minHeight: 10,
+      },
+      navIcon: {
+        width: 24,
+        height: 24,
+        tintColor: '#007bff',
+        marginHorizontal: 20,
+      },
+      playIcon: {
+        width: 32,
+        height: 32,
+        tintColor: '#007bff',
+      },
       separator: {
         height: 1,
         backgroundColor: '#E0E0E0',
