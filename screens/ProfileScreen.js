@@ -1,57 +1,135 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import FloatingButton from '../components/FloatingButton';
-import FeatureCardWithDetails from '../components/FeatureCardWithDetails';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
+import FeatureCardWithDetails from '../components/FeatureCardWithDetails';
+import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 
 const ProfileScreen = ({ navigation }) => {
-  const [coinCount, setCoinCount] = useState(122);
-
-  const handleLogout = async () => {
+    const [coinCount, setCoinCount] = useState(122);
+  const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem('userLoggedIn');
-          navigation.replace('Login');
+          // Handle logout logic
         },
       },
     ]);
   };
 
+  const MenuItem = ({ iconName, label, onPress }) => (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+      <View style={styles.iconContainer}>
+        <Icon name={iconName} size={20} color="#000" />
+      </View>
+      <Text style={styles.menuLabel}>{label}</Text>
+      <Icon name="chevron-forward" size={20} color="#B0B0B0" />
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
-      <Header coinCount={coinCount} />
-      <Text>Welcome to Profile</Text>
-      <FeatureCardWithDetails />
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
-      <FloatingButton />
-    </View>
+    <ScrollView style={styles.container}>
+       <Header coinCount={coinCount}navigation={navigation}  />
+      {/* Header Section */}
+      <View style={styles.header}>
+        <View style={styles.timeCreditsContainer}>
+          <View style={styles.timeIconContainer}>
+            <Icon name="time-outline" size={20} color="#fff" />
+          </View>
+          <View style={styles.timeIconContainer2}>
+          <Text style={styles.timeText}>Time Credits</Text>
+          <Text style={styles.timeValue}>14M 26S</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.buyTimeButton}>
+          <Text style={styles.buyTimeText}>Buy time</Text>
+        </TouchableOpacity>
+      </View>
+      <FeatureCardWithDetails2/>
+
+      {/* Menu Items */}
+      <MenuItem iconName="person-outline" label="Edit profile" />
+      <MenuItem iconName="bookmark-outline" label="Bookmark" />
+      <MenuItem iconName="document-text-outline" label="Imported from Voice Note" />
+      <MenuItem iconName="bar-chart-outline" label="Inside" />
+      <MenuItem iconName="cart-outline" label="Open your AI Shop" />
+      <MenuItem iconName="chatbubble-outline" label="Setting Voices" />
+      <MenuItem iconName="trash-outline" label="Trash" />
+      <MenuItem iconName="settings-outline" label="Settings" />
+      <MenuItem iconName="log-out-outline" label="Logout" onPress={handleLogout} />
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FD',
-    padding: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    marginTop:50,
   },
-  logoutButton: {
-    marginTop: 20,
-    backgroundColor: '#ff4d4d',
-    paddingVertical: 10,
-    borderRadius: 8,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 55,
+    padding: 8,
+    marginVertical: 10,
+  },
+  timeCreditsContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  logoutButtonText: {
+  timeIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 20,
+    padding: 8,
+    marginRight: 10,
+  },
+  timeIconContainer2: {
+   flexDirection:'column',
+    padding: 8,
+    marginRight: 10,
+  },
+  timeText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  timeValue: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  buyTimeButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 25,
+  },
+  buyTimeText: {
+    color: '#007AFF',
+    padding:10,
+    fontWeight: 'bold',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  iconContainer: {
+    marginRight: 15,
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
   },
 });
 

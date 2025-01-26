@@ -1,8 +1,7 @@
-// Header.js
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 
-const Header = ({ coinCount }) => {
+const Header = ({ coinCount, navigation }) => {
   return (
     <View style={styles.header}>
       {/* Welcome Text with Cat Icon */}
@@ -12,7 +11,10 @@ const Header = ({ coinCount }) => {
       </View>
 
       {/* Coin Display with Coin Icon */}
-      <TouchableOpacity style={styles.coinContainer}>
+      <TouchableOpacity
+        style={styles.coinContainer}
+        onPress={() => navigation.navigate('TransactionScreen')} // Navigate to Subscription Screen
+      >
         <Image source={require('../assets/coin.png')} style={styles.coinIcon} />
         <Text style={styles.coinText}>{coinCount?.toString()}</Text>
       </TouchableOpacity>

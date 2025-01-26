@@ -77,7 +77,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   return (
     <View style={styles.container2}>
       <View style={styles.fixedHeader}>
-        <Header coinCount={coinCount} />
+        <Header coinCount={coinCount}navigation={navigation}  />
       </View>
 
       <Animated.View style={[

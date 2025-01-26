@@ -52,7 +52,7 @@ const HomeScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         {/* Header */}
-        <Header coinCount={coinCount} />
+        <Header coinCount={coinCount} navigation={navigation}  />
 
         {/* Rotating Animated Gradient with Fixed Content */}
         <View style={styles.content}>
@@ -129,7 +129,7 @@ const HomeScreen = ({ navigation }) => {
             targetScreen="PPTGenerateScreen"
           />
         </View>
- 
+ <FeatureCardWithDetails/>
       </ScrollView>
       <FloatingButton />
     </View>

@@ -30,7 +30,11 @@ import WaveformTestScreen from './screens/WaveformTestScreen';
 import ProductDetailScreen from './screens/ProductDetailScreen';
 import FillInformationScreen from './screens/FillInformationScreen';
 import SuccessScreen from './screens/successScreen';
-import ManageProductsScreen from './screens/ManageProductsScreen';
+
+import ReferralScreen from './screens/coins/ReferralScreen.js';
+import SubscriptionScreen from './screens/coins/SubscriptionScreen.js';
+import TransactionScreen from './screens/coins/TransactionScreen.js';
+import ManageProductsScreen from './screens/ManageProductsScreen.js';
 
 
 
@@ -116,6 +120,9 @@ const App = () => {
         <Stack.Screen name="FillInformationScreen" component={FillInformationScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ReferralScreen" component={ReferralScreen}options={{ headerShown: false }}  />
+        <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen}options={{ headerShown: false }}  />
+        <Stack.Screen name="TransactionScreen" component={TransactionScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
 </NavigationContainer>
 

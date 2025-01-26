@@ -52,6 +52,23 @@ import { Alert } from 'react-native';
           outputRange: [1, 0.5],
           extrapolate: 'clamp',
       });
+      const playButtonOpacity = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      });
+      const waveformMarginLeft = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: [0, 50],
+        extrapolate: 'clamp',
+      });
+      const waveformWidth = scrollY.interpolate({
+        inputRange: [0, 100],
+        outputRange: ['100%', '50%'], // Adjust width as needed
+        extrapolate: 'clamp',
+      });
+
+
       const [editingStates, setEditingStates] = useState([]);
   
       const [transcription, setTranscription] = useState();
@@ -404,7 +421,7 @@ import { Alert } from 'react-native';
         setSelectedButton(button);
     
         if (button === 'mindMap') {
-            setIsLoading(true);
+            
             fetchAudioMetadata(uid, audioid); 
         }
     };
@@ -690,42 +707,58 @@ import { Alert } from 'react-native';
                             </View>
                             </Animated.View>
 
+
+                            <Animated.View
+                                style={[
+                                    styles.animatedPlayButton,
+                                    { opacity: playButtonOpacity, marginLeft: waveformMarginLeft }
+                                ]}
+                            >
+                                <TouchableOpacity onPress={toggleAudioPlayback}>
+                                    <Image
+                                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                                        style={styles.playIcon}
+                                    />
+                                </TouchableOpacity>
+                            </Animated.View>
+
+
                         <View style={styles.timeContainer}>
                             <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
                             <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
                         </View>
 
-                        <Animated.View style={[styles.controls, { 
+                        <Animated.View style={[styles.controls, {
                             opacity: playerHeight.interpolate({
                                 inputRange: [60, 120],
                                 outputRange: [0, 1],
                                 extrapolate: 'clamp'
                             })
                         }]}>
-                           
-                                    <TouchableOpacity onPress={() => seekAudio(-5)}>
-                                        <Image
-                                            source={require('../assets/backward.png')}
-                                            style={styles.navIcon}
-                                        />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={toggleAudioPlayback}>
-                                        <Image
-                                            source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                                            style={styles.playIcon}
-                                        />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => seekAudio(5)}>
-                                        <Image
-                                            source={require('../assets/forward.png')}
-                                            style={styles.navIcon}
-                                        />
-                                    </TouchableOpacity>
-                            
-                         </Animated.View>
-                       
-                </Animated.View>
-            )}
+
+                            <TouchableOpacity onPress={() => seekAudio(-5)}>
+                                <Image
+                                    source={require('../assets/backward.png')}
+                                    style={styles.navIcon}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={toggleAudioPlayback}>
+                                <Image
+                                    source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                                    style={styles.playIcon}
+                                />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => seekAudio(5)}>
+                                <Image
+                                    source={require('../assets/forward.png')}
+                                    style={styles.navIcon}
+                                />
+                            </TouchableOpacity>
+
+                        </Animated.View>
+
+                    </Animated.View>
+                )}
             <View style={styles.buttonsContainer}>
                 <TouchableOpacity
                     style={[styles.button, selectedButton === 'transcription' ? styles.selectedButton : null]}
@@ -936,7 +969,7 @@ import { Alert } from 'react-native';
           
             <TouchableOpacity onPress={handleFloatingButtonPress} style={styles.floatingButton2}>
                 <Image
-                    source={require('../assets/robot.png')}
+                    source={require('../assets/robot2.png')}
                     style={styles.buttonImage}
                     />
             </TouchableOpacity>
