@@ -635,15 +635,22 @@ import { Alert } from 'react-native';
                         borderRadius: playerPadding,
                     }
                 ]}>
-                    <Animated.View style={[
-                        styles.container2, 
-                        {
-                            height: playerHeight,
-                            padding: playerPadding,
-                            borderRadius: playerPadding
-                        }
-                    ]}>
-                        <View style={styles.waveformBox}>
+                   
+                            <Animated.View style={[
+                                styles.waveformBox,
+                                {
+                                    height: playerHeight._value - 40,
+                                    transform: [
+                                        {
+                                            scaleY: scrollY.interpolate({
+                                                inputRange: [0, 150],
+                                                outputRange: [1, 0.8],
+                                                extrapolate: 'clamp'
+                                            })
+                                        }
+                                    ]
+                                }
+                            ]}>
                             <View style={[styles.waveformContainer, { height: playerHeight._value - 40 }]}>
                                 {isAudioLoading ? (
                                     <View style={styles.loadingContainer}>
@@ -652,25 +659,17 @@ import { Alert } from 'react-native';
                                 ) : (
                                     <View style={[styles.waveform, { justifyContent: 'center' }]}>
                                         {Array(100).fill(0).map((_, index) => {
-                                            const progress = audioPosition / audioDuration;
-                                            const isPlayed = index / 100 < progress;
-                                            // Generate random height between 40 and 180, with some variation
-                                            const randomHeight = Math.random() * (180 - 40) + 40;
-                                            const maxHeight = playerHeight._value - 40; // Adjust based on container height
-                                            const barHeight = Math.max(40, Math.min(randomHeight, maxHeight));
+                                            const minHeight = 10;
+                                            const maxHeight = 60; // Reduced max height
+                                            const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
                                             return (
                                                 <View
                                                     key={index}
                                                     style={[
                                                         styles.waveformBar,
                                                         { 
-                                                            height: barHeight,
-                                                            backgroundColor: isPlayed ? '#007bff' : '#e0e0e0',
-                                                            transform: [
-                                                                { 
-                                                                    scaleY: Math.max(0.8, (randomHeight / 180) * (1 - (scrollY._value / 300)))
-                                                                }
-                                                            ]
+                                                            height: height,
+                                                            backgroundColor: '#007bff'
                                                         }
                                                     ]}
                                                 />
@@ -689,7 +688,7 @@ import { Alert } from 'react-native';
                                     </View>
                                 )}
                             </View>
-                        </View>
+                            </Animated.View>
 
                         <View style={styles.timeContainer}>
                             <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
@@ -720,7 +719,7 @@ import { Alert } from 'react-native';
                                 </>
                             )}
                         </View>
-                        </Animated.View>
+                       
                 </Animated.View>
             )}
             <View style={styles.buttonsContainer}>
@@ -1189,11 +1188,12 @@ flexDirection:'row',
         fontSize: 16,
         marginVertical: 2,
       },
-      waveform: {
+    waveform: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-end',
-      },
+        alignItems: 'center',
+        height: '100%',
+    },
       waveformBar: {
         width: 4,
         backgroundColor: '#007bff',
