@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
-import FeatureCardWithDetails from '../components/FeatureCardWithDetails';
+
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 
 const ProfileScreen = ({ navigation }) => {
     const [coinCount, setCoinCount] = useState(122);
+   
+    
+      const handleUpgradePress = () => {
+        navigation.navigate('TimeScreen'); // Replace 'UpgradeScreen' with your target screen's name
+      };
+    
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
@@ -31,36 +37,38 @@ const ProfileScreen = ({ navigation }) => {
   );
 
   return (
-    <ScrollView style={styles.container}>
-       <Header coinCount={coinCount}navigation={navigation}  />
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.timeCreditsContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <Header coinCount={coinCount} navigation={navigation} />
+    
+    {/* Header Section */}
+    <View style={styles.header}>
+       <View style={styles.timeCreditsContainer}>
           <View style={styles.timeIconContainer}>
-            <Icon name="time-outline" size={20} color="#fff" />
+             <Icon name="time-outline" size={20} color="#fff" />
           </View>
           <View style={styles.timeIconContainer2}>
-          <Text style={styles.timeText}>Time Credits</Text>
-          <Text style={styles.timeValue}>14M 26S</Text>
+             <Text style={styles.timeText}>Time Credits</Text>
+             <Text style={styles.timeValue}>14M 26S</Text>
           </View>
-        </View>
-        <TouchableOpacity style={styles.buyTimeButton}>
+       </View>
+       <TouchableOpacity style={styles.buyTimeButton} onPress={handleUpgradePress}>
           <Text style={styles.buyTimeText}>Buy time</Text>
-        </TouchableOpacity>
-      </View>
-      <FeatureCardWithDetails2/>
-
-      {/* Menu Items */}
-      <MenuItem iconName="person-outline" label="Edit profile" />
-      <MenuItem iconName="bookmark-outline" label="Bookmark" />
-      <MenuItem iconName="document-text-outline" label="Imported from Voice Note" />
-      <MenuItem iconName="bar-chart-outline" label="Inside" />
-      <MenuItem iconName="cart-outline" label="Open your AI Shop" />
-      <MenuItem iconName="chatbubble-outline" label="Setting Voices" />
-      <MenuItem iconName="trash-outline" label="Trash" />
-      <MenuItem iconName="settings-outline" label="Settings" />
-      <MenuItem iconName="log-out-outline" label="Logout" onPress={handleLogout} />
-    </ScrollView>
+       </TouchableOpacity>
+    </View>
+    <FeatureCardWithDetails2 />
+    
+    {/* Menu Items */}
+    <MenuItem iconName="person-outline" label="Edit profile" />
+    <MenuItem iconName="bookmark-outline" label="Bookmark" />
+    <MenuItem iconName="document-text-outline" label="Imported from Voice Note" />
+    <MenuItem iconName="bar-chart-outline" label="Inside" />
+    <MenuItem iconName="cart-outline" label="Open your AI Shop" />
+    <MenuItem iconName="chatbubble-outline" label="Setting Voices" />
+    <MenuItem iconName="trash-outline" label="Trash" />
+    <MenuItem iconName="settings-outline" label="Settings" />
+    <MenuItem iconName="log-out-outline" label="Logout" onPress={handleLogout} />
+ </ScrollView>
+ 
   );
 };
 
@@ -71,6 +79,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop:50,
   },
+  scrollContent: {
+    paddingBottom: 100, // Adjust the value as needed
+ },
+ 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

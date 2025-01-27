@@ -66,7 +66,7 @@ const TransactionScreen = ({ route, navigation }) => {
         <View>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('InviteScreen')}>
+            onPress={() => navigation.navigate('ReferralScreen')}>
             <Image source={require('../../assets/add-circle.png')} style={styles.actionIcon} />
           </TouchableOpacity>
           <Text style={styles.actionText}>Invite</Text>
