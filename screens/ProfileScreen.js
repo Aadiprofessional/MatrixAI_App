@@ -10,7 +10,7 @@ const ProfileScreen = ({ navigation }) => {
    
     
       const handleUpgradePress = () => {
-        navigation.navigate('TimeScreen'); // Replace 'UpgradeScreen' with your target screen's name
+        navigation.navigate('TimeScreen'); 
       };
     
   const handleLogout = () => {
@@ -20,7 +20,7 @@ const ProfileScreen = ({ navigation }) => {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          // Handle logout logic
+         
         },
       },
     ]);

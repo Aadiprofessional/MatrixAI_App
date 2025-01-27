@@ -555,6 +555,9 @@ const LiveTranslateScreen = () => {
                  <Image source={require('../assets/back.png')} style={styles.icon2} />
                </TouchableOpacity>
         <View style={styles.rightHeader}>
+        <TouchableOpacity >
+            <Image source={require('../assets/cliper.png')} style={styles.icon3} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleCopyText}>
             <Image source={require('../assets/copy.png')} style={styles.icon3} />
           </TouchableOpacity>
