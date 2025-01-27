@@ -1,8 +1,18 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useCart } from '../components/CartContext';
 
-const ProductDetailScreen = () => {
+const ProductDetailScreen = ({ navigation }) => {
+  const { addToCart, cart } = useCart();  // Access cart from context
+
+  const product = {
+    id: '1',
+    name: 'AI generated robot',
+    price: 12.0,
+    image: require('../assets/robot.png'),
+  };
+
   return (
     <View style={styles.container}>
       {/* Backdrop Image with Watermark */}
@@ -15,9 +25,22 @@ const ProductDetailScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <Icon name="arrow-back-ios" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.cartButton}>
-          <Icon name="shopping-cart" size={24} color="black" />
+
+        {/* Cart button with item count */}
+        <TouchableOpacity
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart')}
+        >
+          <View style={styles.cartIconContainer}>
+            <Icon name="shopping-cart" size={24} color="black" />
+            {cart.length > 0 && (
+              <View style={styles.cartItemCount}>
+                <Text style={styles.cartItemCountText}>{cart.length}</Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
+
         <Image 
           source={require('../assets/robot.png')} // Replace with your AI robot image path
           style={styles.productImage} 
@@ -51,17 +74,15 @@ const ProductDetailScreen = () => {
         <Text style={styles.deliveryText}>
           <Text style={styles.boldText}>Delivery:</Text> 15 days after payment confirmation
         </Text>
+    
+        <TouchableOpacity
+          style={styles.addToCartButton}
+          onPress={() => addToCart(product)}
+        >
+          <Text style={styles.addToCartText}>Add to Cart</Text>
+        </TouchableOpacity>
+       
       </ScrollView>
-
-      {/* Add to Cart and Buy Now */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.addToCartButton}>
-          <Text style={styles.addToCartText}>Add to cart</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.buyNowButton}>
-          <Text style={styles.buyNowText}>Buy Now</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -98,6 +119,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 5,
+  },
+  cartIconContainer: {
+    position: 'relative',
+  },
+  cartItemCount: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF6F00',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartItemCountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   productImage: {
     width: 200,

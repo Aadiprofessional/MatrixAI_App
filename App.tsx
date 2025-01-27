@@ -37,6 +37,8 @@ import TransactionScreen from './screens/coins/TransactionScreen.js';
 import ManageProductsScreen from './screens/ManageProductsScreen.js';
 import TransactionScreen2 from './screens/coins/TransactionScreen copy.js';
 import TimeScreen from './screens/coins/TimeScreen.js';
+import { CartProvider } from './components/CartContext.js';
+import CartScreen from './screens/CartScreen.js';
 
 
 
@@ -75,6 +77,7 @@ const App = () => {
     }
 
     return (
+        <CartProvider>
         <NavigationContainer>
     <Stack.Navigator>
         {/* Onboarding Screen */}
@@ -118,7 +121,7 @@ const App = () => {
         <Stack.Screen name="PPTGenerateScreen" component={PPTGenerateScreen} options={{ headerShown: false }} />
         <Stack.Screen name="CreatePPTScreen" component={CreatePPTScreen} options={{ headerShown: false }} />
         <Stack.Screen name="WaveformTest" component={WaveformTestScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen}options={{ headerShown: false }} />
         <Stack.Screen name="FillInformationScreen" component={FillInformationScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} options={{ headerShown: false }} />
@@ -127,8 +130,10 @@ const App = () => {
         <Stack.Screen name="TransactionScreen" component={TransactionScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TransactionScreen2" component={TransactionScreen2} options={{ headerShown: false }} />
         <Stack.Screen name="TimeScreen" component={TimeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
     </Stack.Navigator>
 </NavigationContainer>
+</CartProvider>
 
     );
 };
