@@ -25,6 +25,7 @@ import { Svg, SvgUri } from 'react-native-svg';
 import { svg2png } from 'svg-png-converter';
 import RNFS from 'react-native-fs';
 import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
   import { useNavigation } from '@react-navigation/native';
   import Sound from 'react-native-sound';
@@ -70,8 +71,13 @@ import { Alert } from 'react-native';
 
 
       const [editingStates, setEditingStates] = useState([]);
-  
-      const [transcription, setTranscription] = useState();
+      const [transcription, setTranscription] = useState([]);
+      const [isLoading, setIsLoading] = useState(true);
+      const [paragraphs, setParagraphs] = useState([]);
+      const [audioUrl, setAudioUrl] = useState('');
+      const [keyPoints, setKeypoints] = useState('');
+      const [XMLData, setXMLData] = useState('');
+    
       const [isFullScreen, setIsFullScreen] = useState(false);
       const [showMindMap, setShowMindMap] = useState(false);
       const scrollViewRef = useRef(null);
@@ -90,7 +96,7 @@ import { Alert } from 'react-native';
       }, [currentWordIndex.paraIndex]);
       const [wordTimings, setWordTimings] = useState([]);
       const navigation = useNavigation();
-      const [isLoading, setIsLoading] = useState(true);
+     
       const [isAudioLoading, setIsAudioLoading] = useState(false);
       const [fileName, setFileName] = useState('');
       const [fileContent, setFileContent] = useState('');
@@ -98,14 +104,12 @@ import { Alert } from 'react-native';
       const [isTranscriptionVisible, setTranscriptionVisible] = useState(false);
       const [isSpeechToTextEnabled, setSpeechToTextEnabled] = useState(true);
       const [isEditingEnabled, setEditingEnabled] = useState(true);
-      const [paragraphs, setParagraphs] = useState([]);
+   
       const [translations, setTranslations] = useState([]);
       const [selectedButton, setSelectedButton] = useState('transcription');
       const [selectedLanguage, setSelectedLanguage] = useState('zh');
       const [translatedText, setTranslatedText] = useState('');
-      const [audioUrl, setAudioUrl] = useState('');
-      const[keyPoints,setKeypoints]=useState('');
-      const[XMLData,setXMLData]=useState('');
+   
     
       const [showDropdown, setShowDropdown] = useState(false);
       const [audioPosition, setAudioPosition] = useState(0);
@@ -131,15 +135,25 @@ import { Alert } from 'react-native';
   
       const isMounted = useRef(true);
   
-      useEffect(() => {
-          if (uid && audioid) {
-              fetchAudioMetadata(uid, audioid);
-          }
-          
-          return () => {
-              isMounted.current = false;
-          };
-      }, [uid, audioid]);
+    useEffect(() => {
+        const fetchData = async () => {
+            const cachedData = await AsyncStorage.getItem(`audioData-${audioid}`);
+            if (cachedData) {
+                const { transcription, paragraphs, audioUrl, keyPoints, XMLData } = JSON.parse(cachedData);
+                setTranscription(transcription);
+                setParagraphs(paragraphs);
+                setAudioUrl(audioUrl);
+                setKeypoints(keyPoints);
+                setXMLData(XMLData);
+                setIsLoading(false);
+            } else {
+                fetchAudioMetadata(uid, audioid);
+            }
+        };
+
+        fetchData();
+    }, [uid, audioid]);
+
 
     const fetchAudioMetadata = async (uid, audioid) => {
         try {
@@ -151,44 +165,56 @@ import { Alert } from 'react-native';
                 body: JSON.stringify({ uid, audioid }),
             });
             const data = await response.json();
-
+    
             if (response.ok) {
+                // Set state with fetched data
                 setTranscription(data.transcription || '');
                 setFileName(data.audio_name || 'Untitled');
                 setFileContent(data.file_path || '');
-                
+    
                 // Handle transcription
+                let paragraphs = [];
+                let wordTimings = [];
                 if (data.transcription) {
-                    const { paragraphs, words } = splitTranscription(data.transcription);
-                    setParagraphs(paragraphs);
+                    const { paragraphs: para, words } = splitTranscription(data.transcription);
+                    paragraphs = para;
+                    setParagraphs(para);
                     if (data.duration) {
-                        setWordTimings(calculateParagraphTimings(words, data.duration));
+                        wordTimings = calculateParagraphTimings(words, data.duration);
+                        setWordTimings(wordTimings);
                     }
                 }
-                
+    
                 // Handle audio chunks with enhanced playback options
+                let audioUrl = data.audio_url;
                 if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
                     const audioSource = await downloadAndCombineAudio(data.chunk_urls);
-                    
-                    // Handle different playback types
                     if (audioSource && audioSource.type === 'blob') {
-                        setAudioUrl(audioSource.url);
+                        audioUrl = audioSource.url;
                     } else if (audioSource && audioSource.type === 'chunked') {
-                        // Start with first chunk URL
-                        setAudioUrl(audioSource.urls[0]);
-                        // TODO: Implement chunked playback logic
+                        audioUrl = audioSource.urls[0]; // Start with first chunk URL
                     } else if (audioSource && audioSource.type === 'direct') {
-                        setAudioUrl(audioSource.url);
-                    } else {
-                        // Fallback to original audio URL
-                        setAudioUrl(data.audio_url);
+                        audioUrl = audioSource.url;
                     }
-                } else {
-                    setAudioUrl(data.audio_url);
                 }
-                
-                setKeypoints(data.key_points);
-                setXMLData(data.xml_data);
+                setAudioUrl(audioUrl);
+    
+                // Set key points and XML data
+                setKeypoints(data.key_points || '');
+                setXMLData(data.xml_data || '');
+    
+                // Save data to local storage
+                const audioData = {
+                    transcription: data.transcription || '',
+                    fileName: data.audio_name || 'Untitled',
+                    fileContent: data.file_path || '',
+                    paragraphs,
+                    wordTimings,
+                    audioUrl,
+                    keyPoints: data.key_points || '',
+                    XMLData: data.xml_data || '',
+                };
+                await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
             } else {
                 console.error('Error fetching audio metadata:', data.error);
             }
@@ -198,7 +224,6 @@ import { Alert } from 'react-native';
             setIsLoading(false);
         }
     };
-
     const downloadAndCombineAudio = async (chunkUrls) => {
         if (!chunkUrls || !Array.isArray(chunkUrls) || chunkUrls.length === 0) {
             console.error('Invalid chunk URLs');

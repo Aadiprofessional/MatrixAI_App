@@ -23,6 +23,7 @@ import Tts from 'react-native-tts'; // Importing TTS library
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/core';
 
+
 const LiveTranslateScreen = () => {
   const slideAnimation = new Animated.Value(300);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
