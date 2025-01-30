@@ -19,9 +19,9 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
       console.error('No valid XML found in response');
       return;
     }
-    
+  
     const cleanedXMLString = xmlMatch[0].replace(/<\?xml[^>]*>/, '').trim();
-    
+  
     const parser = new XMLParser({
       ignoreAttributes: false,
       removeNSPrefix: true,
@@ -30,6 +30,8 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   
     try {
       const jsonData = parser.parse(cleanedXMLString);
+      console.log('Parsed XML Data:', JSON.stringify(jsonData, null, 2)); // Log the parsed XML structure
+  
       if (jsonData) {
         console.log('Parsed XML Data:', jsonData);
         const formattedData = formatGraphData(jsonData);
@@ -62,8 +64,9 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
           : [node.meeting.topic];
         
         topics.forEach((topic, index) => {
+          const topicName = topic['@_name'] || `Topic ${index + 1}`;
           const topicNode = {
-            name: topic['@_name'] || `Topic ${index + 1}`,
+            name: topicName,
             children: []
           };
           
@@ -77,8 +80,9 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
               : [topic.subtopic];
             
             subtopics.forEach((subtopic, subIndex) => {
+              const subtopicName = subtopic['@_name'] || `Subtopic ${subIndex + 1}`;
               const subtopicNode = {
-                name: subtopic['@_name'] || `Subtopic ${subIndex + 1}`,
+                name: subtopicName,
                 children: []
               };
               

@@ -116,7 +116,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
       const [audioDuration, setAudioDuration] = useState(0);
       const [isAudioPlaying, setIsAudioPlaying] = useState(false);
       const [sound, setSound] = useState(null);
-     
+      const resizeIcon = require('../assets/robot.png');
     
      
       const languages = [
@@ -399,13 +399,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
     };
 
    
-    const handleFloatingButton2Press = () => {
-        if (transcription) {
-            navigation.navigate('TranslateScreen3', { transcription });
-        } else {
-            alert('No transcription to translate.');
-        }
-    };
+   
 
 
     const toggleSlider = () => setSliderVisible(!isSliderVisible);
@@ -624,7 +618,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
     const handleFloatingButtonPress = () => {
         if (transcription) {
-            navigation.navigate('BotScreen2', { transcription });
+            navigation.navigate('BotScreen2', { transcription , XMLData,uid,audioid });
         } else {
             alert('No transcription to translate.');
         }
@@ -1065,10 +1059,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             {/* Floating Buttons */}
           
             <TouchableOpacity onPress={handleFloatingButtonPress} style={styles.floatingButton2}>
-                <Image
-                    source={require('../assets/robot.png')}
-                    style={styles.buttonImage}
-                    />
+                <Image source={resizeIcon} style={styles.buttonImage} />
             </TouchableOpacity>
 
             {/* Full Screen Modal */}
@@ -1298,6 +1289,7 @@ const styles = StyleSheet.create({
 flexDirection:'row',
     },
     playButton2:{
+        marginRight:10,
     
         backgroundColor: '#007BFFFF',
         padding:10,

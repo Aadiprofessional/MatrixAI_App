@@ -74,7 +74,9 @@ const CreatePPTScreen = ({ route, navigation }) => {
       <Text style={styles.heading}>
         {loading ? "Generating PPT" : "PPT Generated"}
       </Text>
-      <Text style={styles.subtext2}>{message}</Text>
+      <Text style={styles.subtext2}>
+  {message.length > 200 ? `${message.substring(0, 200)}...` : message}
+</Text>
       {loading && (
         <Text style={styles.subtext}>
           Please don’t turn off your phone or leave this screen while the create

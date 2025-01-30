@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
@@ -16,10 +17,11 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
+import ForceDirectedGraph2 from '../components/mindMap2';
 
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
-  const { transcription } = route.params || {};
+  const { transcription ,XMLData,uid,audioid} = route.params || {};
   const [messages, setMessages] = useState([
     {
       id: '1',
@@ -32,6 +34,7 @@ const BotScreen2 = ({ navigation, route }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState({});
   const [fullTranscription, setFullTranscription] = useState('');
+    const [isFullScreen, setIsFullScreen] = useState(false);
 
   const toggleMessageExpansion = (messageId) => {
     setExpandedMessages(prev => ({
@@ -247,17 +250,39 @@ const BotScreen2 = ({ navigation, route }) => {
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, styles.mindmapButton]} 
-          onPress={() => navigation.navigate('MindMapScreen')}
+          onPress={() => setIsFullScreen(true)} 
         >
           <Text style={styles.buttonText}>Generate Mindmap</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.button, styles.pptButton]} 
-          onPress={() => navigation.navigate('PPTScreen')}
+          onPress={() =>  navigation.navigate('CreatePPTScreen', { message : transcription ,audioid })}
         >
           <Text style={styles.buttonText}>Generate PPT</Text>
         </TouchableOpacity>
       </View>
+      <Modal
+                visible={isFullScreen}
+                transparent={false}
+                animationType="slide"
+                onRequestClose={() => setIsFullScreen(false)}
+            >
+                <View style={styles.fullScreenContainer}>
+                    <View style={styles.fullScreenGraphContainer}>
+                        <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid} xmlData={XMLData} />
+                    </View>
+                    <TouchableOpacity 
+                        onPress={() => setIsFullScreen(false)} 
+                        style={styles.closeFullScreenButton}
+                    >
+                        <Image
+                            source={require('../assets/close.png')}
+                            style={styles.closeIcon}
+                        />
+                    </TouchableOpacity>
+                </View>
+            </Modal>
+          
 
     </SafeAreaView>
   );
@@ -361,6 +386,49 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 10,
   },
+  fullScreenContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    backgroundColor: '#fff',
+    padding: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+},
+fullScreenGraphContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
+   marginTop:200,
+   marginRight:50,
+    padding: 10,
+    overflow: 'hidden',
+},
+closeFullScreenButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF6600',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1001,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+},
+closeIcon: {
+    width: 20,
+    height: 20,
+    tintColor: '#fff',
+},
   animationContainer: {
     width: '100%',
     height: 600,
