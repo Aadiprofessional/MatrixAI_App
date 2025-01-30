@@ -700,17 +700,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             <View style={[styles.audioControlsContainer2]}>
             {/* Play/Pause Button */}
             <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
+                <View style={[
+                styles.playButton2]}>
                 <Image
                     source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                    style={styles.playIcon}
+                    style={styles.playIcon2}
                 />
+                </View>
             </TouchableOpacity>
 
             {/* Waveform (60% width) */}
             <Animated.View style={[
-                styles.waveformBox,
+                styles.waveformBox2,
                 {
-                    width: '60%', // Fixed 60% width
+                    width: '80%', // Fixed 60% width
                     height: playerHeight._value - 40,
                 }
             ]}>
@@ -1206,9 +1209,19 @@ const styles = StyleSheet.create({
        alignItems: 'center',
        justifyContent: 'center',
        marginTop:30,
+       backgroundColor: '#F2F3F7',
+       borderRadius:50,
+       paddingLeft:15,
+       paddingRight:15,
+
     },
     waveformBox: {
         backgroundColor: '#FFFFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    waveformBox2: {
+        
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -1284,7 +1297,12 @@ const styles = StyleSheet.create({
     paragraphRow:{
 flexDirection:'row',
     },
-   
+    playButton2:{
+    
+        backgroundColor: '#007BFFFF',
+        padding:10,
+        borderRadius:50,
+    },
     highlightedWord: {
         backgroundColor: '#007bff20',
         color: '#007bff',
@@ -1336,7 +1354,7 @@ flexDirection:'row',
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
+      
       },
       loadingText: {
         color: '#666',
@@ -1352,6 +1370,11 @@ flexDirection:'row',
         width: 30,
         height: 30,
         tintColor: '#007bff',
+      },
+      icon2: {
+        width: 30,
+        height: 30,
+        tintColor: '#ffffff',
       },
       progressContainer: {
         marginHorizontal: 10,
@@ -1376,6 +1399,11 @@ flexDirection:'row',
         width: 32,
         height: 32,
         tintColor: '#007bff',
+      },
+      playIcon2: {
+        width: 32,
+        height: 32,
+        tintColor: '#ffffff',
       },
       separator: {
         height: 1,
