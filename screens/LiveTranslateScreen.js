@@ -158,25 +158,7 @@ const LiveTranslateScreen = () => {
     };
   }, []);
 
-  const handleMicPress = async () => {
-    if (isListening) {
-      await Voice.stop();
-      stopCircleAnimation();  // Stop the circle animation when mic is pressed again
-    } else {
-      try {
-        // Get the language code for the selected source language
-        const languageCode = languageCodes[selectedLanguage];
-        if (!languageCode) {
-          throw new Error(`Language code not found for: ${selectedLanguage}`);
-        }
 
-        await Voice.start(languageCode); // Use the correct language code
-        startCircleAnimation();  // Start the circle animation when mic is pressed
-      } catch (error) {
-        console.error('Error starting voice recognition:', error);
-      }
-    }
-  };
 
   const handleSpeakerPress = () => {
     Tts.speak(translatedText, {
@@ -573,26 +555,37 @@ const LiveTranslateScreen = () => {
 
       {/* Top Blue Section */}
       <View style={styles.topSection}>
-  <View style={styles.languageSwitcher}>
-    <TouchableOpacity style={styles.languageButton} onPress={() => {
-      setEditingLanguage('source');
-      setLanguageModalVisible(true);
-    }}>
-      <Text style={styles.languageText}>{selectedLanguage}</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
-      <Image source={require('../assets/Change.png')} style={styles.swapIcon} />
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.languageButton} onPress={() => {
-      setEditingLanguage('target');
-      setLanguageModalVisible(true);
-    }}>
-      <Text style={styles.languageText}>{selectedLanguage2}</Text>
-    </TouchableOpacity>
-  </View>
+      <View style={styles.container2}>
+       <View style={styles.languageSwitcher}>
+        <TouchableOpacity
+          style={styles.languageButton}
+          onPress={() => {
+            setEditingLanguage('source');
+            setLanguageModalVisible(true);
+          }}
+        >
+          <Text style={styles.languageText}>{selectedLanguage}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
+          <Image
+            source={require('../assets/Change.png')}
+            style={styles.swapIcon}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.languageButton}
+          onPress={() => {
+            setEditingLanguage('target');
+            setLanguageModalVisible(true);
+          }}
+        >
+          <Text style={styles.languageText}>{selectedLanguage2}</Text>
+        </TouchableOpacity>
+        </View>
+      </View>
   
   {/* Scroll view added for transcription */}
-  <ScrollView style={{ height: 250 }}>
+  <ScrollView style={{ height: 250,marginTop:50 }}>
     <Text style={styles.documentText}>{transcription}</Text>
   </ScrollView>
 </View>
@@ -763,12 +756,15 @@ marginLeft:10
     backgroundColor: '#fff',
     borderRadius: 25,
     padding: 8,
-    marginBottom: 10,
-    width: '70%',
-    alignSelf: 'center',
+    width: '80%',
+    marginTop:50,
+    height:50,
+    position: 'relative', // Required for absolute positioning of the swap button
   },
   languageButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 26,
+    flex: 1, // Allow buttons to take equal space
+    alignItems: 'center', // Center text horizontally
   },
   languageText: {
     fontSize: 16,
@@ -781,7 +777,15 @@ marginLeft:10
     backgroundColor: '#007bff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 8,
+    position: 'absolute', // Position the swap button absolutely
+    left: '50%', // Move to the horizontal center
+    top: '50%', // Move to the vertical center
+    transform: [{ translateX: -10 }, { translateY: -10 }], // Adjust for button size
+  },
+  container2: {
+    flex: 1,
+    justifyContent: 'center', // Center vertically
+    alignItems: 'center', // Center horizontally
   },
   swapIcon: {
     width: 20,
@@ -811,6 +815,7 @@ marginLeft:10
   translatedText: {
     fontSize: 18,
     color: '#555',
+   
   },
   micButton: {
     alignSelf: 'center',
