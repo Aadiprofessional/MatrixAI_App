@@ -26,6 +26,7 @@ const CartScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Back Button */}
+      <View style={styles.container2}>
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -34,6 +35,7 @@ const CartScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       <Text style={styles.header}>My Cart</Text>
+      </View>
 
       <FlatList
         data={cart}
@@ -55,11 +57,13 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 50,  // Add margin top as requested
   },
+  container2: {
+   flexDirection:'row'
+  
+  },
   backButton: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 1,
+   
+   
   },
   backImage: {
     width: 30,

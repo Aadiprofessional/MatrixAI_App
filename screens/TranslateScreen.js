@@ -668,122 +668,191 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
        
                 </>
             )}
-            {audioUrl && (
-                <Animated.View style={[
-                    styles.audioPlayerContainer,
+{audioUrl && (
+    <Animated.View style={[
+        styles.audioPlayerContainer,
+        {
+            height: playerHeight,
+            padding: playerPadding,
+            borderRadius: playerPadding,
+        }
+    ]}>
+        {/* Container for inputRange: 120 */}
+        <Animated.View style={[
+            styles.audioControlsContainer,
+            {
+                opacity: playerHeight.interpolate({
+                    inputRange: [60, 120],
+                    outputRange: [1, 0], // Visible at 120, hidden at 60
+                    extrapolate: 'clamp'
+                }),
+                transform: [
                     {
-                        height: playerHeight,
-                        padding: playerPadding,
-                        borderRadius: playerPadding,
+                        scale: playerHeight.interpolate({
+                            inputRange: [60, 120],
+                            outputRange: [0.8, 1], // Optional: Add a scaling effect
+                            extrapolate: 'clamp'
+                        })
                     }
-                ]}>
-                   
-                            <Animated.View style={[
-                                styles.waveformBox,
-                                {
-                                    height: playerHeight._value - 40,
-                                    transform: [
-                                        {
-                                            scaleY: scrollY.interpolate({
-                                                inputRange: [0, 150],
-                                                outputRange: [1, 0.8],
-                                                extrapolate: 'clamp'
-                                            })
-                                        }
-                                    ]
-                                }
-                            ]}>
-                            <View style={[styles.waveformContainer, { height: playerHeight._value - 40 }]}>
-                                {isAudioLoading ? (
-                                    <View style={styles.loadingContainer}>
-                                        <Text style={styles.loadingText}>Loading waveform...</Text>
-                                    </View>
-                                ) : (
-                                    <View style={[styles.waveform, { justifyContent: 'center' }]}>
-                                        {Array(100).fill(0).map((_, index) => {
-                                            const minHeight = 10;
-                                            const maxHeight = 60; // Reduced max height
-                                            const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
-                                            return (
-                                                <View
-                                                    key={index}
-                                                    style={[
-                                                        styles.waveformBar,
-                                                        { 
-                                                            height: height,
-                                                            backgroundColor: '#007bff'
-                                                        }
-                                                    ]}
-                                                />
-                                            );
-                                        })}
-                                        {playerHeight._value <= 60 && (
-                                            <View style={styles.smallPlayerControls}>
-                                                <TouchableOpacity onPress={toggleAudioPlayback}>
-                                                    <Image
-                                                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                                                        style={[styles.playIcon, { marginLeft: 10 }]}
-                                                    />
-                                                </TouchableOpacity>
-                                            </View>
-                                        )}
-                                    </View>
-                                )}
-                            </View>
-                            </Animated.View>
+                ]
+            }
+         ]}>
+            <View style={[styles.audioControlsContainer2]}>
+            {/* Play/Pause Button */}
+            <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
+                <Image
+                    source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                    style={styles.playIcon}
+                />
+            </TouchableOpacity>
 
-
-                            <Animated.View
-                                style={[
-                                    styles.animatedPlayButton,
-                                    { opacity: playButtonOpacity, marginLeft: waveformMarginLeft }
-                                ]}
-                            >
-                                <TouchableOpacity onPress={toggleAudioPlayback}>
-                                    <Image
-                                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                                        style={styles.playIcon}
-                                    />
-                                </TouchableOpacity>
-                            </Animated.View>
-
-
-                        <View style={styles.timeContainer}>
-                            <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
-                            <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
+            {/* Waveform (60% width) */}
+            <Animated.View style={[
+                styles.waveformBox,
+                {
+                    width: '60%', // Fixed 60% width
+                    height: playerHeight._value - 40,
+                }
+            ]}>
+                <View style={[styles.waveformContainer, { 
+                    height: playerHeight._value - 40,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center', // Center waveform horizontally
+                }]}>
+                    {isAudioLoading ? (
+                        <View style={styles.loadingContainer}>
+                            <Text style={styles.loadingText}>Loading waveform...</Text>
                         </View>
+                    ) : (
+                        <View style={[styles.waveform, { justifyContent: 'center' }]}>
+                            {Array(100).fill(0).map((_, index) => {
+                                const minHeight = 10;
+                                const maxHeight = 60; // Reduced max height
+                                const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+                                const progress = audioPosition / audioDuration;
+                                const isFilled = index / 100 < progress; // Determine if the bar should be filled
+                                return (
+                                    <View
+                                        key={index}
+                                        style={[
+                                            styles.waveformBar,
+                                            { 
+                                                height: height,
+                                                backgroundColor: isFilled ? '#007bff' : 'gray' // Fill with color based on progress
+                                            }
+                                        ]}
+                                    />
+                                );
+                            })}
+                        </View>
+                    )}
+                </View>
+            </Animated.View>
+                </View>
+        </Animated.View>
 
-                        <Animated.View style={[styles.controls, {
-                            opacity: playerHeight.interpolate({
-                                inputRange: [60, 120],
-                                outputRange: [0, 1],
-                                extrapolate: 'clamp'
-                            })
-                        }]}>
 
-                            <TouchableOpacity onPress={() => seekAudio(-5)}>
-                                <Image
-                                    source={require('../assets/backward.png')}
-                                    style={styles.navIcon}
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={toggleAudioPlayback}>
-                                <Image
-                                    source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                                    style={styles.playIcon}
-                                />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => seekAudio(5)}>
-                                <Image
-                                    source={require('../assets/forward.png')}
-                                    style={styles.navIcon}
-                                />
-                            </TouchableOpacity>
+        {/* Container for inputRange: 60 */}
+        <Animated.View style={[
+            styles.audioControlsContainer,
+            {
+                opacity: playerHeight.interpolate({
+                    inputRange: [60, 120],
+                    outputRange: [0, 1], // Visible at 60, hidden at 120
+                    extrapolate: 'clamp'
+                }),
+                transform: [
+                    {
+                        scale: playerHeight.interpolate({
+                            inputRange: [60, 120],
+                            outputRange: [0.8, 1], // Optional: Add a scaling effect
+                            extrapolate: 'clamp'
+                        })
+                    }
+                ]
+            }
+        ]}>
+            {/* Waveform (100% width) */}
+            <Animated.View style={[
+                styles.waveformBox,
+                {
+                    width: '100%', // Full width
+                    height: playerHeight._value - 40,
+                }
+            ]}>
+                <View style={[styles.waveformContainer, { 
+                    height: playerHeight._value - 40,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center', // Center waveform horizontally
+                }]}>
+                    {isAudioLoading ? (
+                        <View style={styles.loadingContainer}>
+                            <Text style={styles.loadingText}>Loading waveform...</Text>
+                        </View>
+                    ) : (
+                        <View style={[styles.waveform, { justifyContent: 'center' }]}>
+                            {Array(100).fill(0).map((_, index) => {
+                                const minHeight = 10;
+                                const maxHeight = 60; // Reduced max height
+                                const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+                                const progress = audioPosition / audioDuration;
+                                const isFilled = index / 100 < progress; // Determine if the bar should be filled
+                                return (
+                                    <View
+                                        key={index}
+                                        style={[
+                                            styles.waveformBar,
+                                            { 
+                                                height: height,
+                                                backgroundColor: isFilled ? '#007bff' : 'gray' // Fill with color based on progress
+                                            }
+                                        ]}
+                                    />
+                                );
+                            })}
+                        </View>
+                    )}
+                </View>
+            </Animated.View>
 
-                        </Animated.View>
+            {/* Time Container */}
+            <View style={styles.timeContainer}>
+                <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
+                <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
+            </View>
 
-                    </Animated.View>
-                )}
+            {/* Additional Controls */}
+            <Animated.View style={[styles.controls, {
+                opacity: playerHeight.interpolate({
+                    inputRange: [60, 120],
+                    outputRange: [0, 1], // Visible at 60, hidden at 120
+                    extrapolate: 'clamp'
+                })
+            }]}>
+                <TouchableOpacity onPress={() => seekAudio(-5)}>
+                    <Image
+                        source={require('../assets/backward.png')}
+                        style={styles.navIcon}
+                    />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={toggleAudioPlayback}>
+                    <Image
+                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                        style={styles.playIcon}
+                    />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => seekAudio(5)}>
+                    <Image
+                        source={require('../assets/forward.png')}
+                        style={styles.navIcon}
+                    />
+                </TouchableOpacity>
+            </Animated.View>
+        </Animated.View>
+    </Animated.View>
+)}
             <View style={styles.buttonsContainer}>
                 <TouchableOpacity
                     style={[styles.button, selectedButton === 'transcription' ? styles.selectedButton : null]}
@@ -994,7 +1063,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
           
             <TouchableOpacity onPress={handleFloatingButtonPress} style={styles.floatingButton2}>
                 <Image
-                    source={require('../assets/robot2.png')}
+                    source={require('../assets/robot.png')}
                     style={styles.buttonImage}
                     />
             </TouchableOpacity>
@@ -1121,15 +1190,69 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const styles = StyleSheet.create({
     audioPlayerContainer: {
-        backgroundColor: '#f5f5f5',
-        marginHorizontal: 16,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        
+        alignItems: 'center',
+        justifyContent: 'center',
     },
+    audioControlsContainer: {
+        position: 'absolute',
+       
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%', // Adjust width as needed
+    },
+    audioControlsContainer2: {
+       flexDirection:'row',
+       alignItems: 'center',
+       justifyContent: 'center',
+       marginTop:30,
+    },
+    waveformBox: {
+        backgroundColor: '#FFFFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    waveformContainer: {
+        borderRadius: 10,
+        overflow: 'hidden',
+        width: '100%',
+        position: 'relative',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        minHeight: 80,
+    },
+    waveform: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: '100%',
+    },
+    waveformBar: {
+        width: 4,
+        backgroundColor: '#007bff',
+        marginHorizontal: 1,
+        borderRadius: 2,
+        minHeight: 10,
+    },
+    timeContainer: {
+        flexDirection: 'row',
+        width: '100%',
+        marginBottom: 10,
+        paddingHorizontal: 10,
+    },
+    leftTime: {
+        textAlign: 'left',
+        flex: 1,
+    },
+    rightTime: {
+        textAlign: 'right',
+        flex: 1,
+    },
+    timeText: {
+        fontSize: 14,
+        color: '#666',
+    },
+
     container: {
         flex: 1,
         backgroundColor: '#fff',
@@ -1161,6 +1284,7 @@ const styles = StyleSheet.create({
     paragraphRow:{
 flexDirection:'row',
     },
+   
     highlightedWord: {
         backgroundColor: '#007bff20',
         color: '#007bff',
@@ -1187,18 +1311,8 @@ flexDirection:'row',
         paddingVertical: 10,
         paddingHorizontal: 5,
       },
-      waveformContainer: {
-        borderRadius: 10,
-        overflow: 'hidden',
-        width: '100%',
-        position: 'relative',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        minHeight: 80,
-      },
-      waveformBox: {
-        backgroundColor: '#FFFFFFFF',
-      },
+     
+    
       timeContainer: {
         flexDirection: 'row',
         width: '100%',
@@ -1250,19 +1364,8 @@ flexDirection:'row',
         fontSize: 16,
         marginVertical: 2,
       },
-    waveform: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        height: '100%',
-    },
-      waveformBar: {
-        width: 4,
-        backgroundColor: '#007bff',
-        marginHorizontal: 1,
-        borderRadius: 2,
-        minHeight: 10,
-      },
+   
+    
       navIcon: {
         width: 24,
         height: 24,
