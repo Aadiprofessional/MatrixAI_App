@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  Modal,
+
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
