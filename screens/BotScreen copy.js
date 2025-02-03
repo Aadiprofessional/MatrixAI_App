@@ -18,10 +18,12 @@ import axios from 'axios';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
+import LiveCamera from '../components/LiveCamera';
 
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
   const { transcription ,XMLData,uid,audioid} = route.params || {};
+  const [isCameraVisible, setIsCameraVisible] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: '1',
@@ -71,6 +73,10 @@ const BotScreen2 = ({ navigation, route }) => {
     role: msg.sender === 'bot' ? 'assistant' : 'user',
     content: msg.text
   }));
+
+  const handleCamera = () => {
+    setIsCameraVisible(true);
+  };
 
   const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     const maxRetries = 5;
@@ -243,6 +249,9 @@ const BotScreen2 = ({ navigation, route }) => {
           onSubmitEditing={handleSendMessage}
           multiline
         />
+         <TouchableOpacity onPress={handleCamera} style={styles.sendButton}>
+          <Image source={require('../assets/camera.png')} style={styles.sendIcon} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
           <Image source={require('../assets/send2.png')} style={styles.sendIcon} />
         </TouchableOpacity>
@@ -282,7 +291,14 @@ const BotScreen2 = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
             </Modal>
-          
+            <Modal
+        visible={isCameraVisible}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setIsCameraVisible(false)}
+      >
+        <LiveCamera onClose={() => setIsCameraVisible(false)} />
+      </Modal>
 
     </SafeAreaView>
   );

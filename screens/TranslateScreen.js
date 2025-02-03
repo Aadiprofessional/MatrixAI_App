@@ -924,7 +924,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         ]}
     />
 </TouchableOpacity>
-                <TouchableOpacity onPress={() => seekAudio(-5)}>
+                <TouchableOpacity onPress={() => seekAudio(-10)}>
                     <Image
                         source={require('../assets/backward.png')}
                         style={styles.navIcon}
@@ -936,7 +936,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                         style={styles.playIcon}
                     />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => seekAudio(5)}>
+                <TouchableOpacity onPress={() => seekAudio(10)}>
                     <Image
                         source={require('../assets/forward.png')}
                         style={styles.navIcon}
@@ -1408,6 +1408,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#007BFF',
        width:150,
         borderRadius: 20,
+        
+       marginTop:50,
+        marginLeft: 120,
+       
         padding: 8, // Adjust padding for better touch area
         flexDirection: 'row',
         justifyContent: 'center',
@@ -1426,12 +1430,12 @@ const styles = StyleSheet.create({
     convert:{
         marginRight:5,
         fontSize:12,
-        color:'#000',
+        color:'#fff',
             },
             convert2:{
                 marginRight:5,
                 fontSize:16,
-                color:'#000',
+                color:'#fff',
                     },
     selectedButton: {
         backgroundColor: '#007bff', // Change to the selected button color
