@@ -73,15 +73,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
       const [isRepeatMode, setIsRepeatMode] = useState(false);
       const [editingStates, setEditingStates] = useState([]);
       const [transcription, setTranscription] = useState([]);
+
       const [isLoading, setIsLoading] = useState(true);
       const [paragraphs, setParagraphs] = useState([]);
       const [audioUrl, setAudioUrl] = useState('');
       const [keyPoints, setKeypoints] = useState('');
       const [XMLData, setXMLData] = useState('');
+      const [duration, setDuration] = useState('');
       const audioPlayerRef = useRef(null);
       const [isFullScreen, setIsFullScreen] = useState(false);
       const [showMindMap, setShowMindMap] = useState(false);
       const scrollViewRef = useRef(null);
+      const isTranscriptionEmpty = transcription  === '';
+      const coin = require('../assets/coin.png');
       const [currentWordIndex, setCurrentWordIndex] = useState({
           paraIndex: 0,
           wordIndex: 0,
@@ -181,6 +185,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                 setTranscription(data.transcription || '');
                 setFileName(data.audio_name || 'Untitled');
                 setFileContent(data.file_path || '');
+                setDuration(data.duration)
     
                 // Handle transcription
                 let paragraphs = [];
@@ -234,6 +239,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             setIsLoading(false);
         }
     };
+   
     const downloadAndCombineAudio = async (chunkUrls) => {
         if (!chunkUrls || !Array.isArray(chunkUrls) || chunkUrls.length === 0) {
             console.error('Invalid chunk URLs');
@@ -612,7 +618,37 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         }
     };
 
-  
+    const handlePress = async () => {
+        try {
+            setIsLoading(true); // Show the loading indicator
+    
+            const formData = new FormData();
+            formData.append('uid', uid);
+            formData.append('audioid', audioid);
+    
+            const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
+                method: 'POST',
+                body: formData,
+            });
+    
+            const data = await response.json();
+            
+            if (response.ok) {
+              
+              
+            } else {
+                console.error('Conversion failed:', data);
+                Alert.alert('Error', 'Conversion failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('API Error:', error);
+            Alert.alert('Error', 'Something went wrong.');
+        } finally {
+            setIsLoading(false); // Hide the loading indicator
+        }
+    };
+    
+    
     
     
     const handleTranslateParagraph = async (index) => {
@@ -939,6 +975,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                     </Text>
                 </TouchableOpacity>
             </View>
+            {isTranscriptionEmpty && (
+  
+        <TouchableOpacity style={styles.blueButton}    onPress={() => handlePress()}>
+              <Text style={styles.convert2}> {duration}</Text>
+                                <Image source={coin} style={styles.detailIcon2} />
+                                <Text style={styles.convert}> Convert  </Text>
+                                
+        </TouchableOpacity>
+
+)}
 
             {selectedButton === 'transcription' && (
                 <ScrollView 
@@ -1347,6 +1393,46 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#ccc',
     },
+    overlayButtonContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+       
+      
+    },
+    
+    blueButton: {
+        backgroundColor: '#007BFF',
+       width:150,
+        borderRadius: 20,
+        padding: 8, // Adjust padding for better touch area
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5, // Adds shadow for Android
+        shadowColor: '#000', // Adds shadow for iOS
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    detailIcon2: {
+        width: 14,
+        height: 14,
+        resizeMode: 'contain',
+    },
+    convert:{
+        marginRight:5,
+        fontSize:12,
+        color:'#000',
+            },
+            convert2:{
+                marginRight:5,
+                fontSize:16,
+                color:'#000',
+                    },
     selectedButton: {
         backgroundColor: '#007bff', // Change to the selected button color
     },

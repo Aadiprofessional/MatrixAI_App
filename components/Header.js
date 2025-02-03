@@ -8,14 +8,13 @@ const Header = ({  navigation }) => {
   
   
     useEffect(() => {
-      // Fetch initial coin count
       const fetchInitialCoins = async () => {
         const { data, error } = await supabase
           .from('users')
           .select('user_coins')
           .eq('uid', uid)
           .single();
-  
+    
         if (error) {
           console.error('Error fetching initial coins:', error);
         } else {
@@ -23,29 +22,34 @@ const Header = ({  navigation }) => {
         }
       };
       fetchInitialCoins();
-  
+    
       // Realtime subscription to listen for changes in user_coins
       const subscription = supabase
-        .channel('user_coins_updates') // Channel name
+        .channel('public:users') // Use schema:table format
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',          // Listen for UPDATE events
+            event: 'UPDATE',
             schema: 'public',
             table: 'users',
-            filter: `id=eq.${uid}`,   // Filter updates for the specific user
           },
           (payload) => {
             console.log('Change received:', payload);
-            const updatedCoins = payload.new.user_coins;
-            setCoinCount(updatedCoins); // Update state with the new value
+    
+            if (payload.new.uid === uid) { // Filter the specific user
+              setCoinCount(payload.new.user_coins);
+            }
           }
         )
         .subscribe();
-        return () => {
-          supabase.removeChannel(subscription);
-        };
-      }, [uid]);
+    
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }, [uid]);
+    
+    
+    
   return (
     <View style={styles.header}>
       {/* Welcome Text with Cat Icon */}
