@@ -29,7 +29,7 @@ const CreatePPTScreen = ({ route, navigation }) => {
   };
   const generatePPT = async () => {
     try {
-      const response = await axios.post('https://matrix-server.vercel.app/generate-ppt', {
+      const response = await axios.post('https://matrix-server-gzqd.vercel.app/generate-ppt', {
         query: message
       });
       

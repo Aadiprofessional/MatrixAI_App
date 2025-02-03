@@ -17,7 +17,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
         if (inputEmail.trim().length > 0 && inputEmail.includes('@')) {
             setLoading(true);
             try {
-                const response = await fetch('https://matrix-server.vercel.app/sendOtpForSave', {
+                const response = await fetch('https://matrix-server-gzqd.vercel.app/sendOtpForSave', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

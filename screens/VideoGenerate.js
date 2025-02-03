@@ -54,7 +54,7 @@ const VideoUploadScreen = () => {
 const fetchImages = async (UID) => {
     try {
       // Use backticks (``) for template literals to correctly insert UID
-      const response = await fetch(`https://matrix-server.vercel.app/getImage?uid=595dfce5-0898-4364-9046-0aa850190321`);
+      const response = await fetch(`https://matrix-server-gzqd.vercel.app/getImage?uid=595dfce5-0898-4364-9046-0aa850190321`);
       const result = await response.json();
   
       if (response.ok) {
@@ -105,7 +105,7 @@ const fetchImages = async (UID) => {
     setUploading(true);
   
     try {
-      const response = await fetch('https://matrix-server.vercel.app/uploadImage', {
+      const response = await fetch('https://matrix-server-gzqd.vercel.app/uploadImage', {
         method: 'POST',
         body: formData, // Directly use FormData, no custom headers for Content-Type
       });

@@ -11,6 +11,7 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
   });
+console.log(xmlData);
 
   const parseXMLData = (xmlString) => {
     // Extract just the XML portion from the response
@@ -49,90 +50,89 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   };
 
   const formatGraphData = (root) => {
-    const formatNode = (node, name = 'Root') => {
-      const formattedNode = { name, children: [] };
-  
-      // Skip non-essential parts of the data like ?xml and #text
-      if (node['#text'] || node['?xml']) {
-        return null; // Skip if it's a non-relevant node
-      }
-  
-      // Handle meeting structure
-      if (node.meeting && node.meeting.topic) {
-        const topics = Array.isArray(node.meeting.topic)
-          ? node.meeting.topic
-          : [node.meeting.topic];
-        
-        topics.forEach((topic, index) => {
-          const topicName = topic['@_name'] || `Topic ${index + 1}`;
-          const topicNode = {
-            name: topicName,
-            children: []
-          };
-          
-          if (topic.description) {
-            topicNode.children.push({ name: topic.description });
-          }
-          
-          if (topic.subtopic) {
-            const subtopics = Array.isArray(topic.subtopic)
-              ? topic.subtopic
-              : [topic.subtopic];
-            
-            subtopics.forEach((subtopic, subIndex) => {
-              const subtopicName = subtopic['@_name'] || `Subtopic ${subIndex + 1}`;
-              const subtopicNode = {
-                name: subtopicName,
-                children: []
-              };
-              
-              if (subtopic.description) {
-                subtopicNode.children.push({ name: subtopic.description });
-              }
-              
-              if (subtopic.action_items && subtopic.action_items.item) {
-                const items = Array.isArray(subtopic.action_items.item)
-                  ? subtopic.action_items.item
-                  : [subtopic.action_items.item];
-                
-                items.forEach((item, itemIndex) => {
-                  subtopicNode.children.push({
-                    name: `Action Item ${itemIndex + 1}`,
-                    children: [{ name: item }]
-                  });
+  const formatNode = (node, name = 'Root') => {
+    const formattedNode = { name, children: [] };
+
+    // Skip non-essential parts of the data like ?xml and #text
+    if (node['#text'] || node['?xml']) {
+      return null; // Skip if it's a non-relevant node
+    }
+
+    // Handle meeting structure
+    if (node.meeting && node.meeting.topic) {
+      const topics = Array.isArray(node.meeting.topic)
+        ? node.meeting.topic
+        : [node.meeting.topic];
+
+      topics.forEach((topic, index) => {
+        const topicName = topic['@_name'] || `Topic ${index + 1}`;
+        const topicNode = {
+          name: topicName,
+          children: []
+        };
+
+        if (topic.description) {
+          topicNode.children.push({ name: topic.description });
+        }
+
+        if (topic.subtopic) {
+          const subtopics = Array.isArray(topic.subtopic)
+            ? topic.subtopic
+            : [topic.subtopic];
+
+          subtopics.forEach((subtopic, subIndex) => {
+            const subtopicName = subtopic['@_name'] || `Subtopic ${subIndex + 1}`;
+            const subtopicNode = {
+              name: subtopicName,
+              children: []
+            };
+
+            if (subtopic.description) {
+              subtopicNode.children.push({ name: subtopic.description });
+            }
+
+            if (subtopic.action_items && subtopic.action_items.item) {
+              const items = Array.isArray(subtopic.action_items.item)
+                ? subtopic.action_items.item
+                : [subtopic.action_items.item];
+
+              items.forEach((item, itemIndex) => {
+                subtopicNode.children.push({
+                  name: item,
                 });
-              }
-              
-              topicNode.children.push(subtopicNode);
-            });
-          }
-          
-          formattedNode.children.push(topicNode);
-        });
-        
-        return formattedNode;
-      }
-  
-      // Fallback for other structures
-      for (const key in node) {
-        if (Object.hasOwnProperty.call(node, key)) {
-          const childNode = node[key];
-          if (typeof childNode === 'object' && childNode !== null) {
-            const child = formatNode(childNode, key);
-            if (child) formattedNode.children.push(child);
-          } else if (childNode !== undefined && childNode !== null) {
-            formattedNode.children.push({
-              name: key,
-              children: [{ name: String(childNode) }],
-            });
-          }
+              });
+            }
+
+            topicNode.children.push(subtopicNode);
+          });
+        }
+
+        formattedNode.children.push(topicNode);
+      });
+
+      return formattedNode;
+    }
+
+    // Fallback for other structures
+    for (const key in node) {
+      if (Object.hasOwnProperty.call(node, key)) {
+        const childNode = node[key];
+        if (typeof childNode === 'object' && childNode !== null) {
+          const child = formatNode(childNode, key);
+          if (child) formattedNode.children.push(child);
+        } else if (childNode !== undefined && childNode !== null) {
+          formattedNode.children.push({
+            name: key,
+            children: [{ name: String(childNode) }],
+          });
         }
       }
-      return formattedNode;
-    };
-  
-    return root ? [formatNode(root)] : null;
+    }
+    return formattedNode;
   };
+
+  return root ? [formatNode(root)] : null;
+};
 
   // Function to fetch data from Gemini API
   const fetchGraphData = async (transcription) => {
@@ -189,7 +189,7 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
     }
 
     try {
-      const response = await axios.post('https://matrix-server.vercel.app/sendXmlGraph', {
+      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendXmlGraph', {
         uid,
         audioid,
         xmlData,

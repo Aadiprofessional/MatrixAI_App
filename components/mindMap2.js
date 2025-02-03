@@ -185,7 +185,7 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
     }
 
     try {
-      const response = await axios.post('https://matrix-server.vercel.app/sendXmlGraph', {
+      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendXmlGraph', {
         uid,
         audioid,
         xmlData,

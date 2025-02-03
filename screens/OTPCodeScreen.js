@@ -46,7 +46,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
         const enteredOtp = otp.join('');
         if (enteredOtp.trim().length === 6) {
             try {
-                const response = await fetch('https://matrix-server.vercel.app/saveUserData', {
+                const response = await fetch('https://matrix-server-gzqd.vercel.app/saveUserData', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

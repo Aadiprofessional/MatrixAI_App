@@ -109,7 +109,7 @@ const BotScreen = ({ navigation, route }) => {
 
   const saveChatHistory = async (messageText, sender) => {
     try {
-      const response = await axios.post('https://matrix-server.vercel.app/sendChat', {
+      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendChat', {
         uid,
         chatid,
         updatedMessage: messageText,
@@ -173,7 +173,7 @@ const BotScreen = ({ navigation, route }) => {
     // Fetch chat history when component mounts
     const fetchChatHistory = async () => {
       try {
-        const response = await axios.post('https://matrix-server.vercel.app/getChat', { uid, chatid });
+        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getChat', { uid, chatid });
         const history = response.data.messages;
         setMessages(history); // Set messages from the server
         setDataLoaded(true); // Mark data as loaded

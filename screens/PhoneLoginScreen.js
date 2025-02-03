@@ -19,7 +19,7 @@ const EmailLoginScreen = ({ navigation }) => {
 
         try {
             // API call to send OTP to the email
-            const response = await fetch('https://matrix-server.vercel.app/sendEmailOtp', {
+            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendEmailOtp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

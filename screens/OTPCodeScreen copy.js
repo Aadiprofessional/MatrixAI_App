@@ -51,7 +51,7 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
             console.log('OTP entered:', enteredOtp); // Log OTP entered
             try {
                 setLoading(true);
-                const response = await fetch('https://matrix-server.vercel.app/verifyEmailOtp', {
+                const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyEmailOtp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -68,8 +68,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         outputRange: ['100%', '50%'], // Adjust width as needed
         extrapolate: 'clamp',
       });
-
-
+      const [waveformHeights, setWaveformHeights] = useState([]);
+      const [is2xSpeed, setIs2xSpeed] = useState(false);
+      const [isRepeatMode, setIsRepeatMode] = useState(false);
       const [editingStates, setEditingStates] = useState([]);
       const [transcription, setTranscription] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +78,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
       const [audioUrl, setAudioUrl] = useState('');
       const [keyPoints, setKeypoints] = useState('');
       const [XMLData, setXMLData] = useState('');
-    
+      const audioPlayerRef = useRef(null);
       const [isFullScreen, setIsFullScreen] = useState(false);
       const [showMindMap, setShowMindMap] = useState(false);
       const scrollViewRef = useRef(null);
@@ -132,6 +133,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
           setShowDropdown(false); // Close dropdown after selection
       };
   
+  console.log(XMLData);
   
       const isMounted = useRef(true);
   
@@ -154,10 +156,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         fetchData();
     }, [uid, audioid]);
 
-
+    const togglePlaybackSpeed = () => {
+        const newSpeed = is2xSpeed ? 1 : 2; // Toggle between 1x and 2x
+        if (audioPlayerRef.current) {
+            audioPlayerRef.current.setRateAsync(newSpeed, true); // Set playback speed
+            setIs2xSpeed(!is2xSpeed); // Update state
+        }
+    };
+    
+  
     const fetchAudioMetadata = async (uid, audioid) => {
         try {
-            const response = await fetch('https://matrix-server.vercel.app/getAudioFile', {
+            const response = await fetch('https://matrix-server-gzqd.vercel.app/getAudioFile', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -475,6 +485,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         }));
     };
 
+    useEffect(() => {
+        // Generate random heights for the waveform bars
+        const heights = Array(100).fill(0).map(() => Math.floor(Math.random() * (60 - 10 + 1)) + 10);
+        setWaveformHeights(heights);
+    }, []);
+
+    const handleWaveformClick = (e) => {
+        const { locationX } = e.nativeEvent; // X coordinate of the click
+        const waveformWidth = e.currentTarget.offsetWidth; // Width of the waveform container
+    
+        if (waveformWidth && audioDuration) {
+            const seekTime = (locationX / waveformWidth) * audioDuration; // Calculate seek time
+            audioPlayerRef.current.seek(seekTime); // Seek to the calculated time
+            setAudioPosition(seekTime); // Update the audio position state
+        }
+    };
     const onAudioProgress = (progress) => {
         if (!progress || !progress.currentTime || !progress.duration || !paragraphs.length) return;
         
@@ -537,6 +563,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
         setAudioPosition(newPosition);
     };
 
+    const handleAudioEnd = () => {
+        if (isRepeatMode) {
+            audioPlayerRef.current.seek(0); // Seek to the start
+            audioPlayerRef.current.play(); // Play again
+        }
+    };
+    
+ 
     useEffect(() => {
         if (audioUrl) {
             loadAudio();
@@ -577,6 +611,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             console.error('Error sharing:', error);
         }
     };
+
+  
+    
+    
     const handleTranslateParagraph = async (index) => {
         if (!paragraphs[index]) return;
     
@@ -613,9 +651,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             console.error('Translation error:', error);
         }
     };
-    
-
-
+   
     const handleFloatingButtonPress = () => {
         if (transcription) {
             navigation.navigate('BotScreen2', { transcription , XMLData,uid,audioid });
@@ -690,65 +726,71 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                     }
                 ]
             }
-         ]}>
+        ]}>
             <View style={[styles.audioControlsContainer2]}>
-            {/* Play/Pause Button */}
-            <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
-                <View style={[
-                styles.playButton2]}>
-                <Image
-                    source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                    style={styles.playIcon2}
-                />
-                </View>
-            </TouchableOpacity>
+                {/* Play/Pause Button */}
+                <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
+                    <View style={[styles.playButton2]}>
+                        <Image
+                            source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                            style={styles.playIcon2}
+                        />
+                    </View>
+                </TouchableOpacity>
 
-            {/* Waveform (60% width) */}
-            <Animated.View style={[
-                styles.waveformBox2,
-                {
-                    width: '80%', // Fixed 60% width
-                    height: playerHeight._value - 40,
-                }
-            ]}>
-                <View style={[styles.waveformContainer, { 
-                    height: playerHeight._value - 40,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center', // Center waveform horizontally
-                }]}>
-                    {isAudioLoading ? (
-                        <View style={styles.loadingContainer}>
-                            <Text style={styles.loadingText}>Loading waveform...</Text>
-                        </View>
-                    ) : (
-                        <View style={[styles.waveform, { justifyContent: 'center' }]}>
-                            {Array(100).fill(0).map((_, index) => {
-                                const minHeight = 10;
-                                const maxHeight = 60; // Reduced max height
-                                const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
-                                const progress = audioPosition / audioDuration;
-                                const isFilled = index / 100 < progress; // Determine if the bar should be filled
-                                return (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.waveformBar,
-                                            { 
-                                                height: height,
-                                                backgroundColor: isFilled ? '#007bff' : 'gray' // Fill with color based on progress
-                                            }
-                                        ]}
-                                    />
-                                );
-                            })}
-                        </View>
-                    )}
-                </View>
-            </Animated.View>
-                </View>
+                {/* Waveform (80% width) */}
+                <Animated.View style={[
+                    styles.waveformBox2,
+                    {
+                        width: '80%', // Fixed 80% width
+                        height: playerHeight._value - 40,
+                    }
+                ]}>
+                    <View style={[styles.waveformContainer, { 
+                        height: playerHeight._value - 40,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center', // Center waveform horizontally
+                    }]}>
+                        {isAudioLoading ? (
+                            <View style={styles.loadingContainer}>
+                                <Text style={styles.loadingText}>Loading waveform...</Text>
+                            </View>
+                        ) : (
+                            <TouchableWithoutFeedback onPress={(e) => handleWaveformClick(e)}>
+                            <View
+                                style={[styles.waveform, { justifyContent: 'center' }]}
+                                onLayout={(event) => {
+                                    const { width } = event.nativeEvent.layout;
+                                    console.log('Waveform width:', width); // Debugging: Log waveform width
+                                }}
+                                collapsable={false}
+                            >
+                                {/* Waveform bars */}
+                                {waveformHeights.map((height, index) => {
+                                    const progress = audioPosition / audioDuration;
+                                    const isFilled = index / waveformHeights.length < progress; // Determine if the bar should be filled
+                        
+                                    return (
+                                        <View
+                                            key={index}
+                                            style={[
+                                                styles.waveformBar,
+                                                { 
+                                                    height: height,
+                                                    backgroundColor: isFilled ? 'orange' : 'gray' // Change filled color to orange
+                                                }
+                                            ]}
+                                        />
+                                    );
+                                })}
+                            </View>
+                        </TouchableWithoutFeedback>
+                        )}
+                    </View>
+                </Animated.View>
+            </View>
         </Animated.View>
-
 
         {/* Container for inputRange: 60 */}
         <Animated.View style={[
@@ -789,27 +831,35 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                             <Text style={styles.loadingText}>Loading waveform...</Text>
                         </View>
                     ) : (
-                        <View style={[styles.waveform, { justifyContent: 'center' }]}>
-                            {Array(100).fill(0).map((_, index) => {
-                                const minHeight = 10;
-                                const maxHeight = 60; // Reduced max height
-                                const height = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
-                                const progress = audioPosition / audioDuration;
-                                const isFilled = index / 100 < progress; // Determine if the bar should be filled
-                                return (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.waveformBar,
-                                            { 
-                                                height: height,
-                                                backgroundColor: isFilled ? '#007bff' : 'gray' // Fill with color based on progress
-                                            }
-                                        ]}
-                                    />
-                                );
-                            })}
-                        </View>
+                      <TouchableWithoutFeedback onPress={(e) => handleWaveformClick(e)}>
+    <View
+        style={[styles.waveform, { justifyContent: 'center' }]}
+        onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            console.log('Waveform width:', width); // Debugging: Log waveform width
+        }}
+        collapsable={false}
+    >
+        {/* Waveform bars */}
+        {waveformHeights.map((height, index) => {
+            const progress = audioPosition / audioDuration;
+            const isFilled = index / waveformHeights.length < progress; // Determine if the bar should be filled
+
+            return (
+                <View
+                    key={index}
+                    style={[
+                        styles.waveformBar,
+                        { 
+                            height: height,
+                            backgroundColor: isFilled ? 'orange' : 'gray' // Change filled color to orange
+                        }
+                    ]}
+                />
+            );
+        })}
+    </View>
+</TouchableWithoutFeedback>
                     )}
                 </View>
             </Animated.View>
@@ -828,6 +878,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                     extrapolate: 'clamp'
                 })
             }]}>
+
+<TouchableOpacity onPress={() => setIsRepeatMode(!isRepeatMode)}>
+    <Image
+        source={require('../assets/repeat.png')}
+        style={[
+            styles.navIcon2,
+            { tintColor: isRepeatMode ? 'orange' : 'gray' } // Change color based on state
+        ]}
+    />
+</TouchableOpacity>
                 <TouchableOpacity onPress={() => seekAudio(-5)}>
                     <Image
                         source={require('../assets/backward.png')}
@@ -846,10 +906,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                         style={styles.navIcon}
                     />
                 </TouchableOpacity>
+                <TouchableOpacity onPress={togglePlaybackSpeed}>
+    <Image
+        source={require('../assets/2x.png')}
+        style={[
+            styles.navIcon2,
+            { tintColor: is2xSpeed ? 'orange' : 'gray' } // Change color based on state
+        ]}
+    />
+</TouchableOpacity>
             </Animated.View>
         </Animated.View>
     </Animated.View>
 )}
+
+
+
+
             <View style={styles.buttonsContainer}>
                 <TouchableOpacity
                     style={[styles.button, selectedButton === 'transcription' ? styles.selectedButton : null]}
@@ -1385,7 +1458,13 @@ flexDirection:'row',
         width: 24,
         height: 24,
         tintColor: '#007bff',
-        marginHorizontal: 20,
+        marginHorizontal: 40,
+      },
+      navIcon2: {
+        width: 24,
+        height: 24,
+        tintColor: '#007bff',
+        marginHorizontal: -10,
       },
       playIcon: {
         width: 32,
