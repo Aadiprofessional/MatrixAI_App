@@ -24,7 +24,7 @@ import VideoCategory from '../components/VideoCategory';
 import ImageCategory from '../components/ImageCategory';
 
 const AiShop = ({ navigation }) => {
-  const [coinCount, setCoinCount] = useState(122);
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const [selectedTab, setSelectedTab] = useState(0); // Manage selectedTab state here
 

@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 
 const ProfileScreen = ({ navigation }) => {
-    const [coinCount, setCoinCount] = useState(122);
+
    
     
       const handleUpgradePress = () => {
@@ -38,7 +38,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-    <Header coinCount={coinCount} navigation={navigation} />
+    <Header navigation={navigation} />
     
     {/* Header Section */}
     <View style={styles.header}>

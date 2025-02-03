@@ -1,7 +1,51 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { supabase } from '../supabaseClient';
 
-const Header = ({ coinCount, navigation }) => {
+const Header = ({  navigation }) => {
+    const uid = '595dfce5-0898-4364-9046-0aa850190321';
+    const [coinCount, setCoinCount] = useState(0);
+  
+  
+    useEffect(() => {
+      // Fetch initial coin count
+      const fetchInitialCoins = async () => {
+        const { data, error } = await supabase
+          .from('users')
+          .select('user_coins')
+          .eq('uid', uid)
+          .single();
+  
+        if (error) {
+          console.error('Error fetching initial coins:', error);
+        } else {
+          setCoinCount(data.user_coins);
+        }
+      };
+      fetchInitialCoins();
+  
+      // Realtime subscription to listen for changes in user_coins
+      const subscription = supabase
+        .channel('user_coins_updates') // Channel name
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',          // Listen for UPDATE events
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${uid}`,   // Filter updates for the specific user
+          },
+          (payload) => {
+            console.log('Change received:', payload);
+            const updatedCoins = payload.new.user_coins;
+            setCoinCount(updatedCoins); // Update state with the new value
+          }
+        )
+        .subscribe();
+        return () => {
+          supabase.removeChannel(subscription);
+        };
+      }, [uid]);
   return (
     <View style={styles.header}>
       {/* Welcome Text with Cat Icon */}

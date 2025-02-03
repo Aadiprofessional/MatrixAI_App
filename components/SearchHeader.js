@@ -15,7 +15,7 @@ import * as Animatable from 'react-native-animatable';
 const { width } = Dimensions.get('window');
 
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
-  const [coinCount, setCoinCount] = useState(122);
+
   // Animations
   const [showSearch, setShowSearch] = useState(true);
   const searchBarWidth = useRef(new Animated.Value(width - 40)).current;
@@ -77,7 +77,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   return (
     <View style={styles.container2}>
       <View style={styles.fixedHeader}>
-        <Header coinCount={coinCount}navigation={navigation}  />
+        <Header navigation={navigation}  />
       </View>
 
       <Animated.View style={[
