@@ -48,26 +48,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
           outputRange: [16, 8],
           extrapolate: 'clamp',
       });
-      const waveformScale = scrollY.interpolate({
-          inputRange: [0, 200],
-          outputRange: [1, 0.5],
-          extrapolate: 'clamp',
-      });
-      const playButtonOpacity = scrollY.interpolate({
-        inputRange: [0, 100],
-        outputRange: [0, 1],
-        extrapolate: 'clamp',
-      });
-      const waveformMarginLeft = scrollY.interpolate({
-        inputRange: [0, 100],
-        outputRange: [0, 50],
-        extrapolate: 'clamp',
-      });
-      const waveformWidth = scrollY.interpolate({
-        inputRange: [0, 100],
-        outputRange: ['100%', '50%'], // Adjust width as needed
-        extrapolate: 'clamp',
-      });
+    
       const [waveformHeights, setWaveformHeights] = useState([]);
       const [is2xSpeed, setIs2xSpeed] = useState(false);
       const [isRepeatMode, setIsRepeatMode] = useState(false);
@@ -471,8 +452,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
     const calculateParagraphTimings = (paragraphs, duration) => {
         if (!paragraphs.length || !duration) return [];
         return paragraphs.map((para, index) => ({
-            start: index * 45,
-            end: (index + 1) * 45,
+            start: index * 40,
+            end: (index + 1) * 47,
             words: para.split(' ')
         }));
     };

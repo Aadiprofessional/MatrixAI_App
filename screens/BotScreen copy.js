@@ -24,6 +24,7 @@ const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
   const { transcription ,XMLData,uid,audioid} = route.params || {};
   const [isCameraVisible, setIsCameraVisible] = useState(false);
+    const [dataLoaded, setDataLoaded] = useState(false); // Track if data is loaded
   const [messages, setMessages] = useState([
     {
       id: '1',
@@ -78,54 +79,21 @@ const BotScreen2 = ({ navigation, route }) => {
     setIsCameraVisible(true);
   };
 
-  const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
-    const maxRetries = 5;
-    const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000);
-  
-    setIsLoading(true); 
+ 
+  const saveChatHistory = async (messageText, sender) => {
     try {
-      // Only include transcription context for the first summary request
-      const contextMessage = messages.length <= 2 && fullTranscription
-        ? `\n\nFull transcription for context: ${fullTranscription}`
-        : '';
-        
-      const response = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          ...messageHistory,
-          { 
-            role: "user", 
-            content: userMessage + contextMessage
-          }
-        ],
-        model: "deepseek-chat",
+      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendChat', {
+        uid,
+        chatid: audioid, // Using audioid as chatid
+        updatedMessage: messageText,
+        sender,
       });
-  
-      const botMessage = response.choices[0].message.content.trim();
-      
-      setMessages((prev) => [
-        ...prev,
-        { 
-          id: Date.now().toString(), 
-          text: botMessage, 
-          sender: 'bot',
-          context: fullTranscription // Store transcription context
-        },
-      ]);
+      console.log('Message saved:', response.data);
     } catch (error) {
-      if (retryCount < maxRetries) {
-        setTimeout(() => fetchDeepSeekResponse(userMessage, retryCount + 1), retryDelay);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: Date.now().toString(), text: 'Error fetching response. Try again later.', sender: 'bot' },
-        ]);
-      }
-    } finally {
-      setIsLoading(false);
+      console.error('Error saving chat history:', error);
     }
   };
-
+  
   const handleSendMessage = () => {
     if (inputText.trim()) {
       const newMessage = {
@@ -134,12 +102,42 @@ const BotScreen2 = ({ navigation, route }) => {
         sender: 'user',
       };
       setMessages((prev) => [...prev, newMessage]);
+      saveChatHistory(inputText, 'user'); // Save user message
       fetchDeepSeekResponse(inputText);
       setInputText('');
       setIsTyping(false);
     }
   };
-
+  
+  const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
+    const maxRetries = 5;
+    const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000);
+    
+    setIsLoading(true); 
+    try {
+      const response = await openai.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are a helpful assistant." },
+          ...messageHistory,
+          { role: "user", content: userMessage }
+        ],
+        model: "deepseek-chat",
+      });
+  
+      const botMessage = response.choices[0].message.content.trim();
+      
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString(), text: botMessage, sender: 'bot' },
+      ]);
+      saveChatHistory(botMessage, 'bot'); // Save bot response
+    } catch (error) {
+      console.error('Error fetching response:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleAddImage = () => {
     launchImageLibrary({ noData: true }, (response) => {
       if (response.assets) {
@@ -152,6 +150,28 @@ const BotScreen2 = ({ navigation, route }) => {
       }
     });
   };
+
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      try {
+        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getChat', {
+          uid,
+          chatid: audioid, // Using audioid as chatid
+        });
+        const history = response.data.messages || [];
+        setMessages((prev) => [...prev, ...history]); // Merge with initial bot message
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Error fetching chat history:', error);
+        setDataLoaded(true);
+      }
+    };
+  
+    if (audioid) {
+      fetchChatHistory();
+    }
+  }, [audioid]);
+  
 
   const renderMessage = ({ item }) => {
     const isBot = item.sender === 'bot';
