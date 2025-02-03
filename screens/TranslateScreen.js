@@ -150,7 +150,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                 setParagraphs(paragraphs);
                 setAudioUrl(audioUrl);
                 setKeypoints(keyPoints);
-                setXMLData(XMLData);
+               
                 setIsLoading(false);
             } else {
                 fetchAudioMetadata(uid, audioid);
@@ -379,22 +379,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             }
 
             // Set cleanup handler
-            const cleanup = () => {
-                try {
-                    if (combinedUrl) {
-                        URL.revokeObjectURL(combinedUrl);
-                    }
-                } catch (error) {
-                    console.error('Error revoking object URL:', error);
-                }
-            };
+          
 
-            // Cleanup on unmount
-            if (isMounted.current) {
-                window.addEventListener('beforeunload', cleanup);
-            }
-
-            return combinedUrl;
         } catch (error) {
             console.error('Error downloading/combining audio:', error);
             return null;
@@ -1162,7 +1148,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                         Alert.alert('Export Error', error.message || 'Failed to export PDF');
                     }
                 }}
-                style={[styles.centerFloatingButton, {marginLeft: 10}]}
+                style={[styles.centerFloatingButton2]}
             >
                 <Image
                     source={require('../assets/share.png')}
@@ -1792,6 +1778,7 @@ flexDirection:'row',
     buttonImage3: {
         width: 40,
         height: 40,
+      
         resizeMode: 'contain',
         tintColor:'#ffffff',
     },
@@ -1859,11 +1846,11 @@ flexDirection:'row',
         zIndex: 100,
        
     },
+   
     centerFloatingButton2: {
         position: 'absolute',
-        bottom: 100,
-        left: '15%',
-        marginLeft: -30, // Half of button width to center
+        bottom: 160,
+        marginLeft: 25,
         width: 50,
         height: 50,
         borderRadius: 30,
