@@ -50,6 +50,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
       });
     
       const [waveformHeights, setWaveformHeights] = useState([]);
+      const [isTranscriptionGenerating, setIsTranscriptionGenerating] = useState(false);
+const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new Set());
+
       const [is2xSpeed, setIs2xSpeed] = useState(false);
       const [isRepeatMode, setIsRepeatMode] = useState(false);
       const [editingStates, setEditingStates] = useState([]);
@@ -403,10 +406,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
   
 
-    const toggleEditing = () => {
-       
-        // This will control the visibility of timestamps
-    };
+    
     const handleOutsidePress = () => {
         if (isSliderVisible) {
             setSliderVisible(false);
@@ -441,12 +441,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             chunks.push(words.slice(i, i + 100).join(' '));
         }
         return { paragraphs: chunks, words };
-    };
-
-    const calculateWordTimings = (words, duration) => {
-        if (!words.length || !duration) return [];
-        const wordDuration = duration / words.length;
-        return words.map((_, index) => index * wordDuration);
     };
 
     const calculateParagraphTimings = (paragraphs, duration) => {
@@ -586,9 +580,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
     };
 
     const handlePress = async () => {
-        try {
-            setIsLoading(true); // Show the loading indicator
+        if (transcriptionGeneratedFor.has(audioid)) return;
     
+        setIsTranscriptionGenerating(true);
+    
+        try {
             const formData = new FormData();
             formData.append('uid', uid);
             formData.append('audioid', audioid);
@@ -599,22 +595,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
             });
     
             const data = await response.json();
+          
+    
+           
             
             if (response.ok) {
-              
-              
+                setTranscriptionGeneratedFor(prev => new Set(prev).add(audioid));
+                await fetchAudioMetadata(uid, audioid); // Reload data from API
             } else {
-                console.error('Conversion failed:', data);
-                Alert.alert('Error', 'Conversion failed. Please try again.');
+                console.error('Transcription generation failed:', await response.text());
             }
         } catch (error) {
-            console.error('API Error:', error);
-            Alert.alert('Error', 'Something went wrong.');
+            console.error('Error generating transcription:', error);
         } finally {
-            setIsLoading(false); // Hide the loading indicator
+            setIsTranscriptionGenerating(false);
         }
     };
-    
     
     
     
@@ -942,7 +938,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                     </Text>
                 </TouchableOpacity>
             </View>
-            {isTranscriptionEmpty && (
+            {isTranscriptionEmpty && !transcriptionGeneratedFor.has(audioid) && !isTranscriptionGenerating &&  (
   
         <TouchableOpacity style={styles.blueButton}    onPress={() => handlePress()}>
               <Text style={styles.convert2}> {duration}</Text>
@@ -951,6 +947,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
                                 
         </TouchableOpacity>
 
+)}
+
+
+{isTranscriptionGenerating && (
+    <Text style={styles.generatingText}>Generating Transcription May take some time...</Text>
 )}
 
             {selectedButton === 'transcription' && (

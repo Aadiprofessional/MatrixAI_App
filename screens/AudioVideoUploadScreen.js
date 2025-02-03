@@ -53,6 +53,7 @@ const AudioVideoUploadScreen = () => {
     const [selectedLanguage, setSelectedLanguage] = useState('en-US');
     const [audioFile, setAudioFile] = useState(null);
     const [uploading, setUploading] = useState(false); // For upload indicator
+   
     const [duration, setDuration] = useState(null);
     const audioRecorderPlayer = new AudioRecorderPlayer();
     const [popupVisible, setPopupVisible] = useState(false);
@@ -215,49 +216,52 @@ const AudioVideoUploadScreen = () => {
     };
 
 
-    const handlePress = async (item, audioid) => {
-        if (audioid) {
-            setIsLoading(true); // Show loading indicator
+    const handlePress = async ({ audioid }) => {  // Destructure audioid
+        setLoading(true);
+        try {
+            console.log('audioid:', audioid, 'uid:', uid);
+            console.log('Types:', typeof audioid, typeof uid); // Should now show 'string' for both
     
-            try {
-                const formData = new FormData();
-                formData.append('uid', uid);
-                formData.append('audioid', audioid);
+            const formData = new FormData();
+            formData.append('uid', String(uid));
+            formData.append('audioid', String(audioid));  // Pass the string directly
     
-                const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
-                    method: 'POST',
-                    body: formData,
+            const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData,
+            });
+    
+            const data = await response.json();
+    
+            if (response.ok && data.message === "Transcription completed and saved") {
+                navigation.navigate('TranslateScreen2', {
+                    uid,
+                    audioid,
+                    transcription: data.transcription,
+                    chunkUrls: data.chunkUrls,
                 });
-    
-                const data = await response.json();
-    
-                if (response.ok && data.message === "Transcription completed and saved") {
-                    navigation.navigate('TranslateScreen2', {
-                        uid,
-                        audioid,
-                        transcription: data.transcription, // Pass transcription if needed
-                        chunkUrls: data.chunkUrls,         // Pass audio chunks if needed
-                    });
-                } else {
-                    console.error('API Error:', data);
-                    alert('Failed to process audio. Please try again.');
-                }
-            } catch (error) {
-                console.error('Network Error:', error);
-                alert('Network error occurred. Please check your connection.');
-            } finally {
-                setIsLoading(false); // Hide loading indicator
+            } else {
+                console.error('API Error:', data);
+                Alert('Failed to process audio. Please try again.');
             }
-        } else {
+        } catch (error) {
+            console.error('Network Error:', error);
+            Alert('Network error occurred. Please check your connection.');
+        } finally {
+            setLoading(false);
+        }
+        setPopupVisible(false);
+    };
+    
+    
+    const handlePress2 = async (item) => {
+       
             navigation.navigate('TranslateScreen2', {
                 uid,
                 audioid: item.audioid, // Use item.audioid if audioid doesn't exist
             });
-        }
-    
-        setPopupVisible(false);
     };
-    
     
 
 
@@ -538,7 +542,7 @@ const AudioVideoUploadScreen = () => {
 
                         <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => handlePress(item)}
+                        onPress={() => handlePress2(item)}
                     >
                          <Text style={styles.convert}>
                             Convert
@@ -675,11 +679,12 @@ const AudioVideoUploadScreen = () => {
             <TouchableOpacity style={styles.floatingButton2} onPress={handleFloatingButtonPress}>
                 <Image source={micIcon2} style={styles.floatingButtonIcon} />
             </TouchableOpacity>
+    
+    
             {popupVisible && uploadData && (
     <View style={styles.popupContainer}>
         <View style={styles.popupContent}>
             <Text style={styles.popupText}>Upload Successful!</Text>
-      
 
             <View style={styles.popupButtons}>
                 <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
@@ -689,17 +694,24 @@ const AudioVideoUploadScreen = () => {
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handlePress({ audioid: uploadData.audioID })}
-
+                    disabled={loading} // Disable button while loading
                 >
-                    <Text style={styles.convert2}> -{uploadData.duration}</Text>
+                    <Text style={styles.convert2}>-{uploadData.duration}</Text>
                     <Image source={coin} style={styles.detailIcon2} />
-                    <Text style={styles.convert}> Convert  </Text>
+
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#0000ff" />  // Loading spinner
+                    ) : (
+                        <Text style={styles.convert}>Convert</Text>        // Convert text when not loading
+                    )}
+
                     <Image source={Translate} style={styles.detailIcon5} />
                 </TouchableOpacity>
             </View>
         </View>
     </View>
 )}
+
 
 
             {/* Edit Modal */}
