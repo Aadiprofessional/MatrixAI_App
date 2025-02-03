@@ -35,6 +35,7 @@ const resizeIcon = require('../assets/cliper.png');
 const helpIcon = require('../assets/threeDot.png');
 const helpIcon2 = require('../assets/mic2.png');
 const Translate = require('../assets/right-up.png');
+const coin = require('../assets/coin.png');
 const micIcon = require('../assets/mic3.png');
 const micIcon2 = require('../assets/Translate.png');
 const clockIcon = require('../assets/clock.png');
@@ -60,6 +61,8 @@ const AudioVideoUploadScreen = () => {
     const [newFileName, setNewFileName] = useState('');
     const [isSharing, setIsSharing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [uploadData, setUploadData] = useState(null);
+
     useFocusEffect(
         React.useCallback(() => {
             loadFiles();
@@ -169,18 +172,16 @@ const AudioVideoUploadScreen = () => {
         }
         setUploading(true); 
     
-        const user = '595dfce5-0898-4364-9046-0aa850190321'; // Sample user ID
+        const user = '595dfce5-0898-4364-9046-0aa850190321';
         const { uri, name } = file;
     
-        // Form data to be sent
         const formData = new FormData();
         formData.append('audio', { uri, type: file.type, name });
         formData.append('uid', user);
         formData.append('duration', duration);
     
-        // Add Authorization header for the API request
         const headers = {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdGdkaGVoeGhnYXJrb252cGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2Njg4MTIsImV4cCI6MjA1MDI0NDgxMn0.mY8nx-lKrNXjJxHU7eEja3-fTSELQotOP4aZbxvmNPY', // Your Bearer token
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         };
     
         try {
@@ -190,9 +191,12 @@ const AudioVideoUploadScreen = () => {
                 body: formData,
             });
     
+            const data = await response.json(); // 👈 Get response data here
+    
             if (response.ok) {
-                setPopupVisible(true); // Show success popup
-                loadFiles(); // Reload files after successful upload
+                setUploadData(data); // 👈 Store response data
+                setPopupVisible(true); // Show popup
+                loadFiles();
             } else {
                 Alert.alert('Error', 'Failed to upload the file');
             }
@@ -200,9 +204,10 @@ const AudioVideoUploadScreen = () => {
             console.error('Error uploading file:', error);
             Alert.alert('Error', 'An error occurred during file upload');
         } finally {
-            setUploading(false); // End upload indicator
+            setUploading(false);
         }
     };
+    
     
 
     const handleClosePopup = () => {
@@ -210,13 +215,50 @@ const AudioVideoUploadScreen = () => {
     };
 
 
-    const handlePress = (item) => {
-        navigation.navigate('TranslateScreen2', {
-            uid,
-            audioid : item.audioid,
-        });
+    const handlePress = async (item, audioid) => {
+        if (audioid) {
+            setIsLoading(true); // Show loading indicator
+    
+            try {
+                const formData = new FormData();
+                formData.append('uid', uid);
+                formData.append('audioid', audioid);
+    
+                const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
+                    method: 'POST',
+                    body: formData,
+                });
+    
+                const data = await response.json();
+    
+                if (response.ok && data.message === "Transcription completed and saved") {
+                    navigation.navigate('TranslateScreen2', {
+                        uid,
+                        audioid,
+                        transcription: data.transcription, // Pass transcription if needed
+                        chunkUrls: data.chunkUrls,         // Pass audio chunks if needed
+                    });
+                } else {
+                    console.error('API Error:', data);
+                    alert('Failed to process audio. Please try again.');
+                }
+            } catch (error) {
+                console.error('Network Error:', error);
+                alert('Network error occurred. Please check your connection.');
+            } finally {
+                setIsLoading(false); // Hide loading indicator
+            }
+        } else {
+            navigation.navigate('TranslateScreen2', {
+                uid,
+                audioid: item.audioid, // Use item.audioid if audioid doesn't exist
+            });
+        }
+    
         setPopupVisible(false);
     };
+    
+    
 
 
     const handleRemoveFile = async (audioid) => {
@@ -633,27 +675,32 @@ const AudioVideoUploadScreen = () => {
             <TouchableOpacity style={styles.floatingButton2} onPress={handleFloatingButtonPress}>
                 <Image source={micIcon2} style={styles.floatingButtonIcon} />
             </TouchableOpacity>
-            {popupVisible && (
-                <View style={styles.popupContainer}>
-                    <View style={styles.popupContent}>
-                        <Text style={styles.popupText}>Upload done</Text>
-                        <View style={styles.popupButtons}>
-                            <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
-                                <Text style={styles.popupButtonText}>Close</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => handlePress}
-                    >
-                         <Text style={styles.convert}>
-                            Convert
-                        </Text>
-                        <Image source={Translate} style={styles.detailIcon5} />
-                    </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            )}
+            {popupVisible && uploadData && (
+    <View style={styles.popupContainer}>
+        <View style={styles.popupContent}>
+            <Text style={styles.popupText}>Upload Successful!</Text>
+      
+
+            <View style={styles.popupButtons}>
+                <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
+                    <Text style={styles.popupButtonText}>Close</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handlePress({ audioid: uploadData.audioID })}
+
+                >
+                    <Text style={styles.convert2}> -{uploadData.duration}</Text>
+                    <Image source={coin} style={styles.detailIcon2} />
+                    <Text style={styles.convert}> Convert  </Text>
+                    <Image source={Translate} style={styles.detailIcon5} />
+                </TouchableOpacity>
+            </View>
+        </View>
+    </View>
+)}
+
 
             {/* Edit Modal */}
             <Modal
@@ -773,7 +820,7 @@ const styles = StyleSheet.create({
     
     uploadingText: {
         marginTop: 10,
-        color: '#fff',
+        color: '#0478F4FF',
         fontSize: 16,
     },
     deleteAllButtonText: {
@@ -819,6 +866,11 @@ marginRight:5,
 fontSize:12,
 color:'#000',
     },
+    convert2:{
+        marginRight:5,
+        fontSize:16,
+        color:'#000',
+            },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
