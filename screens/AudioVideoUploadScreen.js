@@ -23,7 +23,7 @@ import { supabase } from '../supabaseClient';
 import { Picker } from '@react-native-picker/picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Sound from 'react-native-sound';
-
+import Toast from 'react-native-toast-message';
 
 
 
@@ -45,7 +45,7 @@ const AudioVideoUploadScreen = () => {
     const navigation = useNavigation();
     const [files, setFiles] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [loading, setLoading] = useState(false);
+   
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [isFilterMode, setIsFilterMode] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -130,16 +130,16 @@ const AudioVideoUploadScreen = () => {
             const res = await DocumentPicker.pick({
                 type: [DocumentPicker.types.audio],
             });
-
+    
             if (res && res[0]) {
                 setAudioFile(res[0]);
-
+    
                 // Calculate audio duration
                 const uri = res[0].uri;
                 const durationInSeconds = await getAudioDuration(uri);
                 setDuration(durationInSeconds);
-
-                handleUpload(res[0], durationInSeconds); // Directly upload the file
+    
+                setPopupVisible(true); // 👈 Show popup after file selection
             }
         } catch (err) {
             if (DocumentPicker.isCancel(err)) {
@@ -150,28 +150,13 @@ const AudioVideoUploadScreen = () => {
             }
         }
     };
-
-    const getAudioDuration = async (uri) => {
-        return new Promise((resolve, reject) => {
-            const sound = new Sound(uri, '', (error) => {
-                if (error) {
-                    console.error('Error loading audio:', error);
-                    reject('Error loading audio');
-                } else {
-                    const durationInSeconds = sound.getDuration();
-                    sound.release();
-                    resolve(Math.round(durationInSeconds));
-                }
-            });
-        });
-    };
-
+    
     const handleUpload = async (file, duration) => {
         if (!file) {
             Alert.alert('Error', 'No file selected');
             return;
         }
-        setUploading(true); 
+        setUploading(true);
     
         const user = '595dfce5-0898-4364-9046-0aa850190321';
         const { uri, name } = file;
@@ -192,39 +177,53 @@ const AudioVideoUploadScreen = () => {
                 body: formData,
             });
     
-            const data = await response.json(); // 👈 Get response data here
+            const data = await response.json();
     
             if (response.ok) {
-                setUploadData(data); // 👈 Store response data
-                setPopupVisible(true); // Show popup
+                setUploadData(data); // Set uploadData here
                 loadFiles();
+                Toast.show({
+                    type: 'success',
+                    text1: 'Upload Complete',
+                    text2: 'Your file has been uploaded successfully.',
+                });
+    
+                // Stop the upload process and show toast for conversion start
+                setUploading(false); // Stop the upload
+                setPopupVisible(false); 
+                Toast.show({
+                    type: 'info',
+                    text1: 'Conversion Started',
+                    text2: 'Your file is being processed.',
+                });
+    
+                // Call handlePress for backend conversion
+                if (data.audioID) {
+                    handlePress({ audioid: data.audioID });
+                } else {
+                    Alert.alert('Error', 'Upload completed, but audioID is missing.');
+                }
             } else {
                 Alert.alert('Error', 'Failed to upload the file');
+                setUploadData(null); // Reset uploadData on failure
             }
         } catch (error) {
             console.error('Error uploading file:', error);
             Alert.alert('Error', 'An error occurred during file upload');
+            setUploadData(null); // Reset uploadData on error
         } finally {
-            setUploading(false);
+            setUploading(false); // Ensure uploading is stopped
         }
     };
     
-    
-
-    const handleClosePopup = () => {
-        setPopupVisible(false); // Close popup
-    };
-
-
-    const handlePress = async ({ audioid }) => {  // Destructure audioid
-        setLoading(true);
+    const handlePress = async ({ audioid }) => {
         try {
             console.log('audioid:', audioid, 'uid:', uid);
-            console.log('Types:', typeof audioid, typeof uid); // Should now show 'string' for both
+            console.log('Types:', typeof audioid, typeof uid);
     
             const formData = new FormData();
             formData.append('uid', String(uid));
-            formData.append('audioid', String(audioid));  // Pass the string directly
+            formData.append('audioid', String(audioid));
     
             const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
                 method: 'POST',
@@ -248,11 +247,35 @@ const AudioVideoUploadScreen = () => {
         } catch (error) {
             console.error('Network Error:', error);
             Alert('Network error occurred. Please check your connection.');
-        } finally {
-            setLoading(false);
         }
-        setPopupVisible(false);
     };
+    
+    const getAudioDuration = async (uri) => {
+        return new Promise((resolve, reject) => {
+            const sound = new Sound(uri, '', (error) => {
+                if (error) {
+                    console.error('Error loading audio:', error);
+                    reject('Error loading audio');
+                } else {
+                    const durationInSeconds = sound.getDuration();
+                    sound.release();
+                    resolve(Math.round(durationInSeconds));
+                }
+            });
+        });
+    };
+
+  
+    
+    
+    
+
+    const handleClosePopup = () => {
+        setPopupVisible(false); // Close popup
+    };
+
+
+   
     
     
     const handlePress2 = async (item) => {
@@ -681,10 +704,10 @@ const AudioVideoUploadScreen = () => {
             </TouchableOpacity>
     
     
-            {popupVisible && uploadData && (
+            {popupVisible && (
     <View style={styles.popupContainer}>
         <View style={styles.popupContent}>
-            <Text style={styles.popupText}>Upload Successful!</Text>
+            <Text style={styles.popupText}>Pay to Upload</Text>
 
             <View style={styles.popupButtons}>
                 <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
@@ -693,16 +716,18 @@ const AudioVideoUploadScreen = () => {
 
                 <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => handlePress({ audioid: uploadData.audioID })}
-                    disabled={loading} // Disable button while loading
+                    onPress={async () => {
+                        await handleUpload(audioFile, duration); // Only call handleUpload
+                    }}
+                    disabled={uploading}
                 >
-                    <Text style={styles.convert2}>-{uploadData.duration}</Text>
+                    <Text style={styles.convert2}>-{duration}</Text>
                     <Image source={coin} style={styles.detailIcon2} />
 
-                    {loading ? (
-                        <ActivityIndicator size="small" color="#0000ff" />  // Loading spinner
+                    {uploading ? (
+                        <ActivityIndicator size="small" color="#0000ff" />
                     ) : (
-                        <Text style={styles.convert}>Convert</Text>        // Convert text when not loading
+                        <Text style={styles.convert}>Convert</Text>
                     )}
 
                     <Image source={Translate} style={styles.detailIcon5} />
@@ -711,7 +736,6 @@ const AudioVideoUploadScreen = () => {
         </View>
     </View>
 )}
-
 
 
             {/* Edit Modal */}

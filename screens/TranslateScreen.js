@@ -26,6 +26,7 @@ import { svg2png } from 'svg-png-converter';
 import RNFS from 'react-native-fs';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Slider from '@react-native-community/slider'; // Import the Slider component
 
   import { useNavigation } from '@react-navigation/native';
   import Sound from 'react-native-sound';
@@ -437,8 +438,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         if (!text) return [];
         const words = text.split(' ');
         const chunks = [];
-        for (let i = 0; i < words.length; i += 100) {
-            chunks.push(words.slice(i, i + 100).join(' '));
+        for (let i = 0; i < words.length; i += 75) {
+            chunks.push(words.slice(i, i + 75).join(' '));
         }
         return { paragraphs: chunks, words };
     };
@@ -697,6 +698,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
        
                 </>
             )}
+
 {audioUrl && (
     <Animated.View style={[
         styles.audioPlayerContainer,
@@ -737,7 +739,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     </View>
                 </TouchableOpacity>
 
-                {/* Waveform (80% width) */}
+                {/* Slider (80% width) */}
                 <Animated.View style={[
                     styles.waveformBox2,
                     {
@@ -749,42 +751,23 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         height: playerHeight._value - 40,
                         flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center', // Center waveform horizontally
+                        justifyContent: 'center', // Center slider horizontally
                     }]}>
                         {isAudioLoading ? (
                             <View style={styles.loadingContainer}>
-                                <Text style={styles.loadingText}>Loading waveform...</Text>
+                                <Text style={styles.loadingText}>Loading audio...</Text>
                             </View>
                         ) : (
-                            <TouchableWithoutFeedback onPress={(e) => handleWaveformClick(e)}>
-                            <View
-                                style={[styles.waveform, { justifyContent: 'center' }]}
-                                onLayout={(event) => {
-                                    const { width } = event.nativeEvent.layout;
-                                    console.log('Waveform width:', width); // Debugging: Log waveform width
-                                }}
-                                collapsable={false}
-                            >
-                                {/* Waveform bars */}
-                                {waveformHeights.map((height, index) => {
-                                    const progress = audioPosition / audioDuration;
-                                    const isFilled = index / waveformHeights.length < progress; // Determine if the bar should be filled
-                        
-                                    return (
-                                        <View
-                                            key={index}
-                                            style={[
-                                                styles.waveformBar,
-                                                { 
-                                                    height: height,
-                                                    backgroundColor: isFilled ? 'orange' : 'gray' // Change filled color to orange
-                                                }
-                                            ]}
-                                        />
-                                    );
-                                })}
-                            </View>
-                        </TouchableWithoutFeedback>
+                            <Slider
+                                style={{ width: '100%', height: 40 }}
+                                minimumValue={0}
+                                maximumValue={audioDuration}
+                                value={audioPosition}
+                                onValueChange={(value) => seekAudio(value)}
+                                minimumTrackTintColor="orange"
+                                maximumTrackTintColor="gray"
+                                thumbTintColor="orange"
+                            />
                         )}
                     </View>
                 </Animated.View>
@@ -811,7 +794,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 ]
             }
         ]}>
-            {/* Waveform (100% width) */}
+            {/* Slider (100% width) */}
             <Animated.View style={[
                 styles.waveformBox,
                 {
@@ -823,42 +806,23 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     height: playerHeight._value - 40,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center', // Center waveform horizontally
+                    justifyContent: 'center', // Center slider horizontally
                 }]}>
                     {isAudioLoading ? (
                         <View style={styles.loadingContainer}>
-                            <Text style={styles.loadingText}>Loading waveform...</Text>
+                            <Text style={styles.loadingText}>Loading audio...</Text>
                         </View>
                     ) : (
-                      <TouchableWithoutFeedback onPress={(e) => handleWaveformClick(e)}>
-    <View
-        style={[styles.waveform, { justifyContent: 'center' }]}
-        onLayout={(event) => {
-            const { width } = event.nativeEvent.layout;
-            console.log('Waveform width:', width); // Debugging: Log waveform width
-        }}
-        collapsable={false}
-    >
-        {/* Waveform bars */}
-        {waveformHeights.map((height, index) => {
-            const progress = audioPosition / audioDuration;
-            const isFilled = index / waveformHeights.length < progress; // Determine if the bar should be filled
-
-            return (
-                <View
-                    key={index}
-                    style={[
-                        styles.waveformBar,
-                        { 
-                            height: height,
-                            backgroundColor: isFilled ? 'orange' : 'gray' // Change filled color to orange
-                        }
-                    ]}
-                />
-            );
-        })}
-    </View>
-</TouchableWithoutFeedback>
+                        <Slider
+                            style={{ width: '100%', height: 40 }}
+                            minimumValue={0}
+                            maximumValue={audioDuration}
+                            value={audioPosition}
+                            onValueChange={(value) => seekAudio(value)}
+                            minimumTrackTintColor="orange"
+                            maximumTrackTintColor="gray"
+                            thumbTintColor="orange"
+                        />
                     )}
                 </View>
             </Animated.View>
@@ -877,16 +841,15 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     extrapolate: 'clamp'
                 })
             }]}>
-
-<TouchableOpacity onPress={() => setIsRepeatMode(!isRepeatMode)}>
-    <Image
-        source={require('../assets/repeat.png')}
-        style={[
-            styles.navIcon2,
-            { tintColor: isRepeatMode ? 'orange' : 'gray' } // Change color based on state
-        ]}
-    />
-</TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsRepeatMode(!isRepeatMode)}>
+                    <Image
+                        source={require('../assets/repeat.png')}
+                        style={[
+                            styles.navIcon2,
+                            { tintColor: isRepeatMode ? 'orange' : 'gray' } // Change color based on state
+                        ]}
+                    />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => seekAudio(-10)}>
                     <Image
                         source={require('../assets/backward.png')}
@@ -906,14 +869,14 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={togglePlaybackSpeed}>
-    <Image
-        source={require('../assets/2x.png')}
-        style={[
-            styles.navIcon2,
-            { tintColor: is2xSpeed ? 'orange' : 'gray' } // Change color based on state
-        ]}
-    />
-</TouchableOpacity>
+                    <Image
+                        source={require('../assets/2x.png')}
+                        style={[
+                            styles.navIcon2,
+                            { tintColor: is2xSpeed ? 'orange' : 'gray' } // Change color based on state
+                        ]}
+                    />
+                </TouchableOpacity>
             </Animated.View>
         </Animated.View>
     </Animated.View>
@@ -938,19 +901,10 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     </Text>
                 </TouchableOpacity>
             </View>
-            {isTranscriptionEmpty && !transcriptionGeneratedFor.has(audioid) && !isTranscriptionGenerating &&  (
-  
-        <TouchableOpacity style={styles.blueButton}    onPress={() => handlePress()}>
-              <Text style={styles.convert2}> {duration}</Text>
-                                <Image source={coin} style={styles.detailIcon2} />
-                                <Text style={styles.convert}> Convert  </Text>
-                                
-        </TouchableOpacity>
-
-)}
+        
 
 
-{isTranscriptionGenerating && (
+{isTranscriptionEmpty && (
     <Text style={styles.generatingText}>Generating Transcription May take some time...</Text>
 )}
 
@@ -1133,8 +1087,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 style={[styles.centerFloatingButton2]}
             >
                 <Image
-                    source={require('../assets/share.png')}
-                    style={styles.buttonImage3}
+                    source={require('../assets/downloads.png')}
+                    style={styles.buttonImage4}
                 />
             </TouchableOpacity>
             </View>
@@ -1758,10 +1712,17 @@ flexDirection:'row',
         resizeMode: 'contain',
     },
     buttonImage3: {
-        width: 40,
-        height: 40,
+        width: 30,
+        height: 30,
       
         resizeMode: 'contain',
+        tintColor:'#ffffff',
+    },
+    buttonImage4: {
+        width: 30,
+        height: 30,
+      
+        resizeMode: 'cover',
         tintColor:'#ffffff',
     },
     sliderContainer: {
