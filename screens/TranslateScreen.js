@@ -21,6 +21,7 @@ import React, { useEffect, useState, useRef, forwardRef } from 'react';const for
       NativeModules,
   } from 'react-native';
 import { PDFDocument, rgb, PNGImage } from 'react-native-pdf-lib';
+import LottieView from 'lottie-react-native';
 import { Svg, SvgUri } from 'react-native-svg';
 import { svg2png } from 'svg-png-converter';
 import RNFS from 'react-native-fs';
@@ -69,6 +70,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       const [isFullScreen, setIsFullScreen] = useState(false);
       const [showMindMap, setShowMindMap] = useState(false);
       const scrollViewRef = useRef(null);
+      const [isSeeking, setIsSeeking] = useState(false);
+
       const isTranscriptionEmpty = transcription  === '';
       const coin = require('../assets/coin.png');
       const [currentWordIndex, setCurrentWordIndex] = useState({
@@ -459,16 +462,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         setWaveformHeights(heights);
     }, []);
 
-    const handleWaveformClick = (e) => {
-        const { locationX } = e.nativeEvent; // X coordinate of the click
-        const waveformWidth = e.currentTarget.offsetWidth; // Width of the waveform container
-    
-        if (waveformWidth && audioDuration) {
-            const seekTime = (locationX / waveformWidth) * audioDuration; // Calculate seek time
-            audioPlayerRef.current.seek(seekTime); // Seek to the calculated time
-            setAudioPosition(seekTime); // Update the audio position state
-        }
-    };
+
     const onAudioProgress = (progress) => {
         if (!progress || !progress.currentTime || !progress.duration || !paragraphs.length) return;
         
@@ -514,11 +508,13 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             sound.play((success) => {
                 if (success) {
                     setIsAudioPlaying(false);
-                    setAudioPosition(0);
+                    setAudioPosition(audioDuration); // Set to the end of the audio
+                    // This resets the position to the start
                 } else {
                     console.error('Playback failed');
                 }
             });
+            
         }
         setIsAudioPlaying(!isAudioPlaying);
     };
@@ -531,12 +527,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         setAudioPosition(newPosition);
     };
 
-    const handleAudioEnd = () => {
-        if (isRepeatMode) {
-            audioPlayerRef.current.seek(0); // Seek to the start
-            audioPlayerRef.current.play(); // Play again
-        }
-    };
+   
     
  
     useEffect(() => {
@@ -659,6 +650,24 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             alert('No transcription to translate.');
         }
     };
+    useEffect(() => {
+        let interval;
+        if (isAudioPlaying) {
+            interval = setInterval(() => {
+                if (sound && !isSeeking) { // Only update if not seeking
+                    sound.getCurrentTime((seconds) => {
+                        setAudioPosition(seconds);
+                        onAudioProgress({
+                            currentTime: seconds,
+                            duration: audioDuration
+                        });
+                    });
+                }
+            }, 100);
+        }
+        return () => clearInterval(interval);
+    }, [isAudioPlaying, sound, isSeeking]);
+    
     const toggleTranscriptionVisibility = () => {
         setTranscriptionVisible(!isTranscriptionVisible);
     };
@@ -708,6 +717,16 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             borderRadius: playerPadding,
         }
     ]}>
+        {/* Lottie Animation at the top */}
+        {isAudioPlaying && (
+            <LottieView
+                source={require('../assets/star.json')} // Add your Lottie animation JSON here
+                autoPlay
+                loop
+                style={styles.lottieStyle}
+            />
+        )}
+
         {/* Container for inputRange: 120 */}
         <Animated.View style={[
             styles.audioControlsContainer,
@@ -753,22 +772,35 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         alignItems: 'center',
                         justifyContent: 'center', // Center slider horizontally
                     }]}>
-                        {isAudioLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <Text style={styles.loadingText}>Loading audio...</Text>
-                            </View>
-                        ) : (
-                            <Slider
-                                style={{ width: '100%', height: 40 }}
-                                minimumValue={0}
-                                maximumValue={audioDuration}
-                                value={audioPosition}
-                                onValueChange={(value) => seekAudio(value)}
-                                minimumTrackTintColor="orange"
-                                maximumTrackTintColor="gray"
-                                thumbTintColor="orange"
-                            />
-                        )}
+                        {/* Slider with Progress Trail */}
+                        <Slider
+                            style={{ width: '100%', height: 40 }}
+                            minimumValue={0}
+                            maximumValue={audioDuration}
+                            value={audioPosition}
+                            onValueChange={(value) => {
+                                setIsSeeking(true); // Start seeking
+                                if (sound) {
+                                    sound.setCurrentTime(value);
+                                    setAudioPosition(value);
+                                }
+                            }}
+                            onSlidingComplete={() => setIsSeeking(false)} // Done seeking
+                            minimumTrackTintColor="transparent"
+                            maximumTrackTintColor="transparent"
+                            thumbTintColor="orange"
+                            thumbStyle={{ width: 20, height: 20, borderRadius: 10 }}
+                        />
+
+                        {/* Custom Progress Trail (Snake Animation) */}
+                        <Animated.View
+                            style={[
+                                styles.progressTrail,
+                                {
+                                    width: `${(audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                                }
+                            ]}
+                        />
                     </View>
                 </Animated.View>
             </View>
@@ -808,22 +840,33 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     alignItems: 'center',
                     justifyContent: 'center', // Center slider horizontally
                 }]}>
-                    {isAudioLoading ? (
-                        <View style={styles.loadingContainer}>
-                            <Text style={styles.loadingText}>Loading audio...</Text>
-                        </View>
-                    ) : (
-                        <Slider
-                            style={{ width: '100%', height: 40 }}
-                            minimumValue={0}
-                            maximumValue={audioDuration}
-                            value={audioPosition}
-                            onValueChange={(value) => seekAudio(value)}
-                            minimumTrackTintColor="orange"
-                            maximumTrackTintColor="gray"
-                            thumbTintColor="orange"
-                        />
-                    )}
+                    {/* Slider with Progress Trail */}
+                    <Slider
+                        style={{ width: '100%', height: 40 }}
+                        minimumValue={0}
+                        maximumValue={audioDuration}
+                        value={audioPosition}
+                        onValueChange={(value) => {
+                            // Update the audio position without restarting
+                            if (sound) {
+                                sound.setCurrentTime(value);
+                                setAudioPosition(value);
+                            }
+                        }}
+                        minimumTrackTintColor="transparent" // Hide default progress line
+                        maximumTrackTintColor="transparent" // Hide default background line
+                        thumbTintColor="orange"
+                        thumbStyle={{ width: 20, height: 20, borderRadius: 10 }} // Custom thumb
+                    />
+                    {/* Custom Progress Trail (Snake Animation) */}
+                    <Animated.View
+                        style={[
+                            styles.progressTrail,
+                            {
+                                width: `${(audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                            }
+                        ]}
+                    />
                 </View>
             </Animated.View>
 
@@ -881,6 +924,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         </Animated.View>
     </Animated.View>
 )}
+
 
 
 
@@ -1265,6 +1309,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 10,
         minHeight: 80,
+    },
+    progressTrail: {
+        position: 'absolute',
+        left: 0,
+        height: 4,
+        backgroundColor: 'orange', // Color of the progress trail
+        borderRadius: 2, // Rounded corners
+        zIndex: -1, // Place behind the slider thumb
     },
     waveform: {
         flexDirection: 'row',

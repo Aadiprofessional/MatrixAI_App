@@ -149,63 +149,73 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
 
   
   const chartHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    </head>
-    <body>
-      <div id="chart" style="width: 100%; height: 1100%;"></div>
-      <script>
-        const chartDom = document.getElementById('chart');
-        const myChart = echarts.init(chartDom);
-       const colors = ['#5470C6', '#91CC75', '#EE6666', '#FAC858', '#73C0DE', '#3BA272', '#FC8452', '#9A60B4', '#EA7CCC'];
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  </head>
+  <body>
+    <div id="chart" style="width: 100%; height: 900%;"></div>
+    <script>
+      const chartDom = document.getElementById('chart');
+      const myChart = echarts.init(chartDom);
+      const colors = ['#5470C6', '#91CC75', '#EE6666', '#FAC858', '#73C0DE', '#3BA272', '#FC8452', '#9A60B4', '#EA7CCC'];
 
-        function assignColors(node, index = 0) {
-          node.lineStyle = { color: colors[index % colors.length] };
-          if (node.children) {
-            node.children.forEach((child, idx) => assignColors(child, idx));
-          }
-          return node;
+      function assignColors(node, index = 0) {
+        node.lineStyle = { color: colors[index % colors.length] };
+        if (node.children) {
+          node.children.forEach((child, idx) => assignColors(child, idx));
         }
+        return node;
+      }
 
-        const coloredGraphData = ${JSON.stringify(graphData)}.map((node, idx) => assignColors(node, idx));
+      const coloredGraphData = ${JSON.stringify(graphData)}.map((node, idx) => assignColors(node, idx));
 
-        const option = {
-          tooltip: { trigger: 'item', triggerOn: 'mousemove' },
-          series: [{
-            type: 'tree',
-            data: coloredGraphData,
-            top: '5%',
-            left: '20%',
-            bottom: '5%',
-            right: '20%',
-            roam: true,
-            symbolSize: 8,
+      const option = {
+        tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+        series: [{
+          type: 'tree',
+          data: coloredGraphData,
+          top: '5%',
+          left: '20%',
+          bottom: '5%',
+          right: '20%',
+          roam: true,
+          symbolSize: 8,
+          label: {
+            position: 'left',
+            verticalAlign: 'middle',
+            align: 'right',
+            fontSize: 24
+          },
+          leaves: {
             label: {
-              position: 'left',
+              position: 'right',
               verticalAlign: 'middle',
-              align: 'right',
-              fontSize: 24
+              align: 'left',
             },
-            leaves: {
-              label: {
-                position: 'right',
-                verticalAlign: 'middle',
-                align: 'left',
-              },
-            },
-            emphasis: { focus: 'descendant' },
-            expandAndCollapse: true,
-            initialTreeDepth: 3,
-          }],
-        };
-        myChart.setOption(option);
-      </script>
-    </body>
-    </html>
-  `;
+          },
+          emphasis: { focus: 'descendant' },
+          expandAndCollapse: true,
+          initialTreeDepth: 3,
+          force: {
+            repulsion: 400, // Increase this value to push nodes further apart
+            gravity: 0.1,   // Adjust gravity to control how tightly nodes are pulled together
+            edgeLength: 200, // Adjust edge length to control the distance between connected nodes
+            layoutAnimation: true, // Enable layout animation for smoother transitions
+          },
+          // Add vertical spacing between layers
+          layerSpacing: 80, // Increase this value to add more vertical space between layers
+          // Add horizontal spacing between nodes
+          nodeSpacing: 90,  // Increase this value to add more horizontal space between nodes
+        }],
+      };
+      myChart.setOption(option);
+    </script>
+  </body>
+  </html>
+`;
 
   return (
     <View style={styles.container}>
