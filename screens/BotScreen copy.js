@@ -18,7 +18,7 @@ import axios from 'axios';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
-import LiveCamera from '../components/LiveCamera';
+
 
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
@@ -46,24 +46,79 @@ const BotScreen2 = ({ navigation, route }) => {
     }));
   };
 
+  const handleAttach = () => {
+    launchImageLibrary({ noData: true }, async (response) => {
+      if (response.assets) {
+        const { uri } = response.assets[0];
+        const formData = new FormData();
+        formData.append('uid', uid);  // Pass the user ID
+        formData.append('image', {
+          uri,
+          type: 'image/png',  // Adjust the type based on the image format
+          name: 'image.png',
+        });
+  
+        try {
+          setIsLoading(true);
+          const apiResponse = await axios.post(
+            'https://matrix-server-gzqd.vercel.app/understandImage',
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+  
+          const { ocrText, imageUrl } = apiResponse.data;
+  
+          // Clean the bot response text by removing special characters
+          const cleanedText = ocrText.replace(/(\*\*|\#\#)/g, "");
+  
+          // Add the OCR text to the bot's response and image URL to user message
+          setMessages((prev) => [
+            ...prev,
+            { 
+              id: Date.now().toString(), 
+              image: imageUrl,  // Send image URL to the user side
+              sender: 'user' 
+            },
+          ]);
+          // Keep existing DeepSeek functionality for the original user input message
+          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
+  
+          saveChatHistory(imageUrl, 'user'); // Save bot response
+        } catch (error) {
+          console.error('Error attaching image:', error);
+          Alert.alert('Error', 'Failed to send image for processing');
+          setIsLoading(false);
+        } finally {
+    
+        }
+      }
+    });
+  };
+  
+  
+  
   useEffect(() => {
-    if (transcription) {
+    if (transcription && !dataLoaded) {
       setFullTranscription(transcription);
-      
+  
       // Add auto-generated user message requesting summary
       const userMessage = {
         id: Date.now().toString(),
-        text: "Help me generate summary of the given transcription",
+        text: "Help me generate a summary of the given transcription",
         sender: 'user',
-        fullText: transcription
+        fullText: transcription,
       };
       setMessages((prev) => [...prev, userMessage]);
-      
+  
       // Get summary from bot
-      fetchDeepSeekResponse(`Please summarize this text in structured format: ${transcription}`);
+      fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
     }
-  }, [transcription]);
-
+  }, [transcription, dataLoaded]);
+    
   const openai = new OpenAI({
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
@@ -75,9 +130,10 @@ const BotScreen2 = ({ navigation, route }) => {
     content: msg.text
   }));
 
-  const handleCamera = () => {
-    setIsCameraVisible(true);
+  const handleCamera = (navigation) => {
+    navigation.navigate('CameraScreen');
   };
+  
 
  
   const saveChatHistory = async (messageText, sender) => {
@@ -112,20 +168,23 @@ const BotScreen2 = ({ navigation, route }) => {
   const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     const maxRetries = 5;
     const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000);
-    
-    setIsLoading(true); 
+  
+    setIsLoading(true);
     try {
       const response = await openai.chat.completions.create({
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...messageHistory,
-          { role: "user", content: userMessage }
+          { role: "user", content: userMessage },
         ],
         model: "deepseek-chat",
       });
   
-      const botMessage = response.choices[0].message.content.trim();
-      
+      let botMessage = response.choices[0].message.content.trim();
+  
+      // Clean the bot message of any unwanted characters
+      botMessage = botMessage.replace(/(\*\*|\#\#)/g, "");
+  
       setMessages((prev) => [
         ...prev,
         { id: Date.now().toString(), text: botMessage, sender: 'bot' },
@@ -137,6 +196,8 @@ const BotScreen2 = ({ navigation, route }) => {
       setIsLoading(false);
     }
   };
+  
+  
   
   const handleAddImage = () => {
     launchImageLibrary({ noData: true }, (response) => {
@@ -159,55 +220,87 @@ const BotScreen2 = ({ navigation, route }) => {
           chatid: audioid, // Using audioid as chatid
         });
         const history = response.data.messages || [];
-        setMessages((prev) => [...prev, ...history]); // Merge with initial bot message
+    
+        // Update the state with chat history (handling images as well)
+        setMessages((prev) => [...prev, ...history.map(msg => ({
+          ...msg,
+          image: msg.imageUrl || msg.image, // Ensure image URL is assigned
+          text: msg.text.replace(/(\*\*|\#\#)/g, ""), // Clean previous messages as well
+        }))]);
+    
         setDataLoaded(true);
       } catch (error) {
         console.error('Error fetching chat history:', error);
         setDataLoaded(true);
       }
     };
+    
   
     if (audioid) {
       fetchChatHistory();
     }
   }, [audioid]);
   
-
+  
   const renderMessage = ({ item }) => {
     const isBot = item.sender === 'bot';
+    const isUser = item.sender === 'user';
     const isExpanded = expandedMessages[item.id];
+  
+    // Function to detect if the text contains a URL
+    const containsUrl = (text) => {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text && urlRegex.test(text);
+    };
+  
     return (
       <GestureHandlerRootView>
-        <Swipeable
-          overshootRight={false}
-        >
+        <Swipeable overshootRight={false}>
           <Animatable.View
             animation="fadeInUp"
             duration={100}
             style={[
               styles.messageContainer,
-              isBot ? styles.botMessageContainer : styles.userMessageContainer,
+              isBot ? styles.botMessageContainer : isUser ? styles.userMessageContainer : {},
             ]}
           >
-            {item.text && (
+            {/* Text Display (Exclude URLs for User) */}
+            {item.text && (!isUser || (isUser && !containsUrl(item.text))) && (
               <Text style={isBot ? styles.botText : styles.userText}>
                 {isExpanded ? item.text : item.text.slice(0, 100)}
                 {item.text.length > 100 && (
-                  <Text 
+                  <Text
                     style={styles.viewMoreText}
                     onPress={() => toggleMessageExpansion(item.id)}
                   >
-                    {isExpanded ? ' View less' : ' View more'}
+                    {isExpanded ? ' View less' : '... View more'}
                   </Text>
                 )}
               </Text>
             )}
-            {item.image && <Image source={{ uri: item.image }} style={styles.messageImage} />}
+  
+            {/* Show image if the user sends a URL */}
+            {isUser && item.text && containsUrl(item.text) && (
+              <Image source={{ uri: item.text }} style={styles.messageImage} />
+            )}
+  
+            {/* Show image if the user sends an image */}
+            {isUser && item.image && !containsUrl(item.text) && (
+              <Image source={{ uri: item.image }} style={styles.messageImage} />
+            )}
+  
+            {/* Bot's message can have both text and images */}
+            {isBot && item.image && (
+              <Image source={{ uri: item.image }} style={styles.messageImage} />
+            )}
           </Animatable.View>
         </Swipeable>
       </GestureHandlerRootView>
     );
   };
+  
+  
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -269,7 +362,10 @@ const BotScreen2 = ({ navigation, route }) => {
           onSubmitEditing={handleSendMessage}
           multiline
         />
-         <TouchableOpacity onPress={handleCamera} style={styles.sendButton}>
+         <TouchableOpacity onPress={handleAttach} style={styles.sendButton}>
+          <Image source={require('../assets/plus.png')} style={styles.sendIcon} />
+        </TouchableOpacity>
+         <TouchableOpacity  onPress={() => handleCamera(navigation)} style={styles.sendButton}>
           <Image source={require('../assets/camera.png')} style={styles.sendIcon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
@@ -311,14 +407,7 @@ const BotScreen2 = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
             </Modal>
-            <Modal
-        visible={isCameraVisible}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setIsCameraVisible(false)}
-      >
-        <LiveCamera onClose={() => setIsCameraVisible(false)} />
-      </Modal>
+         
 
     </SafeAreaView>
   );
@@ -351,6 +440,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 10,
     marginHorizontal: '5%',
+  },
+  messageImage: {
+    width: 200,  // Adjust width based on your UI design
+    height: 200, // Adjust height as needed
+    borderRadius: 10,
+    marginVertical: 10,
   },
   textInput: {
     flex: 1,

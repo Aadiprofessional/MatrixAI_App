@@ -46,7 +46,6 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-video": "^6.10.0",
-    "react-native-vision-camera": "^4.6.3",
     "react-native-webview": "^13.13.1",
     "uuid": "^11.0.5"
   },
