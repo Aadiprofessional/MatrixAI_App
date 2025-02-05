@@ -39,6 +39,7 @@ import TransactionScreen2 from './screens/coins/TransactionScreen copy.js';
 import TimeScreen from './screens/coins/TimeScreen.js';
 import { CartProvider } from './components/CartContext.js';
 import CartScreen from './screens/CartScreen.js';
+import CameraScreen from './screens/CameraScreen.js';
 
 
 
@@ -131,6 +132,7 @@ const App = () => {
         <Stack.Screen name="TransactionScreen2" component={TransactionScreen2} options={{ headerShown: false }} />
         <Stack.Screen name="TimeScreen" component={TimeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
+        <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
     </Stack.Navigator>
 </NavigationContainer>
 </CartProvider>

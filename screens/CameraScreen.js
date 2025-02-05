@@ -1,24 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { RNCamera } from 'react-native-camera';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
 
 const CameraScreen = ({ navigation }) => {
+  const [hasPermission, setHasPermission] = useState(false);
+  const devices = useCameraDevices();
+  const device = devices.back; // Using back camera
+
+  useEffect(() => {
+    const getPermission = async () => {
+      const permission = await Camera.requestCameraPermission();
+      setHasPermission(permission === 'authorized');
+    };
+
+    getPermission();
+  }, []);
+
+  
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Image source={require('../assets/back.png')} style={styles.backIcon} />
       </TouchableOpacity>
 
-      <RNCamera style={styles.camera} />
+      <Camera style={styles.camera} device={device} isActive={true} />
 
-      <View style={styles.overlay}>
-        <View style={styles.header}>
-          <Text style={styles.time}>6:04</Text>
-          <View style={styles.statusIcons}>
-          
-            <Image source={require('../assets/battery.png')} style={styles.iconSmall} />
-          </View>
-        </View>
+     
 
         <View style={styles.profileSection}>
           <TouchableOpacity style={styles.tab}><Text>Friends</Text></TouchableOpacity>
@@ -37,7 +45,7 @@ const CameraScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+
   );
 };
 
