@@ -19,10 +19,11 @@ import React, { useEffect, useState, useRef, forwardRef } from 'react';const for
       FlatList,
       Animated,
       NativeModules,
+      Dimensions,
   } from 'react-native';
 import { PDFDocument, rgb, PNGImage } from 'react-native-pdf-lib';
 import LottieView from 'lottie-react-native';
-import { Svg, SvgUri } from 'react-native-svg';
+
 import { svg2png } from 'svg-png-converter';
 import RNFS from 'react-native-fs';
 import { Alert } from 'react-native';
@@ -35,7 +36,7 @@ import Slider from '@react-native-community/slider'; // Import the Slider compon
   import ForceDirectedGraph2 from '../components/mindMap2';
   import { Picker } from '@react-native-picker/picker';
   import DropDownPicker from 'react-native-dropdown-picker';
-  
+  import Svg, { Path } from 'react-native-svg';
   const TranslateScreen = ({ route }) => {
     const graphRef = useRef(null);
       const { audioid ,uid} = route.params || {};
@@ -59,7 +60,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       const [isRepeatMode, setIsRepeatMode] = useState(false);
       const [editingStates, setEditingStates] = useState([]);
       const [transcription, setTranscription] = useState([]);
-
+   
+      const [sliderWidth, setSliderWidth] = useState(Dimensions.get('window').width);
       const [isLoading, setIsLoading] = useState(true);
       const [paragraphs, setParagraphs] = useState([]);
       const [audioUrl, setAudioUrl] = useState('');
@@ -604,7 +606,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         }
     };
     
+    const handleValueChange = (value) => {
+        setAudioPosition(value);
+      };
     
+      const handleLayout = (event) => {
+        const { width } = event.nativeEvent.layout;
+        setSliderWidth(width);
+      };
+    
+      // Calculate the position of the custom thumb
+      const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
     
     const handleTranslateParagraph = async (index) => {
         if (!paragraphs[index]) return;
@@ -712,219 +724,227 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     <Animated.View style={[
         styles.audioPlayerContainer,
         {
-            height: playerHeight,
-            padding: playerPadding,
-            borderRadius: playerPadding,
+          height: playerHeight,
+          padding: playerPadding,
+          borderRadius: playerPadding,
         }
-    ]}>
+      ]}>
         {/* Lottie Animation at the top */}
-        {isAudioPlaying && (
-            <LottieView
-                source={require('../assets/star.json')} // Add your Lottie animation JSON here
-                autoPlay
-                loop
-                style={styles.lottieStyle}
-            />
-        )}
-
+  
         {/* Container for inputRange: 120 */}
         <Animated.View style={[
-            styles.audioControlsContainer,
-            {
-                opacity: playerHeight.interpolate({
-                    inputRange: [60, 120],
-                    outputRange: [1, 0], // Visible at 120, hidden at 60
-                    extrapolate: 'clamp'
-                }),
-                transform: [
-                    {
-                        scale: playerHeight.interpolate({
-                            inputRange: [60, 120],
-                            outputRange: [0.8, 1], // Optional: Add a scaling effect
-                            extrapolate: 'clamp'
-                        })
-                    }
-                ]
-            }
+          styles.audioControlsContainer,
+          {
+            opacity: playerHeight.interpolate({
+              inputRange: [60, 120],
+              outputRange: [1, 0], // Visible at 120, hidden at 60
+              extrapolate: 'clamp'
+            }),
+            transform: [
+              {
+                scale: playerHeight.interpolate({
+                  inputRange: [60, 120],
+                  outputRange: [0.8, 1], // Optional: Add a scaling effect
+                  extrapolate: 'clamp'
+                })
+              }
+            ]
+          }
         ]}>
-            <View style={[styles.audioControlsContainer2]}>
-                {/* Play/Pause Button */}
-                <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
-                    <View style={[styles.playButton2]}>
-                        <Image
-                            source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                            style={styles.playIcon2}
-                        />
-                    </View>
-                </TouchableOpacity>
-
-                {/* Slider (80% width) */}
-                <Animated.View style={[
-                    styles.waveformBox2,
-                    {
-                        width: '80%', // Fixed 80% width
-                        height: playerHeight._value - 40,
-                    }
-                ]}>
-                    <View style={[styles.waveformContainer, { 
-                        height: playerHeight._value - 40,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center', // Center slider horizontally
-                    }]}>
-                        {/* Slider with Progress Trail */}
-                        <Slider
-                            style={{ width: '100%', height: 40 }}
-                            minimumValue={0}
-                            maximumValue={audioDuration}
-                            value={audioPosition}
-                            onValueChange={(value) => {
-                                setIsSeeking(true); // Start seeking
-                                if (sound) {
-                                    sound.setCurrentTime(value);
-                                    setAudioPosition(value);
-                                }
-                            }}
-                            onSlidingComplete={() => setIsSeeking(false)} // Done seeking
-                            minimumTrackTintColor="transparent"
-                            maximumTrackTintColor="transparent"
-                            thumbTintColor="orange"
-                            thumbStyle={{ width: 20, height: 20, borderRadius: 10 }}
-                        />
-
-                        {/* Custom Progress Trail (Snake Animation) */}
-                        <Animated.View
-                            style={[
-                                styles.progressTrail,
-                                {
-                                    width: `${(audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
-                                }
-                            ]}
-                        />
-                    </View>
-                </Animated.View>
-            </View>
+          <View style={[styles.audioControlsContainer2]}>
+            {/* Play/Pause Button */}
+            <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
+              <View style={[styles.playButton2]}>
+                <Image
+                  source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                  style={styles.playIcon2}
+                />
+              </View>
+            </TouchableOpacity>
+  
+            {/* Slider (80% width) */}
+            <Animated.View style={[
+              styles.waveformBox2,
+              {
+                width: '80%', // Fixed 80% width
+                height: playerHeight._value - 40,
+              }
+            ]}>
+              <View style={[styles.waveformContainer, {
+                height: playerHeight._value - 40,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center', // Center slider horizontally
+              }]}>
+                {/* Slider with Progress Trail */}
+                <View style={styles.container69} onLayout={handleLayout}>
+                <Slider
+                  style={{ width: '100%', height: 40 }}
+                  minimumValue={0}
+                  maximumValue={audioDuration}
+                  value={audioPosition}
+                  onValueChange={handleValueChange}
+                  minimumTrackTintColor="transparent"
+                  maximumTrackTintColor="transparent"
+                  thumbTintColor="orange" // Hide the default thumb
+                />
+               
+              
+                </View>
+  
+                {/* Lottie Animation for Waves */}
+                <View style={styles.waveAnimationContainer}>
+                  <LottieView
+                    source={require('../assets/waves.json')} // Add your Lottie animation JSON here
+                    autoPlay={isAudioPlaying} // Sync with audio playback
+                    loop
+                    style={styles.waveAnimation}
+                  />
+                  {/* Mask to Reveal Animation */}
+                  <Animated.View
+                    style={[
+                      styles.mask,
+                      {
+                        width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                      }
+                    ]}
+                  />
+                </View>
+              </View>
+            </Animated.View>
+          </View>
         </Animated.View>
-
+  
         {/* Container for inputRange: 60 */}
         <Animated.View style={[
-            styles.audioControlsContainer,
-            {
-                opacity: playerHeight.interpolate({
-                    inputRange: [60, 120],
-                    outputRange: [0, 1], // Visible at 60, hidden at 120
-                    extrapolate: 'clamp'
-                }),
-                transform: [
-                    {
-                        scale: playerHeight.interpolate({
-                            inputRange: [60, 120],
-                            outputRange: [0.8, 1], // Optional: Add a scaling effect
-                            extrapolate: 'clamp'
-                        })
-                    }
-                ]
-            }
-        ]}>
-            {/* Slider (100% width) */}
-            <Animated.View style={[
-                styles.waveformBox,
-                {
-                    width: '100%', // Full width
-                    height: playerHeight._value - 40,
-                }
-            ]}>
-                <View style={[styles.waveformContainer, { 
-                    height: playerHeight._value - 40,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center', // Center slider horizontally
-                }]}>
-                    {/* Slider with Progress Trail */}
-                    <Slider
-                        style={{ width: '100%', height: 40 }}
-                        minimumValue={0}
-                        maximumValue={audioDuration}
-                        value={audioPosition}
-                        onValueChange={(value) => {
-                            // Update the audio position without restarting
-                            if (sound) {
-                                sound.setCurrentTime(value);
-                                setAudioPosition(value);
-                            }
-                        }}
-                        minimumTrackTintColor="transparent" // Hide default progress line
-                        maximumTrackTintColor="transparent" // Hide default background line
-                        thumbTintColor="orange"
-                        thumbStyle={{ width: 20, height: 20, borderRadius: 10 }} // Custom thumb
-                    />
-                    {/* Custom Progress Trail (Snake Animation) */}
-                    <Animated.View
-                        style={[
-                            styles.progressTrail,
-                            {
-                                width: `${(audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
-                            }
-                        ]}
-                    />
-                </View>
-            </Animated.View>
-
-            {/* Time Container */}
-            <View style={styles.timeContainer}>
-                <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
-                <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
-            </View>
-
-            {/* Additional Controls */}
-            <Animated.View style={[styles.controls, {
-                opacity: playerHeight.interpolate({
-                    inputRange: [60, 120],
-                    outputRange: [0, 1], // Visible at 60, hidden at 120
-                    extrapolate: 'clamp'
+          styles.audioControlsContainer,
+          {
+            opacity: playerHeight.interpolate({
+              inputRange: [60, 120],
+              outputRange: [0, 1], // Visible at 60, hidden at 120
+              extrapolate: 'clamp'
+            }),
+            transform: [
+              {
+                scale: playerHeight.interpolate({
+                  inputRange: [60, 120],
+                  outputRange: [0.8, 1], // Optional: Add a scaling effect
+                  extrapolate: 'clamp'
                 })
+              }
+            ]
+          }
+        ]}>
+          {/* Slider (100% width) */}
+          <Animated.View style={[
+            styles.waveformBox,
+            {
+              width: '100%', // Full width
+              height: playerHeight._value - 40,
+            }
+          ]}>
+            <View style={[styles.waveformContainer, {
+              height: playerHeight._value - 40,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center', // Center slider horizontally
             }]}>
-                <TouchableOpacity onPress={() => setIsRepeatMode(!isRepeatMode)}>
-                    <Image
-                        source={require('../assets/repeat.png')}
-                        style={[
-                            styles.navIcon2,
-                            { tintColor: isRepeatMode ? 'orange' : 'gray' } // Change color based on state
-                        ]}
-                    />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => seekAudio(-10)}>
-                    <Image
-                        source={require('../assets/backward.png')}
-                        style={styles.navIcon}
-                    />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={toggleAudioPlayback}>
-                    <Image
-                        source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
-                        style={styles.playIcon}
-                    />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => seekAudio(10)}>
-                    <Image
-                        source={require('../assets/forward.png')}
-                        style={styles.navIcon}
-                    />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={togglePlaybackSpeed}>
-                    <Image
-                        source={require('../assets/2x.png')}
-                        style={[
-                            styles.navIcon2,
-                            { tintColor: is2xSpeed ? 'orange' : 'gray' } // Change color based on state
-                        ]}
-                    />
-                </TouchableOpacity>
-            </Animated.View>
+              {/* Slider with Progress Trail */}
+              <View style={styles.container69} onLayout={handleLayout}>
+                <Slider
+                  style={{ width: '100%', height: 40 }}
+                  minimumValue={0}
+                  maximumValue={audioDuration}
+                  value={audioPosition}
+                  onValueChange={handleValueChange}
+                  minimumTrackTintColor="transparent"
+                  maximumTrackTintColor="transparent"
+                  thumbTintColor="transparent" // Hide the default thumb
+                />
+                {/* Custom Thumb */}
+                <View
+                  style={[
+                    styles.customThumb,
+                    { left: thumbPosition -5 }, // Adjust for thumb width
+                  ]}
+                />
+              </View>
+  
+              {/* Lottie Animation for Waves */}
+              <View style={styles.waveAnimationContainer2}>
+                <LottieView
+                  source={require('../assets/waves.json')} // Add your Lottie animation JSON here
+                  autoPlay={isAudioPlaying} // Sync with audio playback
+                  loop
+                  style={styles.waveAnimation2}
+                />
+                {/* Mask to Reveal Animation */}
+                <Animated.View
+                  style={[
+                    styles.mask2,
+                    {
+                      width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                    }
+                  ]}
+                />
+              </View>
+            </View>
+          </Animated.View>
+  
+          {/* Time Container */}
+          <View style={styles.timeContainer}>
+            <Text style={[styles.timeText, styles.leftTime]}>{formatTime(audioPosition)}</Text>
+            <Text style={[styles.timeText, styles.rightTime]}>{formatTime(audioDuration)}</Text>
+          </View>
+  
+          {/* Additional Controls */}
+          <Animated.View style={[styles.controls, {
+            opacity: playerHeight.interpolate({
+              inputRange: [60, 120],
+              outputRange: [0, 1], // Visible at 60, hidden at 120
+              extrapolate: 'clamp'
+            })
+          }]}>
+            <TouchableOpacity onPress={() => setIsRepeatMode(!isRepeatMode)}>
+              <Image
+                source={require('../assets/repeat.png')}
+                style={[
+                  styles.navIcon2,
+                  { tintColor: isRepeatMode ? 'orange' : 'gray' } // Change color based on state
+                ]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => seekAudio(-10)}>
+              <Image
+                source={require('../assets/backward.png')}
+                style={styles.navIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleAudioPlayback}>
+              <Image
+                source={isAudioPlaying ? require('../assets/pause.png') : require('../assets/play.png')}
+                style={styles.playIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => seekAudio(10)}>
+              <Image
+                source={require('../assets/forward.png')}
+                style={styles.navIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={togglePlaybackSpeed}>
+              <Image
+                source={require('../assets/2x.png')}
+                style={[
+                  styles.navIcon2,
+                  { tintColor: is2xSpeed ? 'orange' : 'gray' } // Change color based on state
+                ]}
+              />
+            </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
-    </Animated.View>
+      </Animated.View>
 )}
-
 
 
 
@@ -1268,6 +1288,69 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
 };
 
 const styles = StyleSheet.create({
+
+    progressTrail: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        backgroundColor: 'white', // This acts as the mask
+        overflow: 'hidden', // Ensures the Lottie animation is clipped
+    },
+    waveAnimation: {
+        width: '100%', // Ensure the Lottie animation covers the entire width
+        height: '100%', // Ensure the Lottie animation covers the entire height
+    },
+    container69: {
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+      },
+     
+    linePointer: {
+        width: 2,
+        height: 40,
+        backgroundColor: 'orange', // Color of the line pointer
+        borderRadius: 0, // No border radius for a straight line
+    },
+    waveAnimationContainer: {
+        position: 'absolute',
+        width: '100%', // Cover the entire waveform box
+        height: '100%',
+        borderRadius:50,
+        overflow: 'hidden', // Clip the animation
+    },
+    waveAnimationContainer2: {
+        position: 'absolute',
+        width: '100%', // Cover the entire waveform box
+        height: '100%',
+        overflow: 'hidden', // Clip the animation
+       
+    },
+    waveAnimation: {
+        width: '200%', // Full width
+        height: '250%', // Full height
+    },
+    waveAnimation2: {
+        width: '150%', // Full width
+        height: '250%', // Full height
+    
+    },
+    mask: {
+        position: 'absolute',
+        right: 0, // Start from the right
+        top: 0,
+        bottom: 0,
+        backgroundColor: '#F2F3F7', // Acts as the mask
+    },
+    mask2: {
+        position: 'absolute',
+        right: 0, // Start from the right
+        top: 0,
+        bottom: 0,
+        backgroundColor: 'white', // Acts as the mask
+    },
     audioPlayerContainer: {
         
         alignItems: 'center',
@@ -1310,14 +1393,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         minHeight: 80,
     },
-    progressTrail: {
-        position: 'absolute',
-        left: 0,
-        height: 4,
-        backgroundColor: 'orange', // Color of the progress trail
-        borderRadius: 2, // Rounded corners
-        zIndex: -1, // Place behind the slider thumb
-    },
+   
     waveform: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -1349,7 +1425,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
     },
-
+    customThumb: {
+        position: 'absolute',
+        width: 5,
+        height: 60,
+        borderRadius:50,
+        backgroundColor: 'orange',
+        borderRadius: 0,
+      
+        zIndex:200,
+      },
     container: {
         flex: 1,
         backgroundColor: '#fff',
