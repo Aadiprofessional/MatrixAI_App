@@ -156,7 +156,7 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
-    <div id="chart" style="width: 100%; height: 900%;"></div>
+    <div id="chart" style="width: 100%; height: 1200%;"></div>
     <script>
       const chartDom = document.getElementById('chart');
       const myChart = echarts.init(chartDom);
@@ -172,11 +172,81 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
 
       const coloredGraphData = ${JSON.stringify(graphData)}.map((node, idx) => assignColors(node, idx));
 
+      // Function to wrap text into multiple lines with dynamic max length
+      function wrapText(text, nodeType) {
+        let maxLineLength = 20; // Default for topic and subtopic nodes
+        if (nodeType === 'description') {
+          maxLineLength = 90; // For description nodes
+        }
+
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        words.forEach(word => {
+          if ((currentLine + word).length > maxLineLength) {
+            lines.push(currentLine.trim());
+            currentLine = word + ' ';
+          } else {
+            currentLine += word + ' ';
+          }
+        });
+
+        if (currentLine.trim()) {
+          lines.push(currentLine.trim());
+        }
+
+        return lines.join('\\n'); // Join lines with newline character
+      }
+
+      // Function to calculate label height based on number of lines
+      function calculateLabelHeight(text, fontSize = 18, lineHeight = 1.5) {
+        const lines = text.split('\\n').length;
+        return lines * fontSize * lineHeight;
+      }
+
+      // Function to calculate dynamic spacing for nodes
+      function calculateDynamicSpacing(data) {
+        const maxLabelHeight = Math.max(
+          ...data.map(node => calculateLabelHeight(node.name))
+        );
+        return {
+          layerSpacing: maxLabelHeight * 3, // Triple the max label height for vertical spacing
+          nodeSpacing: maxLabelHeight * 2, // Double the max label height for horizontal spacing
+        };
+      }
+
+      const { layerSpacing, nodeSpacing } = calculateDynamicSpacing(coloredGraphData);
+
+      // Custom layout algorithm to adjust node positions
+      function adjustNodePositions(data) {
+        const layers = {};
+        data.forEach(node => {
+          if (!layers[node.depth]) {
+            layers[node.depth] = [];
+          }
+          layers[node.depth].push(node);
+        });
+
+        Object.values(layers).forEach(layer => {
+          let yOffset = 0;
+          layer.forEach(node => {
+            const labelHeight = calculateLabelHeight(node.name);
+            node.y = yOffset + labelHeight / 2; // Center the node vertically
+            yOffset += labelHeight + nodeSpacing; // Add spacing between nodes
+          });
+        });
+
+        return data;
+      }
+
+      const adjustedGraphData = adjustNodePositions(coloredGraphData);
+
       const option = {
         tooltip: { trigger: 'item', triggerOn: 'mousemove' },
         series: [{
           type: 'tree',
-          data: coloredGraphData,
+          data: adjustedGraphData,
           top: '5%',
           left: '20%',
           bottom: '5%',
@@ -187,28 +257,48 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
             position: 'left',
             verticalAlign: 'middle',
             align: 'right',
-            fontSize: 18
+            fontSize: 18,
+            formatter: (params) => {
+              // Wrap text into multiple lines based on node type
+              const nodeType = params.data.nodeType || 'topic'; // Default to 'topic'
+              return wrapText(params.name, nodeType);
+            },
+            rich: {
+              a: {
+                lineHeight: 24, // Adjust line height to match font size
+              }
+            }
           },
           leaves: {
             label: {
               position: 'right',
               verticalAlign: 'middle',
               align: 'left',
+              formatter: (params) => {
+                // Wrap text into multiple lines based on node type
+                const nodeType = params.data.nodeType || 'description'; // Default to 'description'
+                return wrapText(params.name, nodeType);
+              },
+              rich: {
+                a: {
+                  lineHeight: 24, // Adjust line height to match font size
+                }
+              }
             },
           },
           emphasis: { focus: 'descendant' },
           expandAndCollapse: true,
           initialTreeDepth: 3,
           force: {
-            repulsion: 200, // Increase this value to push nodes further apart
+            repulsion: 1000, // Significantly increase repulsion to push nodes further apart
             gravity: 0.1,   // Adjust gravity to control how tightly nodes are pulled together
-            edgeLength: 100, // Adjust edge length to control the distance between connected nodes
+            edgeLength: 300, // Increase edge length to control the distance between connected nodes
             layoutAnimation: true, // Enable layout animation for smoother transitions
           },
-          // Add vertical spacing between layers
-          layerSpacing: 40, // Increase this value to add more vertical space between layers
-          // Add horizontal spacing between nodes
-          nodeSpacing: 20,  // Increase this value to add more horizontal space between nodes
+          // Add dynamic vertical spacing between layers
+          layerSpacing: layerSpacing, // Dynamic vertical spacing
+          // Add dynamic horizontal spacing between nodes
+          nodeSpacing: nodeSpacing,  // Dynamic horizontal spacing
         }],
       };
       myChart.setOption(option);
