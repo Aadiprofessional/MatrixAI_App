@@ -116,11 +116,11 @@ const HomeScreen = ({ navigation }) => {
         </View>
         <View style={styles.featureRow}>
           <FeatureCard
-            title="Speech to Music"
-            description="Convert your Speech into stunning Music."
+            title="Remove Background"
+            description="Remove Background from you Images."
             iconSource={require('../assets/card/music.png')}
             navigation={navigation}
-            targetScreen="WaveformTest"
+            targetScreen="RemoveBackground"
           />
           <FeatureCard
             title="Speech to Presentation"

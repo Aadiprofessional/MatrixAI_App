@@ -9,6 +9,7 @@ import {
   Modal,
   Animated,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -141,11 +142,11 @@ const CreateImagesScreen = ({ route, navigation }) => {
             <Text style={styles.tryAgainText}>Try Again</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.generateButton]}
-            onPress={() => console.log("Image Selected:", selectedImage)}
-          >
-            <Text style={styles.generateText}>OK</Text>
-          </TouchableOpacity>
+  style={[styles.generateButton]}
+  onPress={() => Linking.openURL(selectedImage)}
+>
+  <Text style={styles.generateText}>OK</Text>
+</TouchableOpacity>
         </View>
       )}
 

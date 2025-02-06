@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { Linking } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -115,11 +116,11 @@ const CreateImagesScreen2 = ({ route, navigation }) => {
             <Text style={styles.tryAgainText}>Try Again</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.generateButton]}
-            onPress={() => console.log("Image Selected:", imageUrl)}
-          >
-            <Text style={styles.generateText}>OK</Text>
-          </TouchableOpacity>
+  style={[styles.generateButton]}
+  onPress={() => Linking.openURL(imageUrl)}
+>
+  <Text style={styles.generateText}>OK</Text>
+</TouchableOpacity>
         </View>
       )}
 

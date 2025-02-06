@@ -26,7 +26,7 @@ import ImageSelectScreen from './screens/ImageSelectScreen.js';
 import CreateVideoScreen from './screens/createVideoScreen.js';
 import PPTGenerateScreen from './screens/PPTGenerateScreen.js';
 import CreatePPTScreen from './screens/createPPTScreen.js';
-import WaveformTestScreen from './screens/WaveformTestScreen';
+
 import ProductDetailScreen from './screens/ProductDetailScreen';
 import FillInformationScreen from './screens/FillInformationScreen';
 import SuccessScreen from './screens/successScreen';
@@ -40,6 +40,7 @@ import TimeScreen from './screens/coins/TimeScreen.js';
 import { CartProvider } from './components/CartContext.js';
 import CartScreen from './screens/CartScreen.js';
 import CameraScreen from './screens/CameraScreen.js';
+import RemoveBackground from './screens/RemoveBackGround.js';
 
 
 
@@ -121,7 +122,6 @@ const App = () => {
         <Stack.Screen name="CreateVideoScreen" component={CreateVideoScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PPTGenerateScreen" component={PPTGenerateScreen} options={{ headerShown: false }} />
         <Stack.Screen name="CreatePPTScreen" component={CreatePPTScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="WaveformTest" component={WaveformTestScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen}options={{ headerShown: false }} />
         <Stack.Screen name="FillInformationScreen" component={FillInformationScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
@@ -133,6 +133,7 @@ const App = () => {
         <Stack.Screen name="TimeScreen" component={TimeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
         <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
+        <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
     </Stack.Navigator>
 </NavigationContainer>
 </CartProvider>
