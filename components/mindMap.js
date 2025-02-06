@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import OpenAI from 'openai';
 import { WebView } from 'react-native-webview';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
-
+import Share from 'react-native-share';
+import ViewShot from 'react-native-view-shot';
 const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   const [graphData, setGraphData] = useState(null);
+  const viewShotRef = useRef(null);
+  const [loading, setLoading] = useState(false);
   const openai = new OpenAI({
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
@@ -132,7 +136,10 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
     }
   };
 
- 
+  useEffect(() => {
+    console.log('ViewShot Ref:', viewShotRef.current); // Should not be null
+  }, []);
+  
 
   useEffect(() => {
     if (xmlData) parseXMLData(xmlData);
@@ -306,23 +313,122 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   </body>
   </html>
 `;
+const requestStoragePermission = async () => {
+  if (Platform.OS === 'android') {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        {
+          title: 'Storage Permission Required',
+          message: 'This app needs access to your storage to download PDFs.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  }
+  return true;
+};
+
+const downloadPDF = async () => {
+  const hasPermission = await requestStoragePermission();
+  if (!hasPermission) {
+    console.warn('Storage permission not granted');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    if (!viewShotRef.current) {
+      console.error("ViewShot reference is null, retrying...");
+      setLoading(false);
+      return;
+    }
+
+    setTimeout(async () => {
+      const uri = await viewShotRef.current.capture();
+      console.log('Captured Image URI:', uri);
+
+      if (!uri) {
+        console.error("Captured URI is empty.");
+        setLoading(false);
+        return;
+      }
+
+      const pdfOptions = {
+        html: `<html><body><img src="${uri}" style="width: 100%;" /></body></html>`,
+        fileName: 'graph_visualization',
+        directory: 'Documents',
+      };
+
+      const file = await RNHTMLtoPDF.convert(pdfOptions);
+      console.log('PDF saved to:', file.filePath);
+
+      if (file.filePath) {
+        await Share.open({
+          title: 'Download Graph PDF',
+          url: `file://${file.filePath}`,
+          type: 'application/pdf',
+        });
+      }
+    }, 3000); // Delay capture to allow WebView to render
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
 
   return (
     <View style={styles.container}>
+    {/* Wrap WebView in ViewShot to ensure capturing works */}
+    <ViewShot ref={(ref) => (viewShotRef.current = ref)} options={{ format: 'jpg', quality: 1.0 }}>
+
       <WebView
         originWhitelist={['*']}
         source={{ html: chartHtml }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        style={{ flex: 1 }}
+        style={{ height: 600, width: '100%' }}
       />
-    </View>
+    </ViewShot>
+    <WebView
+        originWhitelist={['*']}
+        source={{ html: chartHtml }}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        style={{ height: 600, width: '100%' }}
+      />
+
+    <TouchableOpacity style={styles.downloadButton} onPress={downloadPDF} disabled={loading}>
+      {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Download PDF</Text>}
+    </TouchableOpacity>
+  </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  downloadButton: {
+    backgroundColor: '#007bff',
+    padding: 12,
+    margin: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
 
 export const getSvgData = () => {

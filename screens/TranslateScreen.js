@@ -127,7 +127,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
           setShowDropdown(false); // Close dropdown after selection
       };
   
-  console.log(XMLData);
+
   
       const isMounted = useRef(true);
   
@@ -304,7 +304,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             // Create URL with enhanced error handling and fallbacks
             let combinedUrl;
             try {
-                console.log('Creating URL for Blob');
+              
                 
                 // Check memory using React Native's Memory module
                 const memoryInfo = await NativeModules.Memory.getMemoryInfo();
@@ -338,18 +338,14 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     }
                 });
                 
-                console.log('Created URL:', combinedUrl);
+            
                 return {
                     type: 'blob',
                     url: combinedUrl
                 };
                 
             } catch (error) {
-                console.error('Error creating object URL:', {
-                    error: error.message,
-                    blobSize: combinedBlob.size,
-                    blobType: combinedBlob.type
-                });
+              
                 
                 // Clean up the blob if URL creation failed
                 if (combinedBlob) {
@@ -982,7 +978,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     }}
                     scrollEventThrottle={16}
                 >
-                    {console.log('ScrollY:', scrollY._value)}
+                    
                     {paragraphs.map((para, index) => (
                         <View key={index} style={[
                             styles.paragraphContainer,
