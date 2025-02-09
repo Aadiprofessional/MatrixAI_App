@@ -10,3 +10,21 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false, // Disable URL session detection for mobile apps
   },
 });
+
+export const getSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log("Current session:", session); // Log current session
+  return session;
+};
+
+// You can listen for authentication state changes
+export const authListener = () => {
+  return supabase.auth.onAuthStateChange((event, session) => {
+    console.log("Auth state change event:", event, "Session:", session);
+    if (session?.user) {
+      console.log("User is logged in:", session.user);
+    } else {
+      console.log("User is logged out.");
+    }
+  });
+};

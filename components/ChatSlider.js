@@ -7,8 +7,9 @@ import {
     TextInput,
     Image,
     FlatList,
+    Modal,
 } from 'react-native';
-import Modal from 'react-native-modal';
+
 import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
 

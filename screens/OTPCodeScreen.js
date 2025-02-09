@@ -15,7 +15,7 @@ import {
 const { width } = Dimensions.get('window');
 
 const OTPCodeScreen = ({ navigation, route }) => {
-    const { email, name, age, gender, password } = route.params || {};
+    const { phone, name, age, gender, password } = route.params || {};
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [activeIndex, setActiveIndex] = useState(0);
     const [error, setError] = useState(false);
@@ -43,7 +43,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
 
     // Handle Verify OTP Button
     const handleVerify = async () => {
-        const enteredOtp = otp.join('');
+        const enteredOtp = otp.join('');  // Join the OTP digits into a string
         if (enteredOtp.trim().length === 6) {
             try {
                 const response = await fetch('https://matrix-server-gzqd.vercel.app/saveUserData', {
@@ -52,12 +52,11 @@ const OTPCodeScreen = ({ navigation, route }) => {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        email,
+                        phone,
                         name,
-                        age,
+                        age: parseInt(age, 10), // Ensure age is passed as an integer
                         gender,
                         otp: enteredOtp,
-                        password,
                     }),
                 });
     
@@ -67,10 +66,10 @@ const OTPCodeScreen = ({ navigation, route }) => {
                     setError(false);
                     // Save login status in AsyncStorage
                     await AsyncStorage.setItem('userLoggedIn', 'true');
-                    navigation.navigate('Main'); // Navigate to Home Screen
+                    navigation.navigate('Main'); // Navigate to Main Screen after successful login/registration
                 } else {
                     setError(true);
-                    alert(result.message || 'Verification failed. Please try again.');
+                   
                 }
             } catch (error) {
                 setError(true);
@@ -78,8 +77,10 @@ const OTPCodeScreen = ({ navigation, route }) => {
             }
         } else {
             setError(true);
+            alert('Please enter a valid OTP');
         }
     };
+    
 
     // Handle Resend
     const handleResendCode = () => {

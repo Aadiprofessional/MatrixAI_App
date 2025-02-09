@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = ({ navigation }) => {
 
@@ -13,18 +14,32 @@ const ProfileScreen = ({ navigation }) => {
         navigation.navigate('TimeScreen'); 
       };
     
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-         
-        },
-      },
-    ]);
-  };
+      const handleLogout = () => {
+        Alert.alert('Logout', 'Are you sure you want to logout?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // Remove user login status from AsyncStorage
+                await AsyncStorage.removeItem('userLoggedIn');
+                
+                // Optionally, reset any other stored user data or tokens if needed
+      
+                // Navigate back to the login screen
+                navigation.navigate('Login'); // Replace with your login screen's name
+                
+                console.log('User logged out successfully');
+              } catch (error) {
+                console.error('Error logging out:', error);
+                alert('Something went wrong while logging out. Please try again.');
+              }
+            },
+          },
+        ]);
+      };
+      
 
   const MenuItem = ({ iconName, label, onPress }) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>

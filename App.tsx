@@ -134,6 +134,7 @@ const App = () => {
         <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
         <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
         <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
+      
     </Stack.Navigator>
 </NavigationContainer>
 </CartProvider>

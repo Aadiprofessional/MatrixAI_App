@@ -4,38 +4,42 @@ import { useRoute } from '@react-navigation/native';
 
 const SignUpDetailsScreen = ({ navigation }) => {
     const route = useRoute();
-    const { email = '', disableEmailInput = false } = route.params || {};
+    const { phone = '', disableEmailInput = false } = route.params || {};
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
     const [age, setAge] = useState('');
     const [gender, setGender] = useState('Male');
     const [alternateNumber, setAlternateNumber] = useState('');
-    const [inputEmail, setInputEmail] = useState(email);
+    const [inputEmail, setInputEmail] = useState(phone);
     const [password, setPassword] = useState('');
 
     const handleLogin = async () => {
-        if (inputEmail.trim().length > 0 && inputEmail.includes('@')) {
+        const phoneRegex = /^\+(\d{1,3})\d{6,14}$/; // Validates phone numbers like +91xxxxxxxxxx or +1xxxxxxxxxx
+    
+        if (phoneRegex.test(inputEmail.trim())) {  // Check if input matches phone number format
             setLoading(true);
             try {
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/sendOtpForSave', {
+                // Make sure the URL is correct for your backend
+                const response = await fetch('https://matrix-server-gzqd.vercel.app/sendOtpWithoutCheck', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ email: inputEmail }),
+                    body: JSON.stringify({ phone: inputEmail }), // Send the phone number
                 });
-
+    
                 const result = await response.json();
                 setLoading(false);
-
+    
                 if (response.ok) {
+                    // Navigate to the OTP code screen after OTP is sent successfully
                     navigation.navigate('OTPCode', {
-                        email: inputEmail,
+                        phone: inputEmail,
                         disableEmailInput: true,
                         name,
                         age,
                         gender,
-                        password
+                        password,
                     });
                 } else {
                     alert(result.message || 'Failed to send OTP. Please try again.');
@@ -45,9 +49,10 @@ const SignUpDetailsScreen = ({ navigation }) => {
                 alert('An error occurred. Please try again.');
             }
         } else {
-            alert('Please enter a valid email address!');
+            alert('Please enter a valid phone number starting with +1 or +91!');
         }
     };
+    
 
     return (
         <View style={styles.container}>
@@ -59,7 +64,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             {/* Header */}
-            <Text style={styles.headerText}>Email not registered.{"\n"}Please provide details.</Text>
+            <Text style={styles.headerText}>Phone Number not registered.{"\n"}Please provide details.</Text>
 
             {/* Input Fields */}
             <TextInput
@@ -102,9 +107,9 @@ const SignUpDetailsScreen = ({ navigation }) => {
                     styles.input,
                     disableEmailInput && styles.disabledInput,
                 ]}
-                placeholder="Email Address"
+                placeholder="Phone Number"
                 placeholderTextColor="#aaa"
-                keyboardType="email-address"
+                keyboardType="phone-pad"
                 value={inputEmail}
                 onChangeText={setInputEmail}
                 editable={!disableEmailInput}

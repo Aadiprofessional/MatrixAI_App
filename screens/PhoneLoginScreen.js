@@ -6,58 +6,61 @@ import {
 const { width } = Dimensions.get('window');
 
 const EmailLoginScreen = ({ navigation }) => {
-    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false); // State to manage loading
 
     const handleLogin = async () => {
-        if (email.trim() === '') {
-            alert('Please enter a valid email!');
+        if (phone.trim() === '') {
+            alert('Please enter a valid phone number!');
             return;
         }
-
+    
         setLoading(true);
-
+    
         try {
-            // API call to send OTP to the email
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendEmailOtp', {
+            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendPhoneOtp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ phone }), // Send phone number in the request body
             });
-
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
             const data = await response.json();
-
-            if (response.ok) {
-                // Check if the response indicates success
-              if (data.error === 'User not registered') {
-                    // If the user is not registered, navigate to the SignUpDetails screen
+            console.log('API Response:', data);  // For debugging
+    
+            if (data.error) {
+                // If the error message is specific (like 'User not registered')
+                if (data.error === 'User not registered') {
                     navigation.navigate('SignUpDetails', {
-                        email: email, // Pass email to SignUpDetails screen
-                        disableEmailInput: true, // Disable email input on SignUpDetails screen
+                        phone: phone,
+                        disableEmailInput: true,
                     });
                 } else {
-                    
-                        // If OTP is successfully sent, navigate to the OTPCode screen
-                        navigation.navigate('OTPCode2', { email: email });
-                    
+                    alert(data.error); // Show the error message from the backend
                 }
             } else {
-                // Handle any non-200 responses
-                alert(`Error: ${data.message || 'Something went wrong'}`);
+                // If OTP is successfully sent, navigate to the OTPCode screen
+                navigation.navigate('OTPCode2', { phone: phone });
             }
         } catch (error) {
-            console.log('Error sending OTP:', error);
-            alert('Error sending OTP. Please try again.');
+            console.error('Error sending OTP:', error);
+            alert(error.message || 'Error sending OTP. Please try again.');
         } finally {
             setLoading(false);
         }
     };
+    
+    
+    
 
     const handleSignUp = () => {
         navigation.navigate('SignUpDetails', {
-            email: '', // No predefined email address
+            phone: '', // No predefined email address
             disableEmailInput: false, // Allow email input on SignUpDetails screen
         });
     };
@@ -78,11 +81,11 @@ const EmailLoginScreen = ({ navigation }) => {
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Enter Email"
+                    placeholder="Enter Phone"
                     placeholderTextColor="#aaa"
                     keyboardType="email-address"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={phone}
+                    onChangeText={setPhone}
                 />
             </View>
 

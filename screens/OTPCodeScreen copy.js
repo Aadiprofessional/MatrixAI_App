@@ -51,13 +51,13 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
             console.log('OTP entered:', enteredOtp); // Log OTP entered
             try {
                 setLoading(true);
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyEmailOtp', {
+                const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyPhoneOtp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        email: email, // Use the email from params
+                        phone: phone, // Use the email from params
                         otp: enteredOtp,
                     }),
                 });

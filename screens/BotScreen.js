@@ -8,16 +8,16 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  Alert,
+
 
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
-import { launchImageLibrary } from 'react-native-image-picker';
+
 import axios from 'axios';
-import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+
 import OpenAI from 'openai';
-import ForceDirectedGraph2 from '../components/mindMap2';
+
 
 const BotScreen = ({ navigation, route }) => {
   const { chatName, chatDescription, chatImage,chatid} = route.params;
