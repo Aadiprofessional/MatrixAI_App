@@ -16,7 +16,7 @@ import axios from "axios";
 const { width } = Dimensions.get("window");
 
 const CreatePPTScreen = ({ route, navigation }) => {
-  const { message } = route.params; // Extract text from params
+  const { message ,number} = route.params; // Extract text from params
   const [pptUrl, setPptUrl] = useState(null); // Store the downloaded PPT URL
   const [localFilePath, setLocalFilePath] = useState(null); // Store local file path
   const [loading, setLoading] = useState(true); // Track loading state
@@ -29,15 +29,37 @@ const CreatePPTScreen = ({ route, navigation }) => {
   };
   const generatePPT = async () => {
     try {
-      const response = await axios.post('https://matrix-server-gzqd.vercel.app/generate-ppt', {
-        query: message
-      });
+      setLoading(true);
+      
+      // Extract "number" from route params
+
+      
+      if (!number) {
+        throw new Error("Number parameter is missing");
+      }
+  
+      const response = await axios.post(
+        'https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/generatePPT',
+        {
+          query: message,  
+          number: number  // Use number from params
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          }
+        }
+      );
       
       const { presentationUrl } = response.data;
       
-      // Download the PPT file
+      if (!presentationUrl) {
+        throw new Error("No PPT URL received");
+      }
+  
+      // Download the PPT file locally
       const filePath = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/presentation.pptx`;
-      
+  
       await ReactNativeBlobUtil.config({
         fileCache: true,
         path: filePath
@@ -47,10 +69,11 @@ const CreatePPTScreen = ({ route, navigation }) => {
       setPptUrl(presentationUrl);
       setLoading(false);
     } catch (error) {
-      console.error('Error generating PPT:', error);
+      console.error("Error generating PPT:", error);
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     generatePPT();

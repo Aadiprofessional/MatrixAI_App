@@ -118,7 +118,7 @@ const HomeScreen = ({ navigation }) => {
           <FeatureCard
             title="Remove Background"
             description="Remove Background from you Images."
-            iconSource={require('../assets/card/music.png')}
+            iconSource={require('../assets/card/image.png')}
             navigation={navigation}
             targetScreen="RemoveBackground"
           />
