@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -7,76 +8,77 @@ import {
   Dimensions,
   ActivityIndicator,
   Animated,
+  Linking,
 } from "react-native";
-import { WebView } from 'react-native-webview';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import PDFView from 'react-native-pdf';
+import PPTViewer from "../components/PPTViewer";
 
 const { width } = Dimensions.get("window");
 
 const CreatePPTScreen = ({ route, navigation }) => {
-  const { message ,number} = route.params; // Extract text from params
+  const { message, number } = route.params; // Extract text from params
   const [pptUrl, setPptUrl] = useState(null); // Store the downloaded PPT URL
-  const [localFilePath, setLocalFilePath] = useState(null); // Store local file path
   const [loading, setLoading] = useState(true); // Track loading state
   const shimmerTranslateX = new Animated.Value(-200); // For shimmer animation
+  const [presentationUrl, setPresentation] = useState('');
 
   const handleTryAgain = () => {
     setLoading(true);
-    setImageUrl(null);
-    generatePPT();
+    setPptUrl(null); // Clear previous PPT URL
+    generatePPT(); // Re-trigger PPT generation
   };
+
   const generatePPT = async () => {
     try {
+      console.log("Starting PPT generation...");
       setLoading(true);
-      
-      // Extract "number" from route params
 
-      
       if (!number) {
         throw new Error("Number parameter is missing");
       }
-  
+
+      console.log("Making API request...");
       const response = await axios.post(
-        'https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/generatePPT',
+        "https://matrixai.deno.dev",
         {
-          query: message,  
-          number: number  // Use number from params
+          query: message,
+          number: number,
         },
         {
           headers: {
             "Content-Type": "application/json",
-          }
+          },
         }
       );
-      
+
+      console.log("API response received:", response);
+
       const { presentationUrl } = response.data;
-      
+
       if (!presentationUrl) {
         throw new Error("No PPT URL received");
       }
-  
-      // Download the PPT file locally
-      const filePath = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/presentation.pptx`;
-  
-      await ReactNativeBlobUtil.config({
+
+      console.log("Generated PPT URL:", presentationUrl); // For debugging
+
+      // Download the PPT file and set the local file path for PDFView
+      const localFilePath = await ReactNativeBlobUtil.config({
         fileCache: true,
-        path: filePath
       }).fetch('GET', presentationUrl);
-      
-      setLocalFilePath(filePath);
-      setPptUrl(presentationUrl);
+
+      setPptUrl(localFilePath.path()); // Set the local file path for rendering
+      setPresentation (presentationUrl)
       setLoading(false);
     } catch (error) {
       console.error("Error generating PPT:", error);
+
       setLoading(false);
     }
   };
-  
 
   useEffect(() => {
-    generatePPT();
+    generatePPT(); // Run once when the component is mounted
     Animated.loop(
       Animated.timing(shimmerTranslateX, {
         toValue: 200,
@@ -84,7 +86,7 @@ const CreatePPTScreen = ({ route, navigation }) => {
         useNativeDriver: true,
       })
     ).start();
-  }, [shimmerTranslateX, message]);
+  }, []); // Empty dependency array ensures this runs only once
 
   return (
     <View style={styles.container}>
@@ -98,8 +100,8 @@ const CreatePPTScreen = ({ route, navigation }) => {
         {loading ? "Generating PPT" : "PPT Generated"}
       </Text>
       <Text style={styles.subtext2}>
-  {message.length > 200 ? `${message.substring(0, 200)}...` : message}
-</Text>
+        {message.length > 200 ? `${message.substring(0, 200)}...` : message}
+      </Text>
       {loading && (
         <Text style={styles.subtext}>
           Please don’t turn off your phone or leave this screen while the create
@@ -109,28 +111,16 @@ const CreatePPTScreen = ({ route, navigation }) => {
 
       <View style={styles.imageContainer}>
         {loading ? (
-            <View style={styles.imageSkeleton}>
-                         <Animated.View
-                                         style={[
-                                           styles.shimmer,
-                                           { transform: [{ translateX: shimmerTranslateX }] },
-                                         ]}
-                                       />
-                        </View>
-                        
+          <View style={styles.imageSkeleton}>
+            <Animated.View
+              style={[
+                styles.shimmer,
+                { transform: [{ translateX: shimmerTranslateX }] },
+              ]}
+            />
+          </View>
         ) : (
-          <WebView
-            source={{ uri: `https://docs.google.com/gview?embedded=true&url=${pptUrl}` }}
-            style={styles.generatedImage}
-            startInLoadingState={true}
-            renderLoading={() => (
-              <ActivityIndicator
-                color='black'
-                size='large'
-                style={styles.flexCenter}
-              />
-            )}
-          />
+          <PPTViewer pptUrl={presentationUrl} />
         )}
       </View>
 
@@ -141,9 +131,9 @@ const CreatePPTScreen = ({ route, navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.generateButton]}
-            onPress={async () => {
-              if (localFilePath) {
-                ReactNativeBlobUtil.android.actionViewIntent(localFilePath, 'application/vnd.ms-powerpoint');
+            onPress={() => {
+              if (presentationUrl) {
+                Linking.openURL(presentationUrl); // Open PPT in browser or another app
               }
             }}
           >
@@ -214,21 +204,9 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 8,
   },
-  flexCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   buttonsContainer: {
     flexDirection: "row",
     marginTop: 20,
-  },
-  imageSkeleton: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#e0e0e0",
-    overflow: "hidden",
-    borderRadius: 4,
   },
   tryAgainButton: {
     backgroundColor: "#E0E0E0",

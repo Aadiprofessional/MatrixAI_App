@@ -49,7 +49,13 @@ const FloatingButton = () => {
       </TouchableOpacity>
 
       {/* ChatSlider Component */}
-      <ChatSlider isVisible={isSliderVisible} toggleModal={toggleSlider} />
+      <Animatable.View
+        animation={isSliderVisible ? 'slideInUp' : 'fadeOutDown'}
+        duration={500}
+        style={styles.chatSliderContainer}
+      >
+        <ChatSlider isVisible={isSliderVisible} setIsVisible={setIsSliderVisible} />
+      </Animatable.View>
     </View>
   );
 };
@@ -118,6 +124,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: 'bold',
+  },
+  chatSliderContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
   },
 });
 

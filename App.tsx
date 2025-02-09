@@ -41,6 +41,7 @@ import { CartProvider } from './components/CartContext.js';
 import CartScreen from './screens/CartScreen.js';
 import CameraScreen from './screens/CameraScreen.js';
 import RemoveBackground from './screens/RemoveBackGround.js';
+import { ModalProvider } from './components/ModalContext.js';
 
 
 
@@ -80,6 +81,7 @@ const App = () => {
 
     return (
         <CartProvider>
+             <ModalProvider>
         <NavigationContainer>
     <Stack.Navigator>
         {/* Onboarding Screen */}
@@ -137,6 +139,7 @@ const App = () => {
       
     </Stack.Navigator>
 </NavigationContainer>
+</ModalProvider>
 </CartProvider>
 
     );

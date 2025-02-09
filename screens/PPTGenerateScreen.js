@@ -26,10 +26,16 @@ const PPTGenerateScreen = () => {
     navigation.navigate('CreatePPTScreen', { message: transcription, number: selectedNumber });
   };
   const backgrounds = {
-    1: require('../assets/bg/bg1.jpg'),
+    1: require('../assets/bg/bg3.jpg'),
     2: require('../assets/bg/bg2.jpg'),
-    3: require('../assets/bg/bg3.jpg'),
+    3: require('../assets/bg/bg1.jpg'),
     4: require('../assets/bg/bg4.jpg'),
+    5: require('../assets/bg/bg5.jpg'),
+    6: require('../assets/bg/bg6.jpeg'),
+    7: require('../assets/bg/bg7.jpeg'),
+    8: require('../assets/bg/bg8.jpeg'),
+    9: require('../assets/bg/bg9.jpeg'),
+    10: require('../assets/bg/bg10.jpeg'),
   };
 
   return (
@@ -47,7 +53,7 @@ const PPTGenerateScreen = () => {
       {/* Selection Rectangles */}
       {isFinished && (
      <View style={styles.selectionContainer}>
-     {[1, 2, 3, 4].map((num) => (
+     {[1, 2, 3, 4,5,6,7,8,9,10].map((num) => (
        <TouchableOpacity
          key={num}
          style={[styles.rectangle, selectedNumber === num && styles.selectedRectangle]}
@@ -136,24 +142,21 @@ const styles = StyleSheet.create({
   
   rectangle: {
     width: '45%',  
-  
-    aspectRatio: 1.5, // Maintain square shape
+    aspectRatio: 1.5, // Adjust this value to match the aspect ratio of your images
     margin: 5,
     borderWidth: 2,
     borderColor: '#ccc',
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden', // Ensure the image doesn't overflow the rectangle
   },
   selectedRectangle: {
     borderColor: '#007BFF',
     borderWidth: 3,
   },
   image: {
-    width: '98%',
-    height: '98%',
-    resizeMode: 'cover',
-    zIndex:-2,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover', // Ensure the image covers the entire rectangle
   },
  
   textInputContainer: {

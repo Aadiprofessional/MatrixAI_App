@@ -8,37 +8,40 @@ const Header = ({ navigation }) => {
     const [loading, setLoading] = useState(true); // Add a loading state
 
     useEffect(() => {
-        // Fetch session on mount
         const fetchSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                console.log("User UID from session:", session.user.id);
-                setUserUid(session.user.id); // Set UID if user is authenticated
-            } else {
-                console.log("No user session found.");
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    console.log("User UID from session:", session.user.id);
+                    setUserUid(session.user.id); // Set UID if user is authenticated
+                } else {
+                    console.log("No user session found.");
+                }
+            } catch (error) {
+                console.error("Error fetching session:", error);
+            } finally {
+                setLoading(false); // Ensure loading is set to false after session is checked
             }
-            setLoading(false); // Set loading to false after session is checked
         };
-
-        fetchSession(); // Call to fetch session on component mount
-
-        // Listen for changes in authentication state
+    
+        fetchSession(); // Fetch session when component mounts
+    
         const authListener = supabase.auth.onAuthStateChange((event, session) => {
             console.log("Auth state change:", event, session);
             if (session?.user) {
                 console.log("User UID from auth listener:", session.user.id);
-                setUserUid(session.user.id); // Set UID once session is available
+                setUserUid(session.user.id); // Set UID from auth state change
             } else {
                 console.log("No user in auth listener.");
-                setUserUid(null); // Handle case where user is not logged in
+                setUserUid(null); // Handle case where user is logged out
             }
         });
-
-        // Clean up the listener when the component is unmounted
+    
         return () => {
-            authListener?.data?.unsubscribe?.(); // Attempt to unsubscribe safely if possible
+            authListener?.data?.unsubscribe?.(); // Clean up listener on component unmount
         };
     }, []);
+    
 
     useEffect(() => {
         if (uid) {  // Only run if UID is set
