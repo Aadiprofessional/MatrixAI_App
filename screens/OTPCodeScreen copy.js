@@ -10,8 +10,8 @@ import {
     Dimensions,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator, // Import ActivityIndicator
 } from 'react-native';
-import AppNavigator from './AppNavigator';
 
 const { width } = Dimensions.get('window');
 
@@ -23,7 +23,7 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
     const [otpVerified, setOtpVerified] = useState(false); // Track if OTP is successfully verified
 
     const inputRefs = [];
-    const { email } = route.params; // Retrieve email from navigation params
+    const { phone } = route.params; // Retrieve phone from navigation params
 
     // Auto-focus on first box when screen loads
     useEffect(() => {
@@ -47,39 +47,47 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
     // Handle Verify OTP Button
     const handleVerify = async () => {
         const enteredOtp = otp.join('');
-        if (enteredOtp.length === 6 && email) {
+        if (enteredOtp.length === 6 && phone) {
             console.log('OTP entered:', enteredOtp); // Log OTP entered
             try {
-                setLoading(true);
+                setLoading(true); // Show ActivityIndicator
                 const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyPhoneOtp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        phone: phone, // Use the email from params
+                        phone: phone, // Use the phone from params
                         otp: enteredOtp,
                     }),
                 });
                 const data = await response.json();
                 setLoading(false);
-
+    
                 console.log('API Response:', data); // Log API response
-
-                if (data.message === "OTP verified successfully") {
+    
+                if (data.message === "OTP verified and user authenticated") {
                     setOtpVerified(true); // OTP successfully verified
                     setError(false);
                     console.log('OTP Verified Successfully'); // Log success
+    
+                    // Save UID to AsyncStorage
+                    if (data.session?.user?.id) {
+                        await AsyncStorage.setItem('uid', data.session.user.id);
+                        console.log('UID saved to AsyncStorage:', data.session.user.id);
+                    }
+    
+                    // Mark user as logged in
                     await AsyncStorage.setItem('userLoggedIn', 'true');
+                    console.log('User logged in status saved to AsyncStorage');
+    
+                    // Navigate to Main Screen
                     navigation.navigate('Main');
-                    
-// Navigate to Home Screen
                 } else {
                     setOtpVerified(false); // OTP verification failed
                     setError(true);
                     console.log('OTP verification failed'); // Log failure
                 }
-                
             } catch (error) {
                 setLoading(false);
                 setError(true);
@@ -88,10 +96,9 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
             }
         } else {
             setError(true);
-            console.log('Invalid OTP or email missing'); // Log invalid input
+            console.log('Invalid OTP or phone missing'); // Log invalid input
         }
     };
-
     // Handle Resend
     const handleResendCode = () => {
         setOtp(['', '', '', '', '', '']);
@@ -119,9 +126,9 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
 
             {/* Error or Subtitle */}
             {error ? (
-                <Text style={styles.errorText}>This code is not correct or email is invalid</Text>
+                <Text style={styles.errorText}>This code is not correct or phone is invalid</Text>
             ) : (
-                <Text style={styles.subtitle}>Enter the 6 digits code that you received on your email</Text>
+                <Text style={styles.subtitle}>Enter the 6 digits code that you received on your phone</Text>
             )}
 
             {/* OTP Inputs */}
@@ -169,8 +176,16 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
             </TouchableOpacity>
 
             {/* Verify Button */}
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerify} disabled={loading}>
-                <Text style={styles.verifyButtonText}>{loading ? 'Verifying...' : 'Verify'}</Text>
+            <TouchableOpacity
+                style={styles.verifyButton}
+                onPress={handleVerify}
+                disabled={loading} // Disable button when loading
+            >
+                {loading ? (
+                    <ActivityIndicator color="#fff" /> // Show ActivityIndicator when loading
+                ) : (
+                    <Text style={styles.verifyButtonText}>Verify</Text> // Show "Verify" text otherwise
+                )}
             </TouchableOpacity>
         </KeyboardAvoidingView>
     );

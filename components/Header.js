@@ -1,94 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { supabase } from '../supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';  // Import AsyncStorage
+import { supabase } from '../supabaseClient'; // Ensure this path is correct
 
 const Header = ({ navigation }) => {
     const [coinCount, setCoinCount] = useState(0);
     const [uid, setUserUid] = useState(null);
-    const [loading, setLoading] = useState(true); // Add a loading state
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchSession = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    console.log("User UID from session:", session.user.id);
-                    setUserUid(session.user.id); // Set UID if user is authenticated
-                } else {
-                    console.log("No user session found.");
-                }
-            } catch (error) {
-                console.error("Error fetching session:", error);
-            } finally {
-                setLoading(false); // Ensure loading is set to false after session is checked
-            }
-        };
-    
-        fetchSession(); // Fetch session when component mounts
-    
-        const authListener = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Auth state change:", event, session);
-            if (session?.user) {
-                console.log("User UID from auth listener:", session.user.id);
-                setUserUid(session.user.id); // Set UID from auth state change
+    // Fetch UID from AsyncStorage
+    const fetchUidFromStorage = async () => {
+        try {
+            const storedUid = await AsyncStorage.getItem('uid');
+            console.log("Retrieved UID:", storedUid);  // Add this log to check the retrieved UID
+            if (storedUid) {
+                console.log("Fetched UID from AsyncStorage:", storedUid);
+                setUserUid(storedUid); // Set UID if it's found in AsyncStorage
             } else {
-                console.log("No user in auth listener.");
-                setUserUid(null); // Handle case where user is logged out
+                console.log("UID not found in AsyncStorage.");
             }
-        });
+        } catch (error) {
+            console.error("Error fetching UID from AsyncStorage:", error);
+        } finally {
+            setLoading(false); // Set loading to false after UID is fetched
+        }
+    };
     
-        return () => {
-            authListener?.data?.unsubscribe?.(); // Clean up listener on component unmount
-        };
-    }, []);
-    
+
+    // Fetch user coins using the UID
+    const fetchCoins = async (userUid) => {
+        console.log("Fetching coins for UID:", userUid); // Log UID being used to fetch coins
+        const { data, error } = await supabase
+            .from('users')
+            .select('user_coins')
+            .eq('uid', userUid)
+            .single();
+
+        if (error) {
+            console.error('Error fetching coins:', error);
+        } else {
+            setCoinCount(data.user_coins);
+        }
+    };
 
     useEffect(() => {
-        if (uid) {  // Only run if UID is set
-            const fetchInitialCoins = async () => {
-                console.log("Fetching coins for UID:", uid); // Log UID being used to fetch coins
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('user_coins')
-                    .eq('uid', uid)
-                    .single();
+        fetchUidFromStorage(); // Fetch UID when the component mounts
+    }, []);
 
-                if (error) {
-                    console.error('Error fetching initial coins:', error);
-                } else {
-                    setCoinCount(data.user_coins);
-                }
-            };
-            fetchInitialCoins();
-
-            // Realtime subscription to listen for changes in user_coins
-            const subscription = supabase
-                .channel('public:users') // Use schema:table format
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'UPDATE',
-                        schema: 'public',
-                        table: 'users',
-                    },
-                    (payload) => {
-                        console.log('Change received:', payload);
-
-                        if (payload.new.uid === uid) { // Filter the specific user
-                            setCoinCount(payload.new.user_coins);
-                        }
-                    }
-                )
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(subscription);
-            };
+    useEffect(() => {
+        if (uid) { // Only fetch coins after UID is available
+            fetchCoins(uid);
         }
-    }, [uid]);
+    }, [uid]); // Trigger this effect when the UID changes
 
     if (loading) {
         return <Text>Loading...</Text>; // Render loading state while checking session
+    }
+
+    if (!uid) {
+        return <Text>No UID found</Text>; // Show message if UID is not found
     }
 
     console.log("UID in Header:", uid); // Log UID in the component for debugging

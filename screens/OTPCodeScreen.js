@@ -64,15 +64,25 @@ const OTPCodeScreen = ({ navigation, route }) => {
     
                 if (response.ok) {
                     setError(false);
+    
+                    // Save UID to AsyncStorage if it exists in the response
+                    if (result.user?.id) {
+                        await AsyncStorage.setItem('uid', result.user.id);
+                        console.log('UID saved to AsyncStorage:', result.user.id);
+                    }
+    
                     // Save login status in AsyncStorage
                     await AsyncStorage.setItem('userLoggedIn', 'true');
-                    navigation.navigate('Main'); // Navigate to Main Screen after successful login/registration
+    
+                    // Navigate to Main Screen after successful login/registration
+                    navigation.navigate('Main');
                 } else {
                     setError(true);
-                   
+                    alert(result.error || 'Failed to verify OTP'); // Show error message from the API
                 }
             } catch (error) {
                 setError(true);
+                console.error('Error verifying OTP:', error);
                 alert('An error occurred. Please try again.');
             }
         } else {
@@ -80,7 +90,6 @@ const OTPCodeScreen = ({ navigation, route }) => {
             alert('Please enter a valid OTP');
         }
     };
-    
 
     // Handle Resend
     const handleResendCode = () => {
