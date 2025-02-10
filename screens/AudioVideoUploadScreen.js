@@ -74,7 +74,7 @@ const AudioVideoUploadScreen = () => {
 
     const loadFiles = async () => {
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/${uid}`);
+            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/595dfce5-0898-4364-9046-0aa850190321`);
             
             // Check response content type
             const contentType = response.headers.get('content-type');

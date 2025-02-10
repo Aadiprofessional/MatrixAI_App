@@ -34,9 +34,7 @@ import Slider from '@react-native-community/slider'; // Import the Slider compon
   import Sound from 'react-native-sound';
   import ForceDirectedGraph from '../components/mindMap';
   import ForceDirectedGraph2 from '../components/mindMap2';
-  import { Picker } from '@react-native-picker/picker';
-  import DropDownPicker from 'react-native-dropdown-picker';
-  import Svg, { Path } from 'react-native-svg';
+
   const TranslateScreen = ({ route }) => {
     const graphRef = useRef(null);
       const { audioid ,uid} = route.params || {};
@@ -160,7 +158,28 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     
   
     const fetchAudioMetadata = async (uid, audioid) => {
+        if (!uid || !audioid) {
+            console.warn('Missing uid or audioid:', { uid, audioid });
+            setIsLoading(false);
+            return;
+        }
+
         try {
+            // First check if we have cached data
+            const cachedData = await AsyncStorage.getItem(`audioData-${audioid}`);
+            if (cachedData) {
+                const parsedData = JSON.parse(cachedData);
+                setTranscription(parsedData.transcription || '');
+                setParagraphs(parsedData.paragraphs || []);
+                setAudioUrl(parsedData.audioUrl || '');
+                setKeypoints(parsedData.keyPoints || '');
+                setXMLData(parsedData.XMLData || '');
+                setIsLoading(false);
+                return;
+            }
+
+            console.log('Fetching audio metadata for:', { uid, audioid });
+            
             const response = await fetch('https://matrix-server-gzqd.vercel.app/getAudioFile', {
                 method: 'POST',
                 headers: {
@@ -168,63 +187,83 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 },
                 body: JSON.stringify({ uid, audioid }),
             });
-            const data = await response.json();
-    
-            if (response.ok) {
-                // Set state with fetched data
-                setTranscription(data.transcription || '');
-                setFileName(data.audio_name || 'Untitled');
-                setFileContent(data.file_path || '');
-                setDuration(data.duration)
-    
-                // Handle transcription
-                let paragraphs = [];
-                let wordTimings = [];
-                if (data.transcription) {
-                    const { paragraphs: para, words } = splitTranscription(data.transcription);
-                    paragraphs = para;
-                    setParagraphs(para);
-                    if (data.duration) {
-                        wordTimings = calculateParagraphTimings(words, data.duration);
-                        setWordTimings(wordTimings);
-                    }
-                }
-    
-                // Handle audio chunks with enhanced playback options
-                let audioUrl = data.audio_url;
-                if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
-                    const audioSource = await downloadAndCombineAudio(data.chunk_urls);
-                    if (audioSource && audioSource.type === 'blob') {
-                        audioUrl = audioSource.url;
-                    } else if (audioSource && audioSource.type === 'chunked') {
-                        audioUrl = audioSource.urls[0]; // Start with first chunk URL
-                    } else if (audioSource && audioSource.type === 'direct') {
-                        audioUrl = audioSource.url;
-                    }
-                }
-                setAudioUrl(audioUrl);
-    
-                // Set key points and XML data
-                setKeypoints(data.key_points || '');
-                setXMLData(data.xml_data || '');
-    
-                // Save data to local storage
-                const audioData = {
-                    transcription: data.transcription || '',
-                    fileName: data.audio_name || 'Untitled',
-                    fileContent: data.file_path || '',
-                    paragraphs,
-                    wordTimings,
-                    audioUrl,
-                    keyPoints: data.key_points || '',
-                    XMLData: data.xml_data || '',
-                };
-                await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
-            } else {
-                console.error('Error fetching audio metadata:', data.error);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server response not OK:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText
+                });
+                throw new Error(`Server error: ${response.status} ${errorText}`);
             }
+
+            const data = await response.json();
+            
+            if (!data) {
+                throw new Error('No data received from server');
+            }
+
+            console.log('Received audio metadata:', {
+                hasTranscription: !!data.transcription,
+                hasAudioUrl: !!data.audio_url,
+                audioName: data.audio_name
+            });
+
+            // Set state with fetched data
+            setTranscription(data.transcription || '');
+            setFileName(data.audio_name || 'Untitled');
+            setFileContent(data.file_path || '');
+            setDuration(data.duration);
+
+            // Handle transcription
+            if (data.transcription) {
+                const { paragraphs: para, words } = splitTranscription(data.transcription);
+                setParagraphs(para);
+                if (data.duration) {
+                    const timings = calculateParagraphTimings(words, data.duration);
+                    setWordTimings(timings);
+                }
+            }
+
+            // Handle audio URL
+            if (data.audio_url) {
+                setAudioUrl(data.audio_url);
+            } else if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
+                const audioSource = await downloadAndCombineAudio(data.chunk_urls);
+                if (audioSource) {
+                    setAudioUrl(audioSource.type === 'blob' ? audioSource.url : data.chunk_urls[0]);
+                }
+            }
+
+            // Set key points and XML data
+            setKeypoints(data.key_points || '');
+            setXMLData(data.xml_data || '');
+
+            // Cache the data
+            const audioData = {
+                transcription: data.transcription || '',
+                paragraphs: para || [],
+                audioUrl: data.audio_url || '',
+                keyPoints: data.key_points || '',
+                XMLData: data.xml_data || '',
+            };
+            await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
+
         } catch (error) {
-            console.error('Error fetching audio metadata:', error);
+            console.error('Error fetching audio metadata:', {
+                error: error.message,
+                stack: error.stack,
+                uid,
+                audioid
+            });
+            
+            // Show user-friendly error
+            Alert.alert(
+                'Error Loading Audio',
+                'Unable to load audio data. Please check your connection and try again.',
+                [{ text: 'OK' }]
+            );
         } finally {
             setIsLoading(false);
         }
@@ -493,6 +532,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 return;
             }
             setAudioDuration(newSound.getDuration());
+            newSound.setNumberOfLoops(isRepeatMode ? -1 : 0); // Set initial loop setting
             setSound(newSound);
         });
     };
@@ -505,14 +545,19 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         } else {
             sound.play((success) => {
                 if (success) {
-                    setIsAudioPlaying(false);
-                    setAudioPosition(audioDuration); // Set to the end of the audio
-                    // This resets the position to the start
+                    if (isRepeatMode) {
+                        // If repeat mode is on, restart the audio
+                        sound.setCurrentTime(0);
+                        sound.play();
+                    } else {
+                        setIsAudioPlaying(false);
+                        setAudioPosition(audioDuration);
+                    }
                 } else {
                     console.error('Playback failed');
+                    setIsAudioPlaying(false);
                 }
             });
-            
         }
         setIsAudioPlaying(!isAudioPlaying);
     };
@@ -544,20 +589,26 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         let interval;
         if (isAudioPlaying) {
             interval = setInterval(() => {
-                if (sound) {
+                if (sound && !isSeeking) {
                     sound.getCurrentTime((seconds) => {
                         setAudioPosition(seconds);
                         onAudioProgress({
                             currentTime: seconds,
                             duration: audioDuration
                         });
+
+                        // Check if we're at the end and repeat mode is off
+                        if (seconds >= audioDuration && !isRepeatMode) {
+                            setIsAudioPlaying(false);
+                            sound.setCurrentTime(0);
+                        }
                     });
                 }
             }, 100);
         }
         
         return () => clearInterval(interval);
-    }, [isAudioPlaying, sound]);
+    }, [isAudioPlaying, sound, isSeeking, isRepeatMode, audioDuration]);
 
     const handleShare = async () => {
         try {
@@ -603,16 +654,36 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     };
     
     const handleValueChange = (value) => {
+        if (!sound) return;
+        
+        setIsSeeking(true); // Indicate that we're seeking
         setAudioPosition(value);
-      };
-    
-      const handleLayout = (event) => {
+    };
+
+    // Add this new function to handle seek completion
+    const handleSlidingComplete = (value) => {
+        if (!sound) return;
+        
+        sound.setCurrentTime(value);
+        setIsSeeking(false);
+        
+        // If audio was playing before seeking, resume playback
+        if (isAudioPlaying) {
+            sound.play((success) => {
+                if (!success) {
+                    console.error('Playback failed after seeking');
+                }
+            });
+        }
+    };
+
+    const handleLayout = (event) => {
         const { width } = event.nativeEvent.layout;
         setSliderWidth(width);
-      };
+    };
     
-      // Calculate the position of the custom thumb
-      const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
+    // Calculate the position of the custom thumb
+    const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
     
     const handleTranslateParagraph = async (index) => {
         if (!paragraphs[index]) return;
@@ -679,6 +750,21 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     const toggleTranscriptionVisibility = () => {
         setTranscriptionVisible(!isTranscriptionVisible);
     };
+
+    // Add this new effect to handle repeat mode
+    useEffect(() => {
+        if (!sound) return;
+
+        // Set up completion callback
+        sound.setNumberOfLoops(isRepeatMode ? -1 : 0); // -1 means infinite loops, 0 means no repeat
+        
+        return () => {
+            // Cleanup
+            if (sound) {
+                sound.setNumberOfLoops(0);
+            }
+        };
+    }, [isRepeatMode, sound]);
 
     return (
         <View style={styles.container}>
@@ -780,9 +866,10 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
+                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
-                  thumbTintColor="orange" // Hide the default thumb
+                  thumbTintColor="transparent" // Hide the default thumb
                 />
                
               
@@ -853,6 +940,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
+                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
                   thumbTintColor="transparent" // Hide the default thumb
@@ -977,6 +1065,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         scrollY.setValue(offsetY);
                     }}
                     scrollEventThrottle={16}
+                    showsVerticalScrollIndicator={false}
                 >
                     
                     {paragraphs.map((para, index) => (

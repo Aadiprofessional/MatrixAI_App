@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, PermissionsAndroid, ActivityIndicator, Alert } from 'react-native';
 import OpenAI from 'openai';
 import { WebView } from 'react-native-webview';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
@@ -7,10 +7,14 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import Share from 'react-native-share';
 import ViewShot from 'react-native-view-shot';
+import RNFS from 'react-native-fs';
+
 const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   const [graphData, setGraphData] = useState(null);
   const viewShotRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [tempWebView, setTempWebView] = useState(null);
+  const webViewRef = useRef(null);
   const openai = new OpenAI({
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
@@ -313,107 +317,309 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   </body>
   </html>
 `;
-const requestStoragePermission = async () => {
-  if (Platform.OS === 'android') {
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        {
-          title: 'Storage Permission Required',
-          message: 'This app needs access to your storage to download PDFs.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        }
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (err) {
-      console.warn(err);
-      return false;
-    }
-  }
-  return true;
-};
 
 const downloadPDF = async () => {
-  const hasPermission = await requestStoragePermission();
-  if (!hasPermission) {
-    console.warn('Storage permission not granted');
-    return;
-  }
-
-  setLoading(true);
-
   try {
-    if (!viewShotRef.current) {
-      console.error("ViewShot reference is null, retrying...");
-      setLoading(false);
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        throw new Error('Storage permission denied');
+      }
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+          <style>
+            body { 
+              margin: 0; 
+              padding: 0; 
+              background: white;
+              width: 100%;
+              height: 100%;
+              overflow: hidden;
+            }
+            #chart { 
+              width: 1500px; 
+              height: 600px;
+              margin: 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="chart"></div>
+          <script>
+            const chartDom = document.getElementById('chart');
+            const myChart = echarts.init(chartDom, null, {
+              renderer: 'svg',
+              width: 1000,
+              height: 600
+            });
+            
+            function wrapText(text, nodeType) {
+              let maxLineLength = 20;
+              if (nodeType === 'description') {
+                maxLineLength = 90;
+              }
+
+              const words = text.split(' ');
+              const lines = [];
+              let currentLine = '';
+
+              words.forEach(word => {
+                if ((currentLine + word).length > maxLineLength) {
+                  lines.push(currentLine.trim());
+                  currentLine = word + ' ';
+                } else {
+                  currentLine += word + ' ';
+                }
+              });
+
+              if (currentLine.trim()) {
+                lines.push(currentLine.trim());
+              }
+
+              return lines.join('\\n');
+            }
+
+            const graphData = ${JSON.stringify(graphData)};
+            
+            const option = {
+              backgroundColor: '#ffffff',
+              tooltip: { 
+                trigger: 'item', 
+                triggerOn: 'mousemove' 
+              },
+              series: [{
+                type: 'tree',
+                data: graphData,
+                top: '5%',
+                left: '2%',
+                bottom: '5%',
+                right: '15%',
+                symbolSize: 8,
+                initialTreeDepth: -1,
+                orient: 'LR',
+                label: {
+                  position: 'left',
+                  verticalAlign: 'middle',
+                  align: 'right',
+                  fontSize: 18,
+                  distance: 5,
+                  formatter: (params) => {
+                    const nodeType = params.data.nodeType || 'topic';
+                    return wrapText(params.name, nodeType);
+                  },
+                  rich: {
+                    a: {
+                      lineHeight: 24,
+                    }
+                  }
+                },
+                leaves: {
+                  label: {
+                    position: 'right',
+                    verticalAlign: 'middle',
+                    align: 'left',
+                    formatter: (params) => {
+                      const nodeType = params.data.nodeType || 'description';
+                      return wrapText(params.name, nodeType);
+                    }
+                  }
+                },
+                expandAndCollapse: false,
+                animationDuration: 0,
+                force: {
+                  repulsion: 1200,
+                  gravity: 0.1,
+                  edgeLength: 300,
+                  layoutAnimation: false
+                },
+                nodeSpacing: 60,
+                layerSpacing: 200,
+                roam: false,
+                lineStyle: {
+                  width: 2,
+                  curveness: 0.5
+                }
+              }]
+            };
+            
+            myChart.setOption(option);
+            
+            // Wait for chart to render then capture
+            setTimeout(() => {
+              const base64 = myChart.getDataURL({ 
+                type: 'png', 
+                pixelRatio: 2,
+                backgroundColor: '#fff',
+                excludeComponents: ['toolbox']
+              });
+              window.ReactNativeWebView.postMessage(base64);
+            }, 2000);
+          </script>
+        </body>
+      </html>
+    `;
+
+    return new Promise((resolve, reject) => {
+      let hasProcessedImage = false;
+
+      const processBase64Image = async (base64Image) => {
+        if (hasProcessedImage) return;
+        hasProcessedImage = true;
+
+        try {
+          const pdfOptions = {
+            html: `
+              <html>
+                <body style="margin: 0; padding: 0;">
+                  <img src="${base64Image}" style="width: 100%; height: auto; display: block;" />
+                </body>
+              </html>
+            `,
+            fileName: `mindmap_${Date.now()}`,
+            directory: 'Documents',
+            width: 1684,  // A3 width (landscape)
+            height: 1190, // A3 height (landscape)
+            backgroundColor: '#ffffff',
+            padding: 0,
+            options: {
+              landscape: true,
+              printBackground: true,
+              preferCSSPageSize: true,
+              margin: {
+                top: '5mm',
+                right: '5mm',
+                bottom: '5mm',
+                left: '5mm'
+              },
+              pageSize: 'A3'
+            }
+          };
+
+          const file = await RNHTMLtoPDF.convert(pdfOptions);
+          
+          if (file.filePath) {
+            if (Platform.OS === 'android') {
+              const downloadPath = `${RNFS.DownloadDirectoryPath}/mindmap_${Date.now()}.pdf`;
+              await RNFS.moveFile(file.filePath, downloadPath);
+              resolve(downloadPath);
+            } else {
+              resolve(file.filePath);
+            }
+          } else {
+            reject(new Error('PDF generation failed'));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      const TempWebView = (
+        <WebView
+          ref={webViewRef}
+          source={{ html: htmlContent }}
+          javaScriptEnabled={true}
+          onMessage={(event) => {
+            processBase64Image(event.nativeEvent.data);
+          }}
+          style={{ width: 1, height: 1, opacity: 0 }}
+        />
+      );
+
+      setTempWebView(TempWebView);
+
+      setTimeout(() => {
+        setTempWebView(null);
+        if (!hasProcessedImage) {
+          reject(new Error('Timeout generating PDF'));
+        }
+      }, 5000);
+    });
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw error;
+  }
+};
+
+const handleDownload = async () => {
+  try {
+    setLoading(true);
+    if (!graphData) {
+      Alert.alert('No Data', 'Please wait for the mind map to load completely.');
       return;
     }
 
-    setTimeout(async () => {
-      const uri = await viewShotRef.current.capture();
-      console.log('Captured Image URI:', uri);
+    const filePath = await downloadPDF();
+    
+    // Share the PDF
+    await Share.open({
+      url: `file://${filePath}`,
+      type: 'application/pdf',
+      title: 'Mind Map PDF'
+    });
 
-      if (!uri) {
-        console.error("Captured URI is empty.");
-        setLoading(false);
-        return;
-      }
-
-      const pdfOptions = {
-        html: `<html><body><img src="${uri}" style="width: 100%;" /></body></html>`,
-        fileName: 'graph_visualization',
-        directory: 'Documents',
-      };
-
-      const file = await RNHTMLtoPDF.convert(pdfOptions);
-      console.log('PDF saved to:', file.filePath);
-
-      if (file.filePath) {
-        await Share.open({
-          title: 'Download Graph PDF',
-          url: `file://${file.filePath}`,
-          type: 'application/pdf',
-        });
-      }
-    }, 3000); // Delay capture to allow WebView to render
+    Alert.alert('Success', 'PDF has been downloaded successfully!');
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error('Failed to download PDF:', error);
+    Alert.alert('Error', 'Failed to generate PDF. Please try again.');
   } finally {
     setLoading(false);
   }
 };
 
-
-
-
-
   return (
     <View style={styles.container}>
-    {/* Wrap WebView in ViewShot to ensure capturing works */}
-    <ViewShot ref={(ref) => (viewShotRef.current = ref)} options={{ format: 'jpg', quality: 1.0 }}>
+      <ViewShot 
+        ref={viewShotRef} 
+        options={{ format: 'png', quality: 1.0 }}
+        style={{ flex: 1 }}
+      >
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: chartHtml }}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          style={{ height: 600, width: '100%' }}
+          onLoadEnd={() => {
+            // Wait for the chart to be fully rendered
+            setTimeout(() => {
+              console.log('Chart rendered and ready for capture');
+            }, 1000);
+          }}
+        />
+      </ViewShot>
 
-      <WebView
-        originWhitelist={['*']}
-        source={{ html: chartHtml }}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        style={{ height: 600, width: '100%' }}
-      />
-    </ViewShot>
-    <WebView
-        originWhitelist={['*']}
-        source={{ html: chartHtml }}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        style={{ height: 600, width: '100%' }}
-      />
+      {tempWebView}  {/* Render temporary WebView when needed */}
 
-    <TouchableOpacity style={styles.downloadButton} onPress={downloadPDF} disabled={loading}>
-      {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Download PDF</Text>}
-    </TouchableOpacity>
-  </View>
+      <TouchableOpacity 
+        style={[
+          styles.downloadButton,
+          loading && styles.downloadButtonDisabled
+        ]} 
+        onPress={handleDownload}
+        disabled={loading}
+      >
+        <View style={styles.buttonContent}>
+          {loading ? (
+            <>
+              <ActivityIndicator color="#fff" style={styles.loader} />
+              <Text style={styles.buttonText}>Downloading...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.buttonText}>Download PDF</Text>
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
+    </View>
   );
 };
 
@@ -423,12 +629,38 @@ const styles = StyleSheet.create({
 
   downloadButton: {
     backgroundColor: '#007bff',
-    padding: 12,
+    padding: 15,
     margin: 10,
     borderRadius: 8,
     alignItems: 'center',
+    elevation: 3, // Add shadow for Android
+    shadowColor: '#000', // Add shadow for iOS
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  downloadButtonDisabled: {
+    backgroundColor: '#cccccc',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  loader: {
+    marginRight: 8,
+  },
 });
 
 export const getSvgData = () => {

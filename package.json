@@ -53,6 +53,7 @@
     "react-native-view-shot": "^4.0.3",
     "react-native-vision-camera": "^4.6.3",
     "react-native-webview": "^13.13.1",
+    "react-native-xml2js": "^1.0.3",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
