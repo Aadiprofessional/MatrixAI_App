@@ -15,10 +15,10 @@ import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
-import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, Swipeable, TouchableWithoutFeedback } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
-
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
@@ -38,6 +38,7 @@ const BotScreen2 = ({ navigation, route }) => {
   const [expandedMessages, setExpandedMessages] = useState({});
   const [fullTranscription, setFullTranscription] = useState('');
     const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   const toggleMessageExpansion = (messageId) => {
     setExpandedMessages(prev => ({
@@ -242,6 +243,21 @@ const BotScreen2 = ({ navigation, route }) => {
   }, [audioid]);
   
   
+
+
+  const handleGeneratePPT = (message) => {
+    navigation.navigate('CreatePPTScreen', { 
+      message: message.text,
+      audioid, 
+      number:1,
+    });
+  };
+
+  const handleGenerateMindmap = (message) => {
+    setSelectedMessage(message);
+    setIsFullScreen(true);
+  };
+
   const renderMessage = ({ item }) => {
     const isBot = item.sender === 'bot';
     const isUser = item.sender === 'user';
@@ -253,9 +269,55 @@ const BotScreen2 = ({ navigation, route }) => {
       return text && urlRegex.test(text);
     };
   
+    const renderLeftActions = () => {
+      return (
+        <View style={styles.swipeableButtons}>
+          <TouchableOpacity 
+            style={styles.swipeButton} 
+            onPress={() => handleGenerateMindmap(item)}
+          >
+            <Ionicons name="git-network-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.swipeButton} 
+            onPress={() => handleGeneratePPT(item)}
+          >
+            <Ionicons name="document-text-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      );
+    };
+  
+    const renderRightActions = () => {
+      return (
+        <View style={styles.swipeableButtons}>
+          <TouchableOpacity 
+            style={styles.swipeButton} 
+            onPress={() => handleGenerateMindmap(item)}
+          >
+            <Ionicons name="git-network-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.swipeButton} 
+            onPress={() => handleGeneratePPT(item)}
+          >
+            <Ionicons name="document-text-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      );
+    };
+  
     return (
       <GestureHandlerRootView>
-        <Swipeable overshootRight={false}>
+        <Swipeable
+          renderLeftActions={isBot ? renderLeftActions : null}
+          renderRightActions={isUser ? renderRightActions : null}
+          leftThreshold={40}
+          rightThreshold={40}
+          overshootLeft={false}
+          overshootRight={false}
+          enabled={isBot ? true : isUser}
+        >
           <Animatable.View
             animation="fadeInUp"
             duration={100}
@@ -278,17 +340,17 @@ const BotScreen2 = ({ navigation, route }) => {
                 )}
               </Text>
             )}
-  
+    
             {/* Show image if the user sends a URL */}
             {isUser && item.text && containsUrl(item.text) && (
               <Image source={{ uri: item.text }} style={styles.messageImage} />
             )}
-  
+    
             {/* Show image if the user sends an image */}
             {isUser && item.image && !containsUrl(item.text) && (
               <Image source={{ uri: item.image }} style={styles.messageImage} />
             )}
-  
+    
             {/* Bot's message can have both text and images */}
             {isBot && item.image && (
               <Image source={{ uri: item.image }} style={styles.messageImage} />
@@ -497,12 +559,14 @@ const styles = StyleSheet.create({
   botMessageContainer: {
     alignSelf: 'flex-start',
     backgroundColor: '#E0E0E0',
-    marginLeft: 10,
+    marginLeft: 0,
+    marginRight: 10,
   },
   userMessageContainer: {
     alignSelf: 'flex-end',
     backgroundColor: '#4C8EF7',
-    marginRight: 10,
+    marginRight: 0,
+    marginLeft: 10,
   },
   botText: {
     color: '#333',
@@ -619,6 +683,28 @@ closeIcon: {
     color: '#007bff',
     fontWeight: 'bold',
     marginLeft: 5,
+  },
+  swipeableButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  swipeButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#007AFF',
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
 
