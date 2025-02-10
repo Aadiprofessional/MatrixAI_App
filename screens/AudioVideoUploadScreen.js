@@ -163,9 +163,56 @@ const AudioVideoUploadScreen = () => {
         return true;
     };
 
+    const checkUserCoins = async (uid, requiredCoins) => {
+        try {
+            const { data, error } = await supabase
+                .from("users")
+                .select("user_coins")
+                .eq("uid", uid)
+                .single();
+
+            if (error) {
+                console.error('Error checking user coins:', error);
+                return false;
+            }
+
+            if (!data || data.user_coins < requiredCoins) {
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error in checkUserCoins:', error);
+            return false;
+        }
+    };
+
     const handleUpload = async (file, duration) => {
         if (!file) {
             Alert.alert('Error', 'No file selected');
+            return;
+        }
+        
+        // Check if user has enough coins
+        const hasEnoughCoins = await checkUserCoins(uid, duration);
+        
+        if (!hasEnoughCoins) {
+            setUploading(false);
+            setPopupVisible(false);
+            Alert.alert(
+                'Insufficient Coins',
+                'You don\'t have enough coins to process this audio. Please recharge.',
+                [
+                    {
+                        text: 'Recharge Now',
+                        onPress: () => navigation.navigate('TransactionScreen')
+                    },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel'
+                    }
+                ]
+            );
             return;
         }
         
@@ -749,7 +796,7 @@ const AudioVideoUploadScreen = () => {
             {popupVisible && (
     <View style={styles.popupContainer}>
         <View style={styles.popupContent}>
-            <Text style={styles.popupText}>Pay to Upload</Text>
+            <Text style={styles.popupText}>Upload Audio</Text>
 
             <View style={styles.popupButtons}>
                 <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
@@ -759,7 +806,7 @@ const AudioVideoUploadScreen = () => {
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={async () => {
-                        await handleUpload(audioFile, duration); // Only call handleUpload
+                        await handleUpload(audioFile, duration);
                     }}
                     disabled={uploading}
                 >

@@ -217,9 +217,11 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             setDuration(data.duration);
 
             // Handle transcription
+            let parsedParagraphs = [];
             if (data.transcription) {
-                const { paragraphs: para, words } = splitTranscription(data.transcription);
-                setParagraphs(para);
+                const { paragraphs, words } = splitTranscription(data.transcription);
+                parsedParagraphs = paragraphs; // Store paragraphs in a variable
+                setParagraphs(paragraphs);
                 if (data.duration) {
                     const timings = calculateParagraphTimings(words, data.duration);
                     setWordTimings(timings);
@@ -243,7 +245,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             // Cache the data
             const audioData = {
                 transcription: data.transcription || '',
-                paragraphs: para || [],
+                paragraphs: parsedParagraphs, // Use the stored paragraphs
                 audioUrl: data.audio_url || '',
                 keyPoints: data.key_points || '',
                 XMLData: data.xml_data || '',
@@ -537,27 +539,41 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         });
     };
 
+    const waveAnimationRef = useRef(null);
+    const waveAnimationRef2 = useRef(null);
+
     const toggleAudioPlayback = () => {
         if (!sound) return;
         
         if (isAudioPlaying) {
             sound.pause();
+            // Pause both wave animations
+            waveAnimationRef.current?.pause();
+            waveAnimationRef2.current?.pause();
         } else {
             sound.play((success) => {
                 if (success) {
                     if (isRepeatMode) {
-                        // If repeat mode is on, restart the audio
                         sound.setCurrentTime(0);
                         sound.play();
                     } else {
                         setIsAudioPlaying(false);
                         setAudioPosition(audioDuration);
+                        // Pause animations when audio ends
+                        waveAnimationRef.current?.pause();
+                        waveAnimationRef2.current?.pause();
                     }
                 } else {
                     console.error('Playback failed');
                     setIsAudioPlaying(false);
+                    // Pause animations on failure
+                    waveAnimationRef.current?.pause();
+                    waveAnimationRef2.current?.pause();
                 }
             });
+            // Play both wave animations
+            waveAnimationRef.current?.play();
+            waveAnimationRef2.current?.play();
         }
         setIsAudioPlaying(!isAudioPlaying);
     };
@@ -878,17 +894,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 {/* Lottie Animation for Waves */}
                 <View style={styles.waveAnimationContainer}>
                   <LottieView
-                    source={require('../assets/waves.json')} // Add your Lottie animation JSON here
-                    autoPlay={isAudioPlaying} // Sync with audio playback
+                    ref={waveAnimationRef}
+                    source={require('../assets/waves.json')}
+                    autoPlay={false}
                     loop
                     style={styles.waveAnimation}
                   />
-                  {/* Mask to Reveal Animation */}
                   <Animated.View
                     style={[
                       styles.mask,
                       {
-                        width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                        width: `${100 - (audioPosition / audioDuration) * 100}%`,
                       }
                     ]}
                   />
@@ -957,17 +973,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
               {/* Lottie Animation for Waves */}
               <View style={styles.waveAnimationContainer2}>
                 <LottieView
-                  source={require('../assets/waves.json')} // Add your Lottie animation JSON here
-                  autoPlay={isAudioPlaying} // Sync with audio playback
+                  ref={waveAnimationRef2}
+                  source={require('../assets/waves.json')}
+                  autoPlay={false}
                   loop
                   style={styles.waveAnimation2}
                 />
-                {/* Mask to Reveal Animation */}
                 <Animated.View
                   style={[
                     styles.mask2,
                     {
-                      width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
+                      width: `${100 - (audioPosition / audioDuration) * 100}%`,
                     }
                   ]}
                 />
