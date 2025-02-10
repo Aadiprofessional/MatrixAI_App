@@ -69,11 +69,11 @@ const AudioVideoUploadScreen = () => {
             loadFiles();
         }, [])
     );
-    const uid = '595dfce5-0898-4364-9046-0aa850190321';
+    const uid = '54167dee-1390-4a7e-9458-416c2d8ff012';
 
     const loadFiles = async () => {
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/595dfce5-0898-4364-9046-0aa850190321`);
+            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/54167dee-1390-4a7e-9458-416c2d8ff012`);
             
             // Check response content type
             const contentType = response.headers.get('content-type');
@@ -158,7 +158,7 @@ const AudioVideoUploadScreen = () => {
         }
         setUploading(true);
     
-        const user = '595dfce5-0898-4364-9046-0aa850190321';
+        const user = '54167dee-1390-4a7e-9458-416c2d8ff012';
         const { uri, name } = file;
     
         const formData = new FormData();

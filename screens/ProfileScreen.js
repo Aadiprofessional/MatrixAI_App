@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
@@ -44,10 +44,10 @@ const ProfileScreen = ({ navigation }) => {
   const MenuItem = ({ iconName, label, onPress }) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <View style={styles.iconContainer}>
-        <Icon name={iconName} size={20} color="#000" />
+        <Ionicons name={iconName} size={20} color="#000" />
       </View>
       <Text style={styles.menuLabel}>{label}</Text>
-      <Icon name="chevron-forward" size={20} color="#B0B0B0" />
+      <Ionicons name="chevron-forward" size={20} color="#B0B0B0" />
     </TouchableOpacity>
   );
 
@@ -59,7 +59,7 @@ const ProfileScreen = ({ navigation }) => {
     <View style={styles.header}>
        <View style={styles.timeCreditsContainer}>
           <View style={styles.timeIconContainer}>
-             <Icon name="time-outline" size={20} color="#fff" />
+             <Ionicons name="time-outline" size={20} color="#fff" />
           </View>
           <View style={styles.timeIconContainer2}>
              <Text style={styles.timeText}>Time Credits</Text>
