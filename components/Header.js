@@ -1,194 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';  // Import AsyncStorage
-import { supabase } from '../supabaseClient'; // Ensure this path is correct
+import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 
-const Header = ({ navigation }) => {
-    const [coinCount, setCoinCount] = useState(0);
-    const [uid, setUserUid] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    // Add this debug function
-    const debugAuthState = async () => {
-        try {
-            // Check current user
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            console.log("Debug - Current User:", user, "Error:", userError);
-
-            // Check current session
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            console.log("Debug - Current Session:", session, "Error:", sessionError);
-
-            // Check AsyncStorage
-            const storedUid = await AsyncStorage.getItem('uid');
-            console.log("Debug - Stored UID in AsyncStorage:", storedUid);
-
-            // Check Supabase URL and Key (don't log the full key in production)
-            console.log("Debug - Supabase URL:", supabase.supabaseUrl);
-            console.log("Debug - Supabase Key (first 6 chars):", supabase.supabaseKey?.substring(0, 6));
-        } catch (error) {
-            console.error("Debug - Error checking auth state:", error);
-        }
-    };
-
-    const fetchUidFromStorage = async () => {
-        try {
-            // First check the current auth state
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
-            console.log("Current auth user:", user);
-
-            if (user?.id) {
-                console.log("Found authenticated user with ID:", user.id);
-                await AsyncStorage.setItem('uid', user.id);
-                setUserUid(user.id);
-                return;
-            }
-
-            // If no authenticated user, try AsyncStorage
-            const storedUid = await AsyncStorage.getItem('uid');
-            console.log("Retrieved UID from AsyncStorage:", storedUid);
-            
-            if (storedUid) {
-                // Verify the stored UID
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('uid')
-                    .eq('uid', storedUid)
-                    .single();
-
-                if (userData) {
-                    console.log("Valid stored UID:", storedUid);
-                    setUserUid(storedUid);
-                } else {
-                    console.log("Invalid stored UID - clearing");
-                    await AsyncStorage.removeItem('uid');
-                }
-            }
-
-        } catch (error) {
-            console.error("Error in fetchUidFromStorage:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Improved fetchCoins function with error handling
-    const fetchCoins = async (userUid) => {
-        if (!userUid) {
-            console.log("No UID available to fetch coins");
-            return;
-        }
-
-        try {
-            console.log("Fetching coins for UID:", userUid);
-            const { data, error } = await supabase
-                .from('users')
-                .select('user_coins')
-                .eq('uid', userUid)
-                .single();
-
-            if (error) {
-                throw error;
-            }
-
-            if (data) {
-                console.log("Coins fetched successfully:", data.user_coins);
-                setCoinCount(data.user_coins);
-            }
-        } catch (error) {
-            console.error('Error fetching coins:', error.message);
-        }
-    };
-
-    const initializeAuth = async () => {
-        try {
-            console.log('Initializing auth...');
-            
-            // First check if we have a UID
-            const storedUid = await AsyncStorage.getItem('uid');
-            const userLoggedIn = await AsyncStorage.getItem('userLoggedIn');
-            
-            console.log('Stored values:', {
-                uid: storedUid,
-                userLoggedIn
-            });
-
-            if (!storedUid || !userLoggedIn) {
-                console.log('No stored credentials found');
-                setLoading(false);
-                return;
-            }
-
-            // Set the UID even without a session
-            setUserUid(storedUid);
-            
-            try {
-                // Try to get/create a session if possible
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    console.log('Active session found');
-                    await AsyncStorage.setItem('supabase-session', JSON.stringify(session));
-                }
-            } catch (sessionError) {
-                console.log('Session error (non-fatal):', sessionError);
-                // Continue anyway since we have the UID
-            }
-        } catch (error) {
-            console.error('Auth initialization error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        let mounted = true;
-
-        const initialize = async () => {
-            if (mounted) {
-                await initializeAuth();
-            }
-        };
-
-        initialize();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                console.log('Auth state changed:', event, session?.user?.id);
-                
-                if (session?.user && mounted) {
-                    await AsyncStorage.setItem('uid', session.user.id);
-                    await AsyncStorage.setItem('supabase-session', JSON.stringify(session));
-                    await AsyncStorage.setItem('userLoggedIn', 'true');
-                    setUserUid(session.user.id);
-                } else if (mounted) {
-                    await AsyncStorage.multiRemove(['supabase-session', 'uid', 'userLoggedIn']);
-                    setUserUid(null);
-                }
-            }
-        );
-
-        return () => {
-            mounted = false;
-            subscription.unsubscribe();
-        };
-    }, []);
-
-    // Fetch coins when UID is available
-    useEffect(() => {
-        if (uid) {
-            fetchCoins(uid);
-        }
-    }, [uid]);
-
-    if (loading) {
-        return <Text>Loading...</Text>; // Render loading state while checking session
-    }
+const Header = ({ navigation, uid }) => {
+    console.log("Header rendering with UID:", uid);
+    const coinCount = useCoinsSubscription(uid);
 
     if (!uid) {
-        return <Text>No UID found</Text>; // Show message if UID is not found
+        console.log("No UID in Header");
+        return <Text>No UID found</Text>;
     }
 
-    console.log("UID in Header:", uid); // Log UID in the component for debugging
+    console.log("Current coin count:", coinCount);
 
     return (
         <View style={styles.header}>
@@ -202,7 +25,7 @@ const Header = ({ navigation }) => {
             <TouchableOpacity
                 style={styles.coinContainer}
                 onPress={() =>
-                    navigation.navigate('TransactionScreen', { coinCount }) // Pass coinCount to TransactionScreen
+                    navigation.navigate('TransactionScreen', { coinCount })
                 }
             >
                 <Image source={require('../assets/coin.png')} style={styles.coinIcon} />

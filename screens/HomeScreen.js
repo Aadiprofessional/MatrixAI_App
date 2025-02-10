@@ -7,14 +7,15 @@ import FeatureCard from '../components/FeatureCard';
 import FloatingButton from '../components/FloatingButton';
 import FeatureCardWithDetails from '../components/FeatureCardWithDetails';
 import { NavigationContainer } from '@react-navigation/native';
+import { useAuth } from '../hooks/useAuth';
 
 import { createStackNavigator } from '@react-navigation/stack';
 const { width } = Dimensions.get('window'); // Get screen width
 
 const HomeScreen = ({ navigation }) => {
+  const { uid, loading } = useAuth();
   const rotateValue = useRef(new Animated.Value(0)).current;
   const [isRotatingFast, setIsRotatingFast] = useState(false);
-
 
   // Gradient rotation animation
   useEffect(() => {
@@ -53,7 +54,7 @@ const HomeScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         {/* Header */}
-        <Header navigation={navigation}  />
+        <Header navigation={navigation} uid={uid} />
 
         {/* Rotating Animated Gradient with Fixed Content */}
         <View style={styles.content}>

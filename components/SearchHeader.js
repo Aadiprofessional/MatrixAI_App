@@ -11,10 +11,14 @@ import {
 } from 'react-native';
 import Header from './Header.js'
 import * as Animatable from 'react-native-animatable';
+import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
 
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
+  const { uid, loading } = useAuth();
 
   // Animations
   const [showSearch, setShowSearch] = useState(true);
@@ -35,6 +39,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const plusRight = useRef(new Animated.Value(10)).current;
 
   const [typingText, setTypingText] = useState('');
+  const coinCount = useCoinsSubscription(uid);
 
   useEffect(() => {
     const targetText = "Let's see the AI world";
@@ -73,11 +78,11 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   
     return () => scrollY.removeAllListeners();
   }, []);
-  
+
   return (
     <View style={styles.container2}>
       <View style={styles.fixedHeader}>
-        <Header navigation={navigation}  />
+        <Header navigation={navigation} uid={uid} />
       </View>
 
       <Animated.View style={[
