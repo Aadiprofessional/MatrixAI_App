@@ -11,7 +11,9 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator, // Import ActivityIndicator
+    Alert,
 } from 'react-native';
+import { supabase } from '../supabaseClient';
 
 const { width } = Dimensions.get('window');
 
@@ -48,55 +50,79 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
     const handleVerify = async () => {
         const enteredOtp = otp.join('');
         if (enteredOtp.length === 6 && phone) {
-            console.log('OTP entered:', enteredOtp); // Log OTP entered
             try {
-                setLoading(true); // Show ActivityIndicator
+                setLoading(true);
+                setError(false);
+                console.log('Verifying OTP for phone:', phone);
+
                 const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyPhoneOtp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        phone: phone, // Use the phone from params
+                        phone: phone,
                         otp: enteredOtp,
                     }),
                 });
+
                 const data = await response.json();
-                setLoading(false);
-    
-                console.log('API Response:', data); // Log API response
-    
+                console.log('API Response full data:', JSON.stringify(data, null, 2));
+
                 if (data.message === "OTP verified and user authenticated") {
-                    setOtpVerified(true); // OTP successfully verified
-                    setError(false);
-                    console.log('OTP Verified Successfully'); // Log success
-    
-                    // Save UID to AsyncStorage
+                    setOtpVerified(true);
+                    
+                    // The user ID is nested in data.session.user.id
                     if (data.session?.user?.id) {
-                        await AsyncStorage.setItem('uid', data.session.user.id);
-                        console.log('UID saved to AsyncStorage:', data.session.user.id);
+                        const userId = data.session.user.id;
+                        console.log('Found user ID:', userId);
+                        
+                        // Store the complete session
+                        await AsyncStorage.setItem('supabase-session', JSON.stringify(data.session));
+                        await AsyncStorage.setItem('uid', userId);
+                        await AsyncStorage.setItem('userLoggedIn', 'true');
+
+                        // Set up Supabase session
+                        try {
+                            const { error: sessionError } = await supabase.auth.setSession({
+                                access_token: data.session.session.access_token,
+                                refresh_token: data.session.session.refresh_token,
+                            });
+
+                            if (sessionError) throw sessionError;
+                            console.log('Supabase session established successfully');
+                        } catch (sessionError) {
+                            console.log('Supabase session error (non-fatal):', sessionError);
+                            // Continue anyway since we have the user ID
+                        }
+
+                        // Verify storage
+                        const storedUid = await AsyncStorage.getItem('uid');
+                        console.log('Stored UID:', storedUid);
+
+                        // Navigate to main screen
+                        navigation.replace('Main');
+                    } else {
+                        throw new Error('User ID not found in response');
                     }
-    
-                    // Mark user as logged in
-                    await AsyncStorage.setItem('userLoggedIn', 'true');
-                    console.log('User logged in status saved to AsyncStorage');
-    
-                    // Navigate to Main Screen
-                    navigation.navigate('Main');
                 } else {
-                    setOtpVerified(false); // OTP verification failed
+                    setOtpVerified(false);
                     setError(true);
-                    console.log('OTP verification failed'); // Log failure
+                    throw new Error(data.error || 'OTP verification failed');
                 }
             } catch (error) {
-                setLoading(false);
+                console.error('Error in OTP verification:', error);
                 setError(true);
-                console.error('API Error:', error); // Log error
-                alert('Something went wrong. Please try again.');
+                Alert.alert(
+                    'Error',
+                    error.message || 'Failed to verify OTP. Please try again.'
+                );
+            } finally {
+                setLoading(false);
             }
         } else {
             setError(true);
-            console.log('Invalid OTP or phone missing'); // Log invalid input
+            Alert.alert('Error', 'Please enter a valid 6-digit OTP');
         }
     };
     // Handle Resend

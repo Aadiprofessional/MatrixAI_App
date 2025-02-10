@@ -51,6 +51,39 @@ const ProfileScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Add navigation handlers
+  const handleEditProfile = () => {
+    navigation.navigate('EditProfile');
+  };
+
+  const handleBookmark = () => {
+    navigation.navigate('Bookmark');
+  };
+
+  const handleVoiceNote = () => {
+    navigation.navigate('VoiceNote');
+  };
+
+  const handleInside = () => {
+    navigation.navigate('Inside');
+  };
+
+  const handleAIShop = () => {
+    navigation.navigate('CartScreen');
+  };
+
+  const handleVoiceSettings = () => {
+    navigation.navigate('VoiceSettings');
+  };
+
+  const handleTrash = () => {
+    navigation.navigate('Trash');
+  };
+
+  const handleSettings = () => {
+    navigation.navigate('Settings');
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
     <Header navigation={navigation} />
@@ -72,16 +105,52 @@ const ProfileScreen = ({ navigation }) => {
     </View>
     <FeatureCardWithDetails2 />
     
-    {/* Menu Items */}
-    <MenuItem iconName="person-outline" label="Edit profile" />
-    <MenuItem iconName="bookmark-outline" label="Bookmark" />
-    <MenuItem iconName="document-text-outline" label="Imported from Voice Note" />
-    <MenuItem iconName="bar-chart-outline" label="Inside" />
-    <MenuItem iconName="cart-outline" label="Open your AI Shop" />
-    <MenuItem iconName="chatbubble-outline" label="Setting Voices" />
-    <MenuItem iconName="trash-outline" label="Trash" />
-    <MenuItem iconName="settings-outline" label="Settings" />
-    <MenuItem iconName="log-out-outline" label="Logout" onPress={handleLogout} />
+    {/* Updated Menu Items with navigation */}
+    <MenuItem 
+        iconName="person-outline" 
+        label="Edit profile" 
+        onPress={handleEditProfile} 
+    />
+    <MenuItem 
+        iconName="bookmark-outline" 
+        label="Wishlist" 
+        onPress={handleBookmark} 
+    />
+    <MenuItem 
+        iconName="document-text-outline" 
+        label="Order History" 
+        onPress={handleVoiceNote} 
+    />
+    <MenuItem 
+        iconName="bar-chart-outline" 
+        label="Inside" 
+        onPress={handleInside} 
+    />
+    <MenuItem 
+        iconName="cart-outline" 
+        label="Open your AI Shop" 
+        onPress={handleAIShop} 
+    />
+    <MenuItem 
+        iconName="chatbubble-outline" 
+        label="Setting Voices" 
+        onPress={handleVoiceSettings} 
+    />
+    <MenuItem 
+        iconName="trash-outline" 
+        label="Trash" 
+        onPress={handleTrash} 
+    />
+    <MenuItem 
+        iconName="settings-outline" 
+        label="Settings" 
+        onPress={handleSettings} 
+    />
+    <MenuItem 
+        iconName="log-out-outline" 
+        label="Logout" 
+        onPress={handleLogout} 
+    />
  </ScrollView>
  
   );

@@ -10,7 +10,9 @@ import {
     Dimensions,
     KeyboardAvoidingView,
     Platform,
+    Alert,
 } from 'react-native';
+import { supabase } from '../supabaseClient';
 
 const { width } = Dimensions.get('window');
 
@@ -43,9 +45,13 @@ const OTPCodeScreen = ({ navigation, route }) => {
 
     // Handle Verify OTP Button
     const handleVerify = async () => {
-        const enteredOtp = otp.join('');  // Join the OTP digits into a string
+        const enteredOtp = otp.join('');
         if (enteredOtp.trim().length === 6) {
             try {
+                setError(false);
+                console.log('Verifying OTP:', enteredOtp);
+
+                // First API call to verify OTP
                 const response = await fetch('https://matrix-server-gzqd.vercel.app/saveUserData', {
                     method: 'POST',
                     headers: {
@@ -54,40 +60,76 @@ const OTPCodeScreen = ({ navigation, route }) => {
                     body: JSON.stringify({
                         phone,
                         name,
-                        age: parseInt(age, 10), // Ensure age is passed as an integer
+                        age: parseInt(age, 10),
                         gender,
                         otp: enteredOtp,
                     }),
                 });
-    
+
                 const result = await response.json();
-    
+                console.log('API Response:', result);
+
                 if (response.ok) {
-                    setError(false);
-    
-                    // Save UID to AsyncStorage if it exists in the response
+                    // If we have user data in the response
                     if (result.user?.id) {
+                        // Set up Supabase session
+                        if (result.session) {
+                            try {
+                                // Store session data
+                                await AsyncStorage.setItem('supabase-session', JSON.stringify(result.session));
+                                
+                                // Set the session in Supabase
+                                const { data: { user }, error: sessionError } = await supabase.auth.setSession({
+                                    access_token: result.session.access_token,
+                                    refresh_token: result.session.refresh_token,
+                                });
+
+                                if (sessionError) throw sessionError;
+
+                                if (user) {
+                                    console.log('Supabase session established for user:', user.id);
+                                    // Store user data
+                                    await AsyncStorage.setItem('uid', user.id);
+                                    await AsyncStorage.setItem('userLoggedIn', 'true');
+
+                                    // Verify storage
+                                    const storedSession = await AsyncStorage.getItem('supabase-session');
+                                    const storedUid = await AsyncStorage.getItem('uid');
+                                    console.log('Session stored:', !!storedSession);
+                                    console.log('UID stored:', storedUid);
+
+                                    // Navigate to main screen
+                                    navigation.replace('Main');
+                                    return;
+                                }
+                            } catch (sessionError) {
+                                console.error('Session setup error:', sessionError);
+                                throw new Error('Failed to establish session');
+                            }
+                        }
+
+                        // Fallback if no session but we have user ID
                         await AsyncStorage.setItem('uid', result.user.id);
-                        console.log('UID saved to AsyncStorage:', result.user.id);
+                        await AsyncStorage.setItem('userLoggedIn', 'true');
+                        console.log('User ID stored:', result.user.id);
+                        navigation.replace('Main');
+                    } else {
+                        throw new Error('No user data in response');
                     }
-    
-                    // Save login status in AsyncStorage
-                    await AsyncStorage.setItem('userLoggedIn', 'true');
-    
-                    // Navigate to Main Screen after successful login/registration
-                    navigation.navigate('Main');
                 } else {
-                    setError(true);
-                    alert(result.error || 'Failed to verify OTP'); // Show error message from the API
+                    throw new Error(result.error || 'OTP verification failed');
                 }
             } catch (error) {
+                console.error('Error in OTP verification:', error);
                 setError(true);
-                console.error('Error verifying OTP:', error);
-                alert('An error occurred. Please try again.');
+                Alert.alert(
+                    'Error',
+                    error.message || 'Failed to verify OTP. Please try again.'
+                );
             }
         } else {
             setError(true);
-            alert('Please enter a valid OTP');
+            Alert.alert('Error', 'Please enter a valid 6-digit OTP');
         }
     };
 
