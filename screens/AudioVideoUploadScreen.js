@@ -9,6 +9,7 @@ import {
     Image,
     ActivityIndicator,
     Modal,
+    Platform,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,8 +25,7 @@ import { Picker } from '@react-native-picker/picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Sound from 'react-native-sound';
 import Toast from 'react-native-toast-message';
-
-
+import { useAuth } from '../context/AuthContext';  // Add this import if not present
 
 const audioIcon = require('../assets/mic3.png');
 const videoIcon = require('../assets/cliper.png');
@@ -40,6 +40,7 @@ const micIcon = require('../assets/mic3.png');
 const micIcon2 = require('../assets/Translate.png');
 const clockIcon = require('../assets/clock.png');
 const calendarIcon = require('../assets/calender.png');
+const emptyIcon = require('../assets/empty.png');
 
 const AudioVideoUploadScreen = () => {
     const navigation = useNavigation();
@@ -63,24 +64,23 @@ const AudioVideoUploadScreen = () => {
     const [isSharing, setIsSharing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [uploadData, setUploadData] = useState(null);
+    const { uid, loading } = useAuth();
 
     useFocusEffect(
         React.useCallback(() => {
             loadFiles();
         }, [])
     );
-    const uid = '54167dee-1390-4a7e-9458-416c2d8ff012';
 
     const loadFiles = async () => {
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/54167dee-1390-4a7e-9458-416c2d8ff012`);
+            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/${uid}`);
             
             // Check response content type
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                console.error('Non-JSON response:', text);
-                Alert.alert('Error', 'Server returned invalid response');
+                console.log('Non-JSON response received');
+                setFiles([]); // Set empty files array
                 return;
             }
 
@@ -93,12 +93,12 @@ const AudioVideoUploadScreen = () => {
                 );
                 setFiles(sortedFiles);
             } else {
-                console.error('Error fetching audio:', data.error);
-                Alert.alert('Error', data.error || 'Failed to fetch audio files');
+                console.log('Error fetching audio:', data.error);
+                setFiles([]); // Set empty files array
             }
         } catch (error) {
-            console.error('Error fetching audio:', error);
-            Alert.alert('Error', 'Failed to load audio files. Please try again later.');
+            console.log('Error fetching audio:', error);
+            setFiles([]); // Set empty files array
         }
     };
 
@@ -115,6 +115,9 @@ const AudioVideoUploadScreen = () => {
     }, [editModalVisible]);
 
     const getFilteredFiles = () => {
+        if (!files || files.length === 0) {
+            return [];
+        }
         if (!searchQuery) {
             return files;
         }
@@ -151,68 +154,102 @@ const AudioVideoUploadScreen = () => {
         }
     };
     
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+
+    const validateFile = (file) => {
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error(`File size must be less than ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+        }
+        return true;
+    };
+
     const handleUpload = async (file, duration) => {
         if (!file) {
             Alert.alert('Error', 'No file selected');
             return;
         }
+        
         setUploading(true);
-    
-        const user = '54167dee-1390-4a7e-9458-416c2d8ff012';
-        const { uri, name } = file;
-    
-        const formData = new FormData();
-        formData.append('audio', { uri, type: file.type, name });
-        formData.append('uid', user);
-        formData.append('duration', duration);
-    
-        const headers = {
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        };
-    
+
         try {
+            // Create a new FormData instance
+            const formData = new FormData();
+            
+            // Append the file exactly like the curl request
+            formData.append('audio', {
+                uri: file.uri,
+                type: 'audio/mpeg',  // Force audio/mpeg type as in curl
+                name: file.name,
+            }, file.name);  // Add filename as third parameter
+            
+            // Append other fields exactly as in curl
+            formData.append('uid', uid);
+            formData.append('duration', String(duration));
+
+            console.log('Starting upload with:', {
+                fileUri: file.uri,
+                fileName: file.name,
+                uid: uid,
+                duration: duration
+            });
+
             const response = await fetch('https://ddtgdhehxhgarkonvpfq.functions.supabase.co/uploadAudio', {
                 method: 'POST',
-                headers: headers,
-                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    // Remove Content-Type header to let the browser set it with boundary
+                },
+                body: formData
             });
-    
+
             const data = await response.json();
-    
+            console.log('Upload response:', data);
+
             if (response.ok) {
-                setUploadData(data); // Set uploadData here
+                setUploadData(data);
                 loadFiles();
+                
                 Toast.show({
                     type: 'success',
                     text1: 'Upload Complete',
-                    text2: 'Your file has been uploaded successfully.',
+                    text2: 'Your file has been uploaded successfully.'
                 });
-    
-                // Stop the upload process and show toast for conversion start
-                setUploading(false); // Stop the upload
-                setPopupVisible(false); 
+
+                setUploading(false);
+                setPopupVisible(false);
+                
                 Toast.show({
                     type: 'info',
                     text1: 'Conversion Started',
-                    text2: 'Your file is being processed.',
+                    text2: 'Your file is being processed.'
                 });
-    
-                // Call handlePress for backend conversion
+
                 if (data.audioID) {
                     handlePress({ audioid: data.audioID });
                 } else {
                     Alert.alert('Error', 'Upload completed, but audioID is missing.');
                 }
             } else {
-                Alert.alert('Error', 'Failed to upload the file');
-                setUploadData(null); // Reset uploadData on failure
+                throw new Error(data.message || 'Upload failed');
             }
         } catch (error) {
-            console.error('Error uploading file:', error);
-            Alert.alert('Error', 'An error occurred during file upload');
-            setUploadData(null); // Reset uploadData on error
+            console.error('Upload error details:', {
+                message: error.message,
+                file: {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    uri: file.uri
+                }
+            });
+            
+            Alert.alert(
+                'Error',
+                'Failed to upload file. Please try again.'
+            );
+            setUploadData(null);
         } finally {
-            setUploading(false); // Ensure uploading is stopped
+            setUploading(false);
         }
     };
     
@@ -673,13 +710,18 @@ const AudioVideoUploadScreen = () => {
                 data={getFilteredFiles()}
                 keyExtractor={(item) => item.audioid}
                 renderItem={renderFileItem}
+                showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        {searchQuery ? (
-                            <Text style={styles.noResultsText}>No files match your search</Text>
-                        ) : (
-                            <ActivityIndicator size="large" color="#0066FEFF" />
-                        )}
+                        <Image 
+                            source={emptyIcon}
+                            style={styles.emptyImage}
+                        />
+                        <Text style={styles.emptyText}>
+                            {searchQuery 
+                                ? "No files match your search"
+                                : "No audio files found"}
+                        </Text>
                     </View>
                 }
             />
@@ -912,12 +954,20 @@ color:'#000',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        marginTop: 100, // Adjust this value to position the empty state below search box
     },
     emptyImage: {
-        width: 80, // Adjust size as needed
-        height: 80,
+        width: 200,
+        height: 200,
         resizeMode: 'contain',
-        marginTop:50,
+        marginBottom: 20,
+        opacity: 0.8
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 10
     },
     actionButton1: {
         backgroundColor: '#298EF9FF',

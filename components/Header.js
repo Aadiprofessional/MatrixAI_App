@@ -1,10 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
+import { supabase } from '../supabaseClient';
 
 const Header = ({ navigation, uid }) => {
     console.log("Header rendering with UID:", uid);
     const coinCount = useCoinsSubscription(uid);
+    const [userName, setUserName] = useState('');
+    const [dpUrl, setDpUrl] = useState(null);
+
+    useEffect(() => {
+        if (uid) {
+            fetchUserData();
+        }
+    }, [uid]);
+
+    const fetchUserData = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('name, dp_url')
+                .eq('uid', uid)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user data:', error);
+                return;
+            }
+
+            if (data) {
+                // Get first name and limit to 10 characters
+                const firstName = data.name?.split(' ')[0] || '';
+                setUserName(firstName.substring(0, 10));
+                
+                // Set profile picture URL if it exists
+                if (data.dp_url) {
+                    setDpUrl(data.dp_url);
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
 
     if (!uid) {
         console.log("No UID in Header");
@@ -15,10 +52,15 @@ const Header = ({ navigation, uid }) => {
 
     return (
         <View style={styles.header}>
-            {/* Welcome Text with Cat Icon */}
+            {/* Welcome Text with Profile Picture */}
             <View style={styles.rowContainer}>
-                <Image source={require('../assets/Avatar/Cat.png')} style={styles.icon} />
-                <Text style={styles.welcomeText}>Welcome Back!</Text>
+                <Image 
+                    source={dpUrl ? { uri: dpUrl } : require('../assets/Avatar/Cat.png')} 
+                    style={styles.icon} 
+                />
+                <Text style={styles.welcomeText}>
+                    Welcome{userName ? ` ${userName}!`: '!'}
+                </Text>
             </View>
 
             {/* Coin Display with Coin Icon */}
@@ -48,9 +90,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     icon: {
-        width: 35,
-        height: 35,
-        marginRight: 10, // Space between icon and text
+        width: 40,
+        height: 40,
+        marginRight: 3,
+        borderWidth: 0.8,
+        borderColor: '#C9C9C9',
+        borderRadius: 17.5, // Make the image circular
     },
     welcomeText: {
         fontSize: 18,
@@ -62,9 +107,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 5,
         paddingHorizontal: 10,
-        borderWidth: 1, // Gray stroke
-        borderColor: '#C9C9C9', // Light gray color
-        borderRadius: 15, // Rounded corners
+        borderWidth: 1,
+        borderColor: '#C9C9C9',
+        borderRadius: 15,
     },
     coinIcon: {
         width: 20,

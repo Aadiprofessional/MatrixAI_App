@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Image, FlatList } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity,
+    TextInput,
+    Image,
+    FlatList,
+    Modal,
+    TouchableWithoutFeedback,
+    Animated,
+} from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import { useNavigation } from '@react-navigation/native';
-import { Dialog, Portal, Button, Provider } from 'react-native-paper';
 
 const imageAssets = [
     require('../assets/Avatar/chat1.png'),
@@ -12,10 +23,15 @@ const imageAssets = [
     require('../assets/Avatar/chat6.png'),
 ];
 
-const ChatSlider = ({ isVisible, setIsVisible }) => {
+const ChatSlider = ({ isVisible, toggleModal }) => {
     const navigation = useNavigation();
+    const [slideAnim] = useState(new Animated.Value(0));
     const [chats, setChats] = useState([
-        { name: 'Matrix Bot', description: 'Think, Create, and Earn', image: require('../assets/Avatar/Cat.png') },
+        {
+            name: 'Matrix Bot',
+            description: 'Think, Create, and Earn',
+            image: require('../assets/Avatar/Cat.png')
+        },
         { name: 'StarryAI bot', description: 'AI Image Creator', image: imageAssets[0] },
         { name: 'Creative WritingsE', description: 'Text Generator', image: imageAssets[1] },
         { name: 'RealVisXL', description: 'Image Enhancer', image: imageAssets[2] },
@@ -29,50 +45,63 @@ const ChatSlider = ({ isVisible, setIsVisible }) => {
     const [newChatDescription, setNewChatDescription] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
 
-    const addChat = () => {
-        if (newChatName.trim()) {
-            setChats([
-                ...chats,
-                {
-                    name: newChatName,
-                    description: newChatDescription,
-                    image: selectedImage || imageAssets[0],
-                },
-            ]);
-            setNewChatName('');
-            setNewChatDescription('');
-            setSelectedImage(null);
+    const handleClose = () => {
+        if (isAddModalVisible) {
             setAddModalVisible(false);
+        } else {
+            toggleModal();
         }
     };
 
     return (
-        <Provider>
-            <Portal>
-                <Dialog visible={isVisible} onDismiss={() => setIsVisible(false)}>
-                    <Dialog.Title>All Chats</Dialog.Title>
-                    <Dialog.Content>
-                        {/* Chat List */}
-                        <FlatList
-                            data={chats}
-                            keyExtractor={(item, index) => index.toString()}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={styles.chatItem}
-                                    onPress={() => {
-                                        setIsVisible(false);
-                                        navigation.navigate('BotScreen', {
-                                            chatName: item.name,
-                                            chatDescription: item.description,
-                                            chatImage: item.image,
-                                            chatid: item.name
-                                        });
-                                    }}
-                                >
-                                    <Image source={item.image} style={styles.chatImage} />
-                                    <View style={styles.chatTextContainer}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Text style={styles.chatName}>{item.name}</Text>
+        <Modal
+            visible={isVisible}
+            transparent={true}
+            animationType="none"
+            onRequestClose={handleClose}
+        >
+            <TouchableWithoutFeedback onPress={handleClose}>
+                <View style={styles.modalOverlay}>
+                    <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+                        <Animatable.View 
+                            style={styles.container} 
+                            animation="slideInUp" 
+                            duration={300}
+                        >
+                            {/* Header */}
+                            <View style={styles.header}>
+                                <TouchableOpacity onPress={handleClose}>
+                                    <Image source={require('../assets/close.png')} style={styles.closeIcon} />
+                                </TouchableOpacity>
+                                <Text style={styles.title}>All Chats</Text>
+                                <TouchableOpacity onPress={() => setAddModalVisible(true)}>
+                                    <Image source={require('../assets/plus.png')} style={styles.addIcon} />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Chat List */}
+                            <FlatList
+                                data={chats}
+                                keyExtractor={(item, index) => index.toString()}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.chatItem}
+                                        onPress={() => {
+                                            handleClose();
+                                            navigation.navigate('BotScreen', { 
+                                                chatName: item.name,
+                                                chatDescription: item.description,
+                                                chatImage: item.image,
+                                                chatid:item.name
+                                            });
+                                        }}
+                                    >
+                                        <Image source={item.image} style={styles.chatImage} />
+                                        <View style={styles.chatTextContainer}>
+                                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                            <Text style={styles.chatName}>
+                                                {item.name}
+                                            </Text>
                                             {item.name === 'Matrix Bot' && (
                                                 <View style={styles.rightContainer}>
                                                     <Image source={require('../assets/star.png')} style={styles.starImage} />
@@ -80,73 +109,112 @@ const ChatSlider = ({ isVisible, setIsVisible }) => {
                                                 </View>
                                             )}
                                         </View>
-                                        <Text style={styles.chatDescription}>{item.description}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button onPress={() => setIsVisible(false)}>Cancel</Button>
-                        <Button onPress={() => setAddModalVisible(true)}>Add Chat</Button>
-                    </Dialog.Actions>
-                </Dialog>
+                                            <Text style={styles.chatDescription}>{item.description}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </Animatable.View>
+                    </TouchableWithoutFeedback>
+                </View>
+            </TouchableWithoutFeedback>
 
-                {/* Add Chat Modal */}
-                <Dialog visible={isAddModalVisible} onDismiss={() => setAddModalVisible(false)}>
-                    <Dialog.Title>Add New Chat</Dialog.Title>
-                    <Dialog.Content>
-                        <TextInput
-                            placeholder="Chat Name"
-                            value={newChatName}
-                            onChangeText={setNewChatName}
-                            style={styles.input}
-                        />
-                        <TextInput
-                            placeholder="Description"
-                            value={newChatDescription}
-                            onChangeText={setNewChatDescription}
-                            style={styles.input}
-                        />
+            {/* Add Chat Modal */}
+            <Modal
+                visible={isAddModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setAddModalVisible(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setAddModalVisible(false)}>
+                    <View style={styles.addModalOverlay}>
+                        <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+                            <View style={styles.addContainer}>
+                                <Text style={styles.addTitle}>Add New Chat</Text>
+                                <TextInput
+                                    placeholder="Chat Name"
+                                    value={newChatName}
+                                    onChangeText={setNewChatName}
+                                    style={styles.input}
+                                />
+                                <TextInput
+                                    placeholder="Description"
+                                    value={newChatDescription}
+                                    onChangeText={setNewChatDescription}
+                                    style={styles.input}
+                                />
 
-                        {/* Image Selection */}
-                        <Text style={styles.label}>Choose Image</Text>
-                        <View style={styles.imageGrid}>
-                            {imageAssets.map((img, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    onPress={() => setSelectedImage(img)}
-                                    style={[
-                                        styles.imageWrapper,
-                                        selectedImage === img && styles.selectedImage,
-                                    ]}
-                                >
-                                    <Image source={img} style={styles.imageOption} />
-                                    {selectedImage === img && <Text style={styles.checkmark}>✓</Text>}
+                                {/* Image Selection */}
+                                <Text style={styles.label}>Choose Image</Text>
+                                <View style={styles.imageGrid}>
+                                    {imageAssets.map((img, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            onPress={() => setSelectedImage(img)}
+                                            style={[
+                                                styles.imageWrapper,
+                                                selectedImage === img && styles.selectedImage,
+                                            ]}
+                                        >
+                                            <Image source={img} style={styles.imageOption} />
+                                            {selectedImage === img && <Text style={styles.checkmark}>✓</Text>}
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <TouchableOpacity onPress={() => {
+                                    if (newChatName.trim()) {
+                                        setChats([
+                                            ...chats,
+                                            {
+                                                name: newChatName,
+                                                description: newChatDescription,
+                                                image: selectedImage || imageAssets[0],
+                                            },
+                                        ]);
+                                        setNewChatName('');
+                                        setNewChatDescription('');
+                                        setSelectedImage(null);
+                                        setAddModalVisible(false);
+                                    }
+                                }} style={styles.addButton}>
+                                    <Text style={styles.addButtonText}>Add Chat</Text>
                                 </TouchableOpacity>
-                            ))}
-                        </View>
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button onPress={addChat}>Add Chat</Button>
-                        <Button onPress={() => setAddModalVisible(false)}>Cancel</Button>
-                    </Dialog.Actions>
-                </Dialog>
-            </Portal>
-        </Provider>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+        </Modal>
     );
 };
 
-
-
 const styles = StyleSheet.create({
-    modal: { margin: 0, justifyContent: 'flex-end' },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    addModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     container: {
         backgroundColor: '#FFFFFF',
         padding: 20,
         borderTopLeftRadius: 15,
         borderTopRightRadius: 15,
         height: '80%',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: -2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     closeIcon: { width: 24, height: 24 },
@@ -157,7 +225,6 @@ const styles = StyleSheet.create({
     chatTextContainer: { flex: 1 },
     chatName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
     chatDescription: { fontSize: 12, color: '#666' },
-    addModal: { justifyContent: 'center', alignItems: 'center' },
     addContainer: { backgroundColor: '#FFFFFF', padding: 20, borderRadius: 10, width: '90%' },
     addTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
     input: { borderWidth: 1, borderColor: '#E0E0E0', padding: 10, borderRadius: 8, marginBottom: 10 },

@@ -85,8 +85,10 @@ const ProfileScreen = ({ navigation }) => {
         navigation.navigate('Settings');
     };
 
+    const storagePath = `users/${uid}/`;
+
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <Header navigation={navigation} uid={uid} />
             
             {/* Header Section */}

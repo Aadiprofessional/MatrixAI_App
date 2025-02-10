@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, PermissionsAndroid, Platform, Animated, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, PermissionsAndroid, Platform, Animated, Alert, ActivityIndicator, Modal, TouchableWithoutFeedback } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Modal from 'react-native-modal';
 import AudioRecord from 'react-native-audio-record';
 import { Image } from 'react-native-animatable';
 import * as Animatable from 'react-native-animatable';
@@ -364,41 +363,57 @@ const VoiceTranslateScreen = () => {
       </View>
 
       <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={toggleModal}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        backdropOpacity={0.5}
-        style={styles.modal}
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={toggleModal}
       >
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.headerText}>All Languages</Text>
-            <TouchableOpacity onPress={navigateToTranslateScreen} style={styles.convertButtonContainer}>
-              <Image source={require('../assets/Translate.png')} style={styles.convertButtonIcon} />
-            </TouchableOpacity>
-          </View>
+        <TouchableWithoutFeedback onPress={toggleModal}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <View style={styles.header}>
+                  <Text style={styles.headerText}>All Languages</Text>
+                  <TouchableOpacity 
+                    onPress={navigateToTranslateScreen} 
+                    style={styles.convertButtonContainer}
+                  >
+                    <Image 
+                      source={require('../assets/Translate.png')} 
+                      style={styles.convertButtonIcon} 
+                    />
+                  </TouchableOpacity>
+                </View>
 
-          <View style={styles.searchBox}>
-            <Image source={require('../assets/search.png')} style={styles.searchIcon} />
-            <TextInput
-              placeholder="Search Language"
-              style={styles.textInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
+                <View style={styles.searchBox}>
+                  <Image 
+                    source={require('../assets/search.png')} 
+                    style={styles.searchIcon} 
+                  />
+                  <TextInput
+                    placeholder="Search Language"
+                    style={styles.textInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
 
-          <FlatList
-            data={filterLanguages(searchQuery)}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.languageItem} onPress={() => handleLanguageSelect(item)}>
-                <Text style={styles.languageItemText}>{item.label}</Text>
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item) => item.value}
-          />
-        </View>
+                <FlatList
+                  data={filterLanguages(searchQuery)}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.languageItem} 
+                      onPress={() => handleLanguageSelect(item)}
+                    >
+                      <Text style={styles.languageItemText}>{item.label}</Text>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.value}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -519,15 +534,17 @@ const styles = StyleSheet.create({
     tintColor: '#fff',
     resizeMode: 'contain',
   },
-  modal: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
-    margin: 0,
   },
   modalContent: {
     backgroundColor: 'white',
     padding: 20,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
+    maxHeight: '80%',
   },
   headerText: {
     fontSize: 18,
@@ -553,6 +570,19 @@ const styles = StyleSheet.create({
   languageItemText: {
     fontSize: 16,
     color: '#333',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
+  searchIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  textInput: {
+    flex: 1,
   },
 });
 

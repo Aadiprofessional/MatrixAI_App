@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
 import Sound from 'react-native-sound';
+import { useAuth } from '../context/AuthContext';
 
 const AudioPlayer = ({ url, transcript = [], onProgress, scrollY }) => {
+  const { uid, loading } = useAuth();
   const safeScrollY = scrollY ?? 0;
   console.log('AudioPlayer scrollY:', scrollY, 'safeScrollY:', safeScrollY);
   const [isPlaying, setIsPlaying] = useState(false);
