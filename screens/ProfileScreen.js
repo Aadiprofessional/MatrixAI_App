@@ -25,17 +25,22 @@ const ProfileScreen = ({ navigation }) => {
                 onPress: async () => {
                     try {
                         // Remove user login status from AsyncStorage
-                        await AsyncStorage.removeItem('userLoggedIn');
+                        await AsyncStorage.multiRemove([
+                            'userLoggedIn',
+                            'uid',
+                            // Add any other keys you want to clear
+                        ]);
                         
-                        // Optionally, reset any other stored user data or tokens if needed
-            
-                        // Navigate back to the login screen
-                        navigation.navigate('Login'); // Replace with your login screen's name
+                        // Navigate to the login screen
+                        navigation.replace('Login');
                         
                         console.log('User logged out successfully');
                     } catch (error) {
                         console.error('Error logging out:', error);
-                        alert('Something went wrong while logging out. Please try again.');
+                        Alert.alert(
+                            'Logout Error',
+                            'Something went wrong while logging out. Please try again.'
+                        );
                     }
                 },
             },

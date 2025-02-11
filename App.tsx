@@ -43,6 +43,7 @@ import CameraScreen from './screens/CameraScreen.js';
 import RemoveBackground from './screens/RemoveBackGround.js';
 import { ModalProvider } from './components/ModalContext.js';
 import { AuthProvider } from './context/AuthContext';
+import SignUpDetailsScreen2 from './screens/SignUpDetailsScreen copy.js';
 
 
 
@@ -106,6 +107,7 @@ const App = () => {
                                     <Stack.Screen name="OTPCode2" component={OTPCodeScreen2} options={{ headerShown: false }} />
                                     <Stack.Screen name="OTPCode" component={OTPCodeScreen} options={{ headerShown: false }} />
                                     <Stack.Screen name="SignUpDetails" component={SignUpDetailsScreen} options={{ headerShown: false }} />
+                                    <Stack.Screen name="SignUpDetails2" component={SignUpDetailsScreen2} options={{ headerShown: false }} />
                                 </>
                             )}
 

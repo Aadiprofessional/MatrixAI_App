@@ -69,5 +69,16 @@
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1046714115920-83sdiqi07763luik2p1d54ka442optra</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>1046714115920-83sdiqi07763luik2p1d54ka442optra.apps.googleusercontent.com</string>
 </dict>
 </plist>

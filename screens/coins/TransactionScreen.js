@@ -11,7 +11,7 @@ const transactions = [
 ];
 
 const TransactionScreen = ({ route, navigation }) => {
-  const { coinCount } = route.params;
+ 
 
   const renderItem = ({ item }) => (
     <View style={styles.transactionItem}>
@@ -34,7 +34,7 @@ const TransactionScreen = ({ route, navigation }) => {
       {/* Header with full background */}
       <View style={styles.header}>
         <Image source={require('../../assets/Header.png')} style={styles.headerImage} />
-        <Text style={styles.coinCount}>{coinCount} Coins</Text>
+        <Text style={styles.coinCount }>{ } Coins</Text>
       </View>
 
       {/* Action buttons */}
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     height: '130%',
     resizeMode: 'contain',
   },
-  coinCount: {
-    position: 'absolute',
+  
+    coinCount:{position: 'absolute',
     top: 110,
     left: 20,
     color: '#fff',

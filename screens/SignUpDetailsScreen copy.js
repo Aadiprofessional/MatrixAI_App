@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 
-const SignUpDetailsScreen = ({ navigation }) => {
+const SignUpDetailsScreen2 = ({ navigation }) => {
     const route = useRoute();
     const { userInfo = {}, phone = '', disableEmailInput = false } = route.params || {};
     const [loading, setLoading] = useState(false);
@@ -18,59 +18,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
         console.log('Received user info:', userInfo);
     }, [userInfo]);
 
-    const handleLogin = async () => {
-        if (!name || !age || !phoneNumber || !password) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        const phoneRegex = /^\+(\d{1,3})\d{6,14}$/;
-    
-        if (phoneRegex.test(phoneNumber.trim())) {
-            setLoading(true);
-            try {
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/sendOtpWithoutCheck', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        phone: phoneNumber,
-                        user_id: userInfo?.user_id,
-                        email: inputEmail,
-                        name: name,
-                        age: age,
-                        gender: gender,
-                        avatar_url: userInfo?.avatar_url || ''
-                    }), 
-                });
-    
-                const result = await response.json();
-                setLoading(false);
-    
-                if (response.ok) {
-                    navigation.navigate('OTPCode', {
-                        phone: phoneNumber,
-                        user_id: userInfo?.user_id,
-                        email: inputEmail,
-                        name,
-                        age,
-                        gender,
-                        password,
-                        avatar_url: userInfo?.avatar_url || ''
-                    });
-                } else {
-                    alert(result.message || 'Failed to send OTP. Please try again.');
-                }
-            } catch (error) {
-                setLoading(false);
-                alert('An error occurred. Please try again.');
-            }
-        } else {
-            alert('Please enter a valid phone number starting with +1 or +91!');
-        }
-    };
-
+   
     return (
         <View style={styles.container}>
             {/* Back Button */}
@@ -160,7 +108,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
                     {loading ? (
                         <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                        <Text style={styles.otpButtonText}>Get OTP</Text>
+                        <Text style={styles.otpButtonText}>Save Data</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -266,4 +214,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default SignUpDetailsScreen;
+export default SignUpDetailsScreen2;
