@@ -15,33 +15,21 @@ import * as Animatable from 'react-native-animatable';
 import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../hooks/useAuth';
-import Icon from 'react-native-vector-icons/FontAwesome';
-
+import Icon from 'react-native-vector-icons/Feather';
+  import { useCart } from '../components/CartContext';
 const { width } = Dimensions.get('window');
 
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const { uid, loading } = useAuth();
-
-  // Animations
-  const [showSearch, setShowSearch] = useState(true);
-  const searchBarWidth = useRef(new Animated.Value(width - 40)).current;
-  const searchBarHeight = useRef(new Animated.Value(40)).current;
-  const searchBarLeft = useRef(new Animated.Value((width - (width - 40)) / 2)).current;
-  const searchBarTop = useRef(new Animated.Value((Dimensions.get('window').height - 40) / 2 - 100)).current;
-  const searchBarRadius = useRef(new Animated.Value(20)).current;
-  const searchBarOpacity = useRef(new Animated.Value(1)).current;
-
-  // Title animations
-  const titleLeft = useRef(new Animated.Value(width / 2 - 100)).current;
-  const titleTop = useRef(new Animated.Value(100)).current; // Initial position at top of container
-  const titleFontSize = useRef(new Animated.Value(24)).current;
+  const { addToCart, cart } = useCart();  // Access cart from context
+  
   const titleOpacity = useRef(new Animated.Value(1)).current;
 
   // Plus button animations
   const plusTop = useRef(new Animated.Value(10)).current;
   const plusRight = useRef(new Animated.Value(10)).current;
-  const searchBoxOpacity = useRef(new Animated.Value(1)).current;
 
+  const cartLeft = useRef(new Animated.Value(10)).current;
   const [typingText, setTypingText] = useState('');
   const coinCount = useCoinsSubscription(uid);
 
@@ -52,6 +40,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const backgroundContainerHeight = useRef(new Animated.Value(200)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const searchBoxHeight = useRef(new Animated.Value(250)).current; // Use useRef for mutable animated value
 
   useEffect(() => {
     const targetText = "Let's see the AI world";
@@ -72,8 +61,8 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
     const listenerId = scrollY.addListener(({ value }) => {
       const progress = Math.min(value / scrollThreshold, 1);
 
-      // Update the height of the search bar from 120 to 50
- 
+      // Update the height of the search box from 100 to 50
+      searchBoxHeight.setValue(250 * (1 - progress) + 50 * progress); // From 100 to 50
 
       // Update the background image visibility based on scroll
       backgroundOpacity.setValue(Math.max(1 - progress, 0)); // Update opacity based on scroll
@@ -82,11 +71,12 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
       backgroundContainerHeight.setValue(200 * (1 - progress) + 50 * progress); // From 200 to 50
 
       // Adjust title opacity to fade out smoothly
-      titleOpacity.setValue(1 - progress); // Fade out based on scroll progress
+      titleOpacity.setValue(1 - (progress*2)); // Fade out based on scroll progress
 
       // Plus button animations
       plusTop.setValue(10 * (1.5 - progress));
       plusRight.setValue(10);
+      cartLeft.setValue(10);
     });
 
     return () => {
@@ -129,7 +119,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
               }),
             },
           ]}
-          resizeMode="cover"
+         
         />
       </Animated.View>
 
@@ -149,11 +139,9 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
           )}
         </Animated.Text>
       </View>
+    
 
-      <View style={[styles.searchContainer,   {
-         
-           
-          },]}>
+      <Animated.View style={[styles.searchContainer, { height: searchBoxHeight }]}>
         <View style={styles.searchBox}>
           <Icon name="search" size={20} color="#484848" style={styles.icon} />
           <TextInput
@@ -165,8 +153,30 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
             returnKeyType="search"
           />
         </View>
-      </View>
-
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.plusContainer,
+          {
+            top: plusTop,
+            left: cartLeft,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart')}
+        >
+          <View style={styles.cartIconContainer}>
+            <Icon name="shopping-cart" size={24} color="white" />
+            {cart.length > 0 && (
+              <View style={styles.cartItemCount}>
+                <Text style={styles.cartItemCountText}>{cart.length}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
       <Animated.View
         style={[
           styles.plusContainer,
@@ -205,21 +215,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
+    padding: 0,
+    margin: 0,
   },
   backgroundImage: {
     position: 'absolute',
     width: '100%',
     height: '100%',
+    alignSelf: 'center',
+    resizeMode: 'cover',
+    left: 0,
+    right: 0,
   },
-  speechBubble: {
-    maxWidth: 200,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+ 
   header: {
     position: 'absolute',
     top: 0,
@@ -231,11 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
+ 
   titleContainer: {
     position: 'absolute',
     top: 60,
@@ -253,7 +257,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-
   },
   searchBox: {
     flexDirection: 'row',
@@ -283,6 +286,29 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 10,
     tintColor:'#007BFF'
+  },
+  cartButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  cartIconContainer: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+  },  
+  cartItemCount: {
+    position: 'absolute',
+    top: -5,
+    right: -10,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  cartItemCountText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 
