@@ -65,7 +65,7 @@ const LoginScreen = ({ navigation }) => {
               if (userData) {
                 navigation.replace('Main');
               } else {
-                navigation.navigate('SignUpDetails2');
+                navigation.navigate('SignUpDetails');
               }
             }
           }
@@ -174,7 +174,7 @@ const LoginScreen = ({ navigation }) => {
               phone: session.user.phone || ''
             };
             console.log('Navigating to SignUpDetails with user info:', userInfo);
-            navigation.navigate('SignUpDetails2', { userInfo });
+            navigation.navigate('SignUpDetails', { userInfo });
             return;
           }
 

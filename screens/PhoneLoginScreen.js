@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
 import {
-    View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Dimensions, ActivityIndicator
+    View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Dimensions, ActivityIndicator, Modal, Pressable
 } from 'react-native';
+import flagUS from '../assets/flags/usa.jpeg'; // Example for US flag
+import flagIN from '../assets/flags/india.jpeg'; // Example for India flag
+import flagOTHER from '../assets/flags/china.jpeg'; // Example for other flags
 
 const { width } = Dimensions.get('window');
 
-const EmailLoginScreen = ({ navigation }) => {
+const PhoneLoginScreen = ({ navigation }) => {
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false); // State to manage loading
+    const [countryCode, setCountryCode] = useState('+91'); // Default to India
+    const [dropdownVisible, setDropdownVisible] = useState(false);
+
+    const countryCodes = [
+        { label: '+1', value: '+1', flag: flagUS },
+        { label: '+91', value: '+91', flag: flagIN },
+        { label: '+8', value: '+8', flag: flagOTHER },
+    ];
 
     const handleLogin = async () => {
-        if (phone.trim() === '') {
-            alert('Please enter a valid phone number!');
+        const formattedPhone = `${countryCode}${phone.trim()}`;
+        if (phone.trim() === '' || phone.length !== 10 || /\s/.test(phone)) {
+            alert('Please enter a valid 10-digit phone number without spaces!');
             return;
         }
     
@@ -23,7 +35,7 @@ const EmailLoginScreen = ({ navigation }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ phone }), // Send phone number in the request body
+                body: JSON.stringify({ phone: formattedPhone }),
             });
     
             if (!response.ok) {
@@ -37,7 +49,7 @@ const EmailLoginScreen = ({ navigation }) => {
                 // If the error message is specific (like 'User not registered')
                 if (data.error === 'User not registered') {
                     navigation.navigate('SignUpDetails', {
-                        phone: phone,
+                        phone: formattedPhone,
                         disableEmailInput: true,
                     });
                 } else {
@@ -45,7 +57,7 @@ const EmailLoginScreen = ({ navigation }) => {
                 }
             } else {
                 // If OTP is successfully sent, navigate to the OTPCode screen
-                navigation.navigate('OTPCode2', { phone: phone });
+                navigation.navigate('OTPCode2', { phone: formattedPhone });
             }
         } catch (error) {
             console.error('Error sending OTP:', error);
@@ -77,16 +89,50 @@ const EmailLoginScreen = ({ navigation }) => {
             {/* Heading */}
             <Text style={styles.heading}>Log in and unlock{'\n'}the digital universe</Text>
 
-            {/* Email Input */}
+            {/* Combined Dropdown and Phone Input */}
             <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter Phone"
-                    placeholderTextColor="#aaa"
-                    keyboardType="email-address"
-                    value={phone}
-                    onChangeText={setPhone}
-                />
+                <TouchableOpacity onPress={() => setDropdownVisible(!dropdownVisible)} style={styles.dropdown}>
+                    <View style={styles.dropdownContent}>
+                        <Image source={countryCodes.find(code => code.value === countryCode).flag} style={styles.flagIcon} />
+                        <Text style={styles.dropdownText}>{countryCode}</Text>
+                    </View>
+                    <Image source={require('../assets/downArrow.png')} style={styles.dropdownIcon} />
+                </TouchableOpacity>
+                {dropdownVisible && (
+                    <Modal transparent={true} animationType="fade">
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalContainer}>
+                                {countryCodes.map((code) => (
+                                    <Pressable
+                                        key={code.value}
+                                        onPress={() => {
+                                            setCountryCode(code.value);
+                                            setDropdownVisible(false);
+                                        }}
+                                        style={styles.modalItem}
+                                    >
+                                        <View style={styles.modalItemContent}>
+                                            <Image source={code.flag} style={styles.flagIcon} />
+                                            <Text style={styles.modalItemText}>{code.label}</Text>
+                                        </View>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+                    </Modal>
+                )}
+                <View style={styles.divider} />
+                <View style={styles.inputWrapper}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter Phone"
+                        placeholderTextColor="#aaa"
+                        keyboardType="numeric"
+                        value={phone}
+                        onChangeText={setPhone}
+                        maxLength={10} // Limit to 10 digits
+                    />
+                </View>
             </View>
 
             {/* Get OTP Button */}
@@ -120,7 +166,7 @@ const EmailLoginScreen = ({ navigation }) => {
 
             {/* Sign Up Link */}
             <Text style={styles.signupText}>
-                Don’t have an account?
+                Don't have an account?
                 <Text style={styles.signupLink} onPress={handleSignUp}> Sign up</Text>
             </Text>
 
@@ -171,20 +217,59 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 10,
-        padding: 10,
         width: '100%',
         marginBottom: 20,
     },
-    phoneIcon: {
-        marginRight: 10,
-        fontSize: 18,
+    dropdown: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        padding: 10,
+        justifyContent: 'space-between',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dropdownContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dropdownText: {
+        fontSize: 16,
+        color: '#000',
+    },
+    dropdownIcon: {
+        width: 20,
+        height: 20,
+        resizeMode: 'contain',
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContainer: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 20,
+        width: '80%',
+    },
+    modalItem: {
+        padding: 10,
+    },
+    modalItemContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    modalItemText: {
+        fontSize: 16,
+    },
+    inputWrapper: {
+        padding: 10,
     },
     input: {
-        flex: 1,
         fontSize: 16,
         color: '#000',
     },
@@ -253,6 +338,11 @@ const styles = StyleSheet.create({
         color: '#aaa',
         fontSize: 12,
     },
+    flagIcon: {
+        width: 20,
+        height: 20,
+        marginRight: 5,
+    },
 });
 
-export default EmailLoginScreen;
+export default PhoneLoginScreen;
