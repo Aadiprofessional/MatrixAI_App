@@ -8,12 +8,14 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import Header from './Header.js'
 import * as Animatable from 'react-native-animatable';
 import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../hooks/useAuth';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const { width } = Dimensions.get('window');
 
@@ -33,13 +35,23 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const titleLeft = useRef(new Animated.Value(width / 2 - 100)).current;
   const titleTop = useRef(new Animated.Value(100)).current; // Initial position at top of container
   const titleFontSize = useRef(new Animated.Value(24)).current;
+  const titleOpacity = useRef(new Animated.Value(1)).current;
 
   // Plus button animations
   const plusTop = useRef(new Animated.Value(10)).current;
   const plusRight = useRef(new Animated.Value(10)).current;
+  const searchBoxOpacity = useRef(new Animated.Value(1)).current;
 
   const [typingText, setTypingText] = useState('');
   const coinCount = useCoinsSubscription(uid);
+
+  // Define backgroundOpacity as a ref
+  const backgroundOpacity = useRef(new Animated.Value(1)).current;
+
+  // Set initial height for the background image container
+  const backgroundContainerHeight = useRef(new Animated.Value(200)).current;
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const targetText = "Let's see the AI world";
@@ -55,29 +67,32 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   }, []); // Runs every time the component is rendered
   
   useEffect(() => {
-    scrollY.addListener(({ value }) => {
-      const scrollThreshold = 100;
+    const scrollThreshold = 150; // Adjust threshold as needed
+
+    const listenerId = scrollY.addListener(({ value }) => {
       const progress = Math.min(value / scrollThreshold, 1);
-  
-      // Search bar animations
-      searchBarHeight.setValue(50 + (200 * (1 - progress))); // Shrinks from 250 to 50
-      searchBarWidth.setValue((width - 40) * (1 - progress) + 40 * progress);
-      searchBarLeft.setValue(20 * (1 - progress));
-      searchBarTop.setValue(100 * (1 - progress) + 10 * progress);
-      searchBarRadius.setValue(25 * (1 - progress) + 20 * progress);
-  
-      // Title animations
-      titleLeft.setValue((width / 2 - 100) * (1 - progress) + 80 * progress);
-      titleTop.setValue((searchBarHeight._value / 2 - 70) * (1 - progress) + (70 / 2 - 20) * progress);
-      titleFontSize.setValue(24 * (1 - progress) + 16 * progress);
-  
+
+      // Update the height of the search bar from 120 to 50
+ 
+
+      // Update the background image visibility based on scroll
+      backgroundOpacity.setValue(Math.max(1 - progress, 0)); // Update opacity based on scroll
+
+      // Update the height of the background container
+      backgroundContainerHeight.setValue(200 * (1 - progress) + 50 * progress); // From 200 to 50
+
+      // Adjust title opacity to fade out smoothly
+      titleOpacity.setValue(1 - progress); // Fade out based on scroll progress
+
       // Plus button animations
-      plusTop.setValue(10 * (2 - progress));
+      plusTop.setValue(10 * (1.5 - progress));
       plusRight.setValue(10);
     });
-  
-    return () => scrollY.removeAllListeners();
-  }, []);
+
+    return () => {
+      scrollY.removeListener(listenerId); // Clean up listener
+    };
+  }, [scrollY]); // Ensure scrollY is included in the dependency array
 
   return (
     <View style={styles.container2}>
@@ -87,12 +102,13 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
 
       <Animated.View style={[
         styles.container,
-        { height: searchBarHeight }
+        { height: backgroundContainerHeight } // Use the animated height
       ]}>
       <Animated.View
         style={[
           styles.backgroundImageContainer,
           {
+            
             backgroundColor: scrollY.interpolate({
               inputRange: [0, 100],
               outputRange: ['transparent', '#007BFF'],
@@ -117,55 +133,39 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
         />
       </Animated.View>
 
-      <Animated.Text
-        style={[
-          styles.title,
-          { left: titleLeft, top: titleTop, fontSize: titleFontSize },
-        ]}
-      >
-        {typingText !== '' && (
-          <View style={styles.speechBubble}>
-            <Animatable.Text animation="fadeIn" style={styles.typingText}>
-              {typingText}
-            </Animatable.Text>
-          </View>
-        )}
-      </Animated.Text>
+      <View style={styles.titleContainer}>
+        <Animated.Text
+          style={[
+            styles.title,
+            { opacity: titleOpacity },
+          ]}
+        >
+          {typingText !== '' && (
+            <View style={styles.speechBubble}>
+              <Animatable.Text animation="fadeIn" style={styles.typingText}>
+                {typingText}
+              </Animatable.Text>
+            </View>
+          )}
+        </Animated.Text>
+      </View>
 
-      <Animated.View
-        style={[
-          styles.searchContainer,
-          {
-            width: searchBarWidth,
-            height: 40,
-            left: searchBarLeft,
-            top: searchBarTop,
-            borderRadius: searchBarRadius,
-            backgroundColor: scrollY.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['rgba(255, 255, 255, 0.9)', '#FFFFFF00'],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
-        {showSearch ? (
+      <View style={[styles.searchContainer,   {
+         
+           
+          },]}>
+        <View style={styles.searchBox}>
+          <Icon name="search" size={20} color="#484848" style={styles.icon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search Item"
-            placeholderTextColor="#999"
-            onBlur={() => setShowSearch(false)}
+            placeholder="Search your products"
+            placeholderTextColor="#484848"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
           />
-        ) : (
-          <Image
-            source={require('../assets/search.png')}
-            style={styles.searchIcon}
-            onStartShouldSetResponder={() => {
-              setShowSearch(true);
-            }}
-          />
-        )}
-      </Animated.View>
+        </View>
+      </View>
 
       <Animated.View
         style={[
@@ -236,17 +236,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  title: {
+  titleContainer: {
     position: 'absolute',
-    top: 40,
+    top: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  title: {
     fontWeight: 'bold',
     color: '#fff',
   },
     searchContainer: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
+    width: '70%',
     alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    width: '100%',
   },
   searchInput: {
     fontSize: 16,
@@ -264,10 +280,9 @@ const styles = StyleSheet.create({
     height: 25,
     tintColor:'#fff'
   },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#fff',
+  icon: {
+    marginRight: 10,
+    tintColor:'#007BFF'
   },
 });
 
