@@ -50,16 +50,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tab: {
-    width: 60,  // Fixed width
-    height: 60,  // Fixed height (square)
+    width: 40,  // Fixed width
+    height: 40,  // Fixed height (square)
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-    width: 30,  // Icon size
-    height: 30,
+      width: 25,  // Icon size
+    height: 25,
     tintColor: '#333',
   },
   tabText: {

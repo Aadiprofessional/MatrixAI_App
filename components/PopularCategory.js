@@ -111,7 +111,7 @@ const PopularCategory = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
+    marginTop: 0,
   },
   scrollContainer: {
     flex: 1,

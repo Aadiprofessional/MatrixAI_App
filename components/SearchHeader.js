@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Alert,
+
 } from 'react-native';
 import Header from './Header.js'
 import * as Animatable from 'react-native-animatable';
@@ -16,7 +17,7 @@ import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../hooks/useAuth';
 import Icon from 'react-native-vector-icons/Feather';
-  import { useCart } from '../components/CartContext';
+import { useCart } from '../components/CartContext';
 const { width } = Dimensions.get('window');
 
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
@@ -95,10 +96,10 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
         { height: backgroundContainerHeight } // Use the animated height
       ]}>
       <Animated.View
+        source={require('../assets/AIShopImage1.png')}
         style={[
           styles.backgroundImageContainer,
           {
-            
             backgroundColor: scrollY.interpolate({
               inputRange: [0, 100],
               outputRange: ['transparent', '#007BFF'],
@@ -107,7 +108,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
           },
         ]}
       >
-        <Animated.Image
+       <Animated.Image
           source={require('../assets/AIShop.png')}
           style={[
             styles.backgroundImage,
@@ -147,7 +148,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search your products"
-            placeholderTextColor="#484848"
+            placeholderTextColor="#9F9F9FFF"
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
@@ -239,7 +240,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
- 
   titleContainer: {
     position: 'absolute',
     top: 60,
@@ -263,13 +263,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 10,
-    paddingHorizontal: 10,
+      paddingHorizontal: 10,
     paddingVertical: 10,
     width: '100%',
   },
   searchInput: {
     fontSize: 16,
-    paddingHorizontal: 10,
+    paddingRight: 50,
   },
   plusContainer: {
     position: 'absolute',

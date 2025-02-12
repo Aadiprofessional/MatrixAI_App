@@ -19,7 +19,7 @@ import Header from '../components/Header';
 // Import the category components
 import PopularCategory from '../components/PopularCategory';
 import MusicCategory from '../components/MusicCategory';
-import DocumentCategory from '../components/DocumentCategory';
+
 import VideoCategory from '../components/VideoCategory';
 import ImageCategory from '../components/ImageCategory';
 
@@ -45,10 +45,8 @@ const AiShop = ({ navigation }) => {
       case 1:
         return <MusicCategory />;
       case 2:
-        return <DocumentCategory />;
-      case 3:
         return <VideoCategory />;
-      case 4:
+      case 3:
         return <ImageCategory />;
       default:
         return null;
@@ -71,6 +69,7 @@ const AiShop = ({ navigation }) => {
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        bounces={false}
       >
 
    {renderCategoryComponent()}

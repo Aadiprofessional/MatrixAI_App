@@ -55,6 +55,7 @@ const HomeScreen = ({ navigation }) => {
       <ScrollView 
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         {/* Header */}
         <Header navigation={navigation} uid={uid} />
