@@ -12,9 +12,7 @@ import {
 } from 'react-native';
 import SearchHeader from '../components/SearchHeader';
 import CategoryTabs from '../components/CategoryTabs';
-import Card from '../components/Card';
-import Banner from '../components/Banner';
-import Header from '../components/Header';
+
 
 // Import the category components
 import PopularCategory from '../components/PopularCategory';
@@ -64,6 +62,7 @@ const AiShop = ({ navigation }) => {
       {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -73,25 +72,7 @@ const AiShop = ({ navigation }) => {
       >
 
    {renderCategoryComponent()}
-        <Banner />
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest Release</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={latestRelease.slice(4)}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card title={item.title} price={item.price} image={item.image} navigation={navigation} />
-          )}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.cardList}
-        />
+      
 
         {/* Render the selected category component below the ScrollView */}
       
@@ -108,6 +89,9 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100, // Adjust the value as needed
+},
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
