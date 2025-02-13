@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import { useAuth } from '../hooks/useAuth';
+import RNRestart from 'react-native-restart';
 
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,8 +32,8 @@ const ProfileScreen = ({ navigation }) => {
                             // Add any other keys you want to clear
                         ]);
                         
-                        // Navigate to the login screen
-                        navigation.replace('Login');
+                        // Restart the app
+                        RNRestart.Restart();
                         
                         console.log('User logged out successfully');
                     } catch (error) {

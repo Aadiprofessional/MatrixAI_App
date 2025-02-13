@@ -23,6 +23,8 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
     const [error, setError] = useState(false);
     const [loading, setLoading] = useState(false); // Loading state for button
     const [otpVerified, setOtpVerified] = useState(false); // Track if OTP is successfully verified
+    const [timer, setTimer] = useState(180); // Timer state
+    const [isResendDisabled, setIsResendDisabled] = useState(true); // Disable resend button initially
 
     const inputRefs = [];
     const { phone } = route.params; // Retrieve phone from navigation params
@@ -31,6 +33,19 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
     useEffect(() => {
         inputRefs[0]?.focus();
     }, []);
+
+    // Start timer when the component mounts
+    useEffect(() => {
+        let interval = null;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prevTimer) => prevTimer - 1);
+            }, 1000);
+        } else {
+            setIsResendDisabled(false); // Enable button when timer reaches 0
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     // Handle OTP input
     const handleOtpChange = (text, index) => {
@@ -125,6 +140,33 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
             Alert.alert('Error', 'Please enter a valid 6-digit OTP');
         }
     };
+
+    // Handle Login to send OTP
+    const handleLogin = async () => {
+        const formattedPhone = phone.trim(); // Use phone from params
+        if (formattedPhone === '' || formattedPhone.length !== 10 || /\s/.test(formattedPhone)) {
+            alert('Please enter a valid 10-digit phone number without spaces!');
+            return;
+        }
+        setLoading(true);
+        try {
+            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendPhoneOtp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ phone: formattedPhone }),
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('API Response:', data); // For debugging
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Handle Resend
     const handleResendCode = () => {
         setOtp(['', '', '', '', '', '']);
@@ -133,6 +175,9 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
         setError(false);
         alert('A new code has been sent!');
         console.log('Resent OTP'); // Log resend action
+        setTimer(180); // Reset timer to 60 seconds
+        setIsResendDisabled(true); // Disable button
+        handleLogin(); // Call the handleLogin function to send OTP again
     };
 
     return (
@@ -195,8 +240,15 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
                 ))}
             </View>
 
+            {/* Timer Display */}
+            <Text style={styles.timerText}>{`00:${String(timer).padStart(2, '0')}`}</Text>
+
             {/* Resend Code */}
-            <TouchableOpacity style={styles.resendContainer} onPress={handleResendCode}>
+            <TouchableOpacity 
+                style={styles.resendContainer} 
+                onPress={handleResendCode} 
+                disabled={isResendDisabled} // Disable button based on state
+            >
                 <Image source={require('../assets/resend.png')} style={styles.resendImage} />
                 <Text style={styles.resendText}>Get new code</Text>
             </TouchableOpacity>
@@ -311,6 +363,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    timerText: {
+        fontSize: 18,
+        color: '#000',
+        marginBottom: 10,
     },
 });
 

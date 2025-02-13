@@ -21,6 +21,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [activeIndex, setActiveIndex] = useState(0);
     const [error, setError] = useState(false);
+    const [timer, setTimer] = useState(180); // Timer state
 
     const inputRefs = [];
 
@@ -140,6 +141,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
         setActiveIndex(0);
         setError(false);
         alert('A new code has been sent!');
+        setTimer(180); // Reset timer to 60 seconds
     };
 
     return (
@@ -201,6 +203,8 @@ const OTPCodeScreen = ({ navigation, route }) => {
                     />
                 ))}
             </View>
+           
+            <Text style={styles.timerText}>{`00:${String(timer).padStart(2, '0')}`}</Text>
 
 
             {/* Resend Code */}
@@ -311,6 +315,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    timerText: {
+        color: '#3399FF',
+        fontSize: 14,
+        marginBottom: 20,
     },
 });
 

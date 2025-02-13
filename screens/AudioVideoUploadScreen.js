@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     },
     deleteAllButton: {
         position: 'absolute',
-        bottom: 20,
+        bottom: 30,
         left: '10%',
         right: '60%',
         backgroundColor: '#ff4d4d',

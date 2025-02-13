@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,9 @@ import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+// Add a module-scope variable to persist summary call status across mounts
+const summaryCalledForAudioId = {};
+
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
   const { transcription ,XMLData,uid,audioid} = route.params || {};
@@ -39,6 +42,7 @@ const BotScreen2 = ({ navigation, route }) => {
   const [fullTranscription, setFullTranscription] = useState('');
     const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [showAdditionalButtons, setShowAdditionalButtons] = useState(false); // New state for additional buttons
 
   const toggleMessageExpansion = (messageId) => {
     setExpandedMessages(prev => ({
@@ -48,62 +52,18 @@ const BotScreen2 = ({ navigation, route }) => {
   };
 
   const handleAttach = () => {
-    launchImageLibrary({ noData: true }, async (response) => {
-      if (response.assets) {
-        const { uri } = response.assets[0];
-        const formData = new FormData();
-        formData.append('uid', uid);  // Pass the user ID
-        formData.append('image', {
-          uri,
-          type: 'image/png',  // Adjust the type based on the image format
-          name: 'image.png',
-        });
-  
-        try {
-          setIsLoading(true);
-          const apiResponse = await axios.post(
-            'https://matrix-server-gzqd.vercel.app/understandImage',
-            formData,
-            {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            }
-          );
-  
-          const { ocrText, imageUrl } = apiResponse.data;
-  
-          // Clean the bot response text by removing special characters
-          const cleanedText = ocrText.replace(/(\*\*|\#\#)/g, "");
-  
-          // Add the OCR text to the bot's response and image URL to user message
-          setMessages((prev) => [
-            ...prev,
-            { 
-              id: Date.now().toString(), 
-              image: imageUrl,  // Send image URL to the user side
-              sender: 'user' 
-            },
-          ]);
-          // Keep existing DeepSeek functionality for the original user input message
-          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
-  
-          saveChatHistory(imageUrl, 'user'); // Save bot response
-        } catch (error) {
-          console.error('Error attaching image:', error);
-          Alert.alert('Error', 'Failed to send image for processing');
-          setIsLoading(false);
-        } finally {
-    
-        }
-      }
-    });
+    setShowAdditionalButtons(prev => !prev); // Toggle additional buttons visibility
+    // Change the icon from plus to cross
   };
   
   
   
   useEffect(() => {
-    if (transcription && !dataLoaded) {
+    // Only run this effect once per audio id (when transcription is available)
+    if (transcription && !dataLoaded && audioid && !summaryCalledForAudioId[audioid]) {
+      // Mark that we've already called summary for this audio id
+      summaryCalledForAudioId[audioid] = true;
+
       setFullTranscription(transcription);
   
       // Add auto-generated user message requesting summary
@@ -118,7 +78,7 @@ const BotScreen2 = ({ navigation, route }) => {
       // Get summary from bot
       fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
     }
-  }, [transcription, dataLoaded]);
+  }, [transcription, dataLoaded, audioid]);
     
   const openai = new OpenAI({
     baseURL: 'https://api.deepseek.com',
@@ -288,74 +248,66 @@ const BotScreen2 = ({ navigation, route }) => {
       );
     };
   
-    const renderRightActions = () => {
-      return (
-        <View style={styles.swipeableButtons}>
-          <TouchableOpacity 
-            style={styles.swipeButton} 
-            onPress={() => handleGenerateMindmap(item)}
-          >
-            <Ionicons name="git-network-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.swipeButton} 
-            onPress={() => handleGeneratePPT(item)}
-          >
-            <Ionicons name="document-text-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      );
-    };
-  
+ 
     return (
       <GestureHandlerRootView>
         <Swipeable
           renderLeftActions={isBot ? renderLeftActions : null}
-          renderRightActions={isUser ? renderRightActions : null}
+   
           leftThreshold={40}
           rightThreshold={40}
           overshootLeft={false}
           overshootRight={false}
-          enabled={isBot ? true : isUser}
+          enabled={isBot}
         >
-          <Animatable.View
-            animation="fadeInUp"
-            duration={100}
-            style={[
-              styles.messageContainer,
-              isBot ? styles.botMessageContainer : isUser ? styles.userMessageContainer : {},
-            ]}
-          >
-            {/* Text Display (Exclude URLs for User) */}
-            {item.text && (!isUser || (isUser && !containsUrl(item.text))) && (
-              <Text style={isBot ? styles.botText : styles.userText}>
-                {isExpanded ? item.text : item.text.slice(0, 100)}
-                {item.text.length > 100 && (
-                  <Text
-                    style={styles.viewMoreText}
-                    onPress={() => toggleMessageExpansion(item.id)}
-                  >
-                    {isExpanded ? ' View less' : '... View more'}
-                  </Text>
-                )}
-              </Text>
-            )}
+          <View style={{ flexDirection: isBot ? 'row' : 'row-reverse', alignItems: 'center' }}>
+            <Animatable.View
+              animation={isBot ? "fadeInUp" : undefined}
+              duration={100}
+              style={[
+                styles.messageContainer,
+                isBot ? styles.botMessageContainer : styles.userMessageContainer,
+              ]}
+            >
+              {/* Text Display (Exclude URLs for User) */}
+              {item.text && (!isUser || (isUser && !containsUrl(item.text))) && (
+                <Text style={isBot ? styles.botText : styles.userText}>
+                  {isExpanded ? item.text : item.text.slice(0, 100)}
+                  {item.text.length > 100 && (
+                    <Text
+                      style={styles.viewMoreText}
+                      onPress={() => toggleMessageExpansion(item.id)}
+                    >
+                      {isExpanded ? ' View less' : '... View more'}
+                    </Text>
+                  )}
+                </Text>
+              )}
     
-            {/* Show image if the user sends a URL */}
-            {isUser && item.text && containsUrl(item.text) && (
-              <Image source={{ uri: item.text }} style={styles.messageImage} />
-            )}
+              {/* Show image if the user sends a URL */}
+              {isUser && item.text && containsUrl(item.text) && (
+                <Image source={{ uri: item.text }} style={styles.messageImage} />
+              )}
     
-            {/* Show image if the user sends an image */}
-            {isUser && item.image && !containsUrl(item.text) && (
-              <Image source={{ uri: item.image }} style={styles.messageImage} />
-            )}
+              {/* Show image if the user sends an image */}
+              {isUser && item.image && !containsUrl(item.text) && (
+                <Image source={{ uri: item.image }} style={styles.messageImage} />
+              )}
     
-            {/* Bot's message can have both text and images */}
-            {isBot && item.image && (
-              <Image source={{ uri: item.image }} style={styles.messageImage} />
-            )}
-          </Animatable.View>
+              {/* Bot's message can have both text and images */}
+              {isBot && item.image && (
+                <Image source={{ uri: item.image }} style={styles.messageImage} />
+              )}
+            </Animatable.View>
+            <TouchableOpacity>
+              <Ionicons 
+                name={isBot ? 'arrow-redo-sharp' : ''} 
+                size={24} 
+                color="#4C8EF7" 
+                style={{ marginHorizontal: 5 }}
+              />
+            </TouchableOpacity>
+          </View>
         </Swipeable>
       </GestureHandlerRootView>
     );
@@ -397,12 +349,13 @@ const BotScreen2 = ({ navigation, route }) => {
           onContentSizeChange={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
           onLayout={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
           ref={flatListRef}
+          style={{ marginBottom: showAdditionalButtons ? 50 : 0 }}
         />
       )}
 
       {/* Loading Animation */}
       {isLoading && (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { bottom: showAdditionalButtons ? -100 : -140 }]}>
           <LottieView
             source={require('../assets/dot.json')}
             autoPlay
@@ -415,7 +368,7 @@ const BotScreen2 = ({ navigation, route }) => {
       {/* Buttons for Mindmap and PPT */}
     
       {/* Chat Input Box */}
-      <View style={styles.chatBoxContainer}>
+      <View style={[styles.chatBoxContainer, { bottom: showAdditionalButtons ? -10 : -50}]}>
         <TextInput
           style={styles.textInput}
           placeholder="Type a message..."
@@ -424,30 +377,39 @@ const BotScreen2 = ({ navigation, route }) => {
           onSubmitEditing={handleSendMessage}
           multiline
         />
-         <TouchableOpacity onPress={handleAttach} style={styles.sendButton}>
-          <Image source={require('../assets/plus.png')} style={styles.sendIcon} />
+        <TouchableOpacity onPress={handleAttach} style={styles.sendButton}>
+          {showAdditionalButtons ? (
+            <Ionicons name="close" size={24} color="#4C8EF7" />
+          ) : (
+            <Ionicons name="add" size={24} color="#4C8EF7" />
+          )}
         </TouchableOpacity>
-         <TouchableOpacity  onPress={() => handleCamera(navigation)} style={styles.sendButton}>
-          <Image source={require('../assets/camera.png')} style={styles.sendIcon} />
+        <TouchableOpacity onPress={() => handleCamera(navigation)} style={styles.sendButton}>
+          <Ionicons name="camera" size={24} color="#4C8EF7" />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
-          <Image source={require('../assets/send2.png')} style={styles.sendIcon} />
+          <Ionicons name="send" size={24} color="#4C8EF7" />
         </TouchableOpacity>
       </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.mindmapButton]} 
-          onPress={() => setIsFullScreen(true)} 
-        >
-          <Text style={styles.buttonText}>Generate Mindmap</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.button, styles.pptButton]} 
-          onPress={() =>  navigation.navigate('CreatePPTScreen', { message : transcription ,audioid })}
-        >
-          <Text style={styles.buttonText}>Generate PPT</Text>
-        </TouchableOpacity>
-      </View>
+    
+      {/* Render additional buttons when showAdditionalButtons is true */}
+      {showAdditionalButtons && (
+        <View style={styles.additionalButtonsContainer}>
+          <TouchableOpacity style={styles.additionalButton}>
+            <Ionicons name="camera" size={24} color="#4C8EF7" />
+            <Text>Photo OCR</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.additionalButton} >
+            <Ionicons name="image" size={24} color="#4C8EF7" />
+            <Text>Image OCR</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.additionalButton}>
+            <Ionicons name="attach" size={24} color="#4C8EF7" />
+            <Text>Document</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    
       <Modal
                 visible={isFullScreen}
                 transparent={false}
@@ -494,7 +456,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'absolute',
-    bottom: -10,
+    bottom: -50,
     width: '90%',
     borderRadius: 25,
     borderWidth: 1,
@@ -647,7 +609,7 @@ closeIcon: {
   },
   loadingContainer: {
     position: 'absolute',
-    bottom: -100,
+  
     left: -200,
     right: 0,
     justifyContent: 'center',
@@ -705,6 +667,21 @@ closeIcon: {
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  additionalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    position: 'absolute',
+    bottom: -60, // Adjust based on your layout
+    width: '100%',
+  },
+  additionalButton: {
+    alignItems: 'center',
+  },
+  additionalIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
   },
 });
 

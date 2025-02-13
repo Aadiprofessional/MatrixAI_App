@@ -121,7 +121,8 @@ const PhoneLoginScreen = ({ navigation }) => {
                         </View>
                     </Modal>
                 )}
-                <View style={styles.divider} />
+             
+                <View style={styles.divider2} />
                 <View style={styles.inputWrapper}>
                     <TextInput
                         style={styles.input}
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     dropdown: {
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
-        padding: 10,
+        padding: 5,
         justifyContent: 'space-between',
         flexDirection: 'row',
         alignItems: 'center',
@@ -240,9 +241,11 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     dropdownIcon: {
-        width: 20,
-        height: 20,
+        width: 10,
+        height: 10,
         resizeMode: 'contain',
+ 
+        marginLeft: 3,
     },
     modalOverlay: {
         flex: 1,
@@ -297,6 +300,8 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: '#ddd',
     },
+    
+    
     orText: {
         marginHorizontal: 10,
         color: '#aaa',
@@ -342,6 +347,12 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         marginRight: 5,
+    },
+    divider2: {
+        width: 1,
+        backgroundColor: '#ccc',
+        height: '100%',
+        
     },
 });
 

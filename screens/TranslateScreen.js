@@ -34,7 +34,9 @@ import Slider from '@react-native-community/slider'; // Import the Slider compon
   import Sound from 'react-native-sound';
   import ForceDirectedGraph from '../components/mindMap';
   import ForceDirectedGraph2 from '../components/mindMap2';
-
+  import { Picker } from '@react-native-picker/picker';
+  import DropDownPicker from 'react-native-dropdown-picker';
+  import Svg, { Path } from 'react-native-svg';
   const TranslateScreen = ({ route }) => {
     const graphRef = useRef(null);
       const { audioid ,uid} = route.params || {};
@@ -158,28 +160,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     
   
     const fetchAudioMetadata = async (uid, audioid) => {
-        if (!uid || !audioid) {
-            console.warn('Missing uid or audioid:', { uid, audioid });
-            setIsLoading(false);
-            return;
-        }
-
         try {
-            // First check if we have cached data
-            const cachedData = await AsyncStorage.getItem(`audioData-${audioid}`);
-            if (cachedData) {
-                const parsedData = JSON.parse(cachedData);
-                setTranscription(parsedData.transcription || '');
-                setParagraphs(parsedData.paragraphs || []);
-                setAudioUrl(parsedData.audioUrl || '');
-                setKeypoints(parsedData.keyPoints || '');
-                setXMLData(parsedData.XMLData || '');
-                setIsLoading(false);
-                return;
-            }
-
-            console.log('Fetching audio metadata for:', { uid, audioid });
-            
             const response = await fetch('https://matrix-server-gzqd.vercel.app/getAudioFile', {
                 method: 'POST',
                 headers: {
@@ -187,85 +168,63 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 },
                 body: JSON.stringify({ uid, audioid }),
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server response not OK:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorText
-                });
-                throw new Error(`Server error: ${response.status} ${errorText}`);
-            }
-
             const data = await response.json();
-            
-            if (!data) {
-                throw new Error('No data received from server');
-            }
-
-            console.log('Received audio metadata:', {
-                hasTranscription: !!data.transcription,
-                hasAudioUrl: !!data.audio_url,
-                audioName: data.audio_name
-            });
-
-            // Set state with fetched data
-            setTranscription(data.transcription || '');
-            setFileName(data.audio_name || 'Untitled');
-            setFileContent(data.file_path || '');
-            setDuration(data.duration);
-
-            // Handle transcription
-            let parsedParagraphs = [];
-            if (data.transcription) {
-                const { paragraphs, words } = splitTranscription(data.transcription);
-                parsedParagraphs = paragraphs; // Store paragraphs in a variable
-                setParagraphs(paragraphs);
-                if (data.duration) {
-                    const timings = calculateParagraphTimings(words, data.duration);
-                    setWordTimings(timings);
+    
+            if (response.ok) {
+                // Set state with fetched data
+                setTranscription(data.transcription || '');
+                setFileName(data.audio_name || 'Untitled');
+                setFileContent(data.file_path || '');
+                setDuration(data.duration)
+    
+                // Handle transcription
+                let paragraphs = [];
+                let wordTimings = [];
+                if (data.transcription) {
+                    const { paragraphs: para, words } = splitTranscription(data.transcription);
+                    paragraphs = para;
+                    setParagraphs(para);
+                    if (data.duration) {
+                        wordTimings = calculateParagraphTimings(words, data.duration);
+                        setWordTimings(wordTimings);
+                    }
                 }
-            }
-
-            // Handle audio URL
-            if (data.audio_url) {
-                setAudioUrl(data.audio_url);
-            } else if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
-                const audioSource = await downloadAndCombineAudio(data.chunk_urls);
-                if (audioSource) {
-                    setAudioUrl(audioSource.type === 'blob' ? audioSource.url : data.chunk_urls[0]);
+    
+                // Handle audio chunks with enhanced playback options
+                let audioUrl = data.audio_url;
+                if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
+                    const audioSource = await downloadAndCombineAudio(data.chunk_urls);
+                    if (audioSource && audioSource.type === 'blob') {
+                        audioUrl = audioSource.url;
+                    } else if (audioSource && audioSource.type === 'chunked') {
+                        audioUrl = audioSource.urls[0]; // Start with first chunk URL
+                    } else if (audioSource && audioSource.type === 'direct') {
+                        audioUrl = audioSource.url;
+                    }
                 }
+                setAudioUrl(audioUrl);
+    
+                // Set key points and XML data
+                setKeypoints(data.key_points || '');
+                setXMLData(data.xml_data || '');
+    
+                // Save data to local storage
+                const audioData = {
+                    transcription: data.transcription || '',
+                    fileName: data.audio_name || 'Untitled',
+                    fileContent: data.file_path || '',
+                    paragraphs,
+                    wordTimings,
+                    audioUrl,
+                    keyPoints: data.key_points || '',
+                    XMLData: data.xml_data || '',
+                };
+                await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
+            } else {
+                console.error('Error fetching audio metadata:', data.error);
             }
-
-            // Set key points and XML data
-            setKeypoints(data.key_points || '');
-            setXMLData(data.xml_data || '');
-
-            // Cache the data
-            const audioData = {
-                transcription: data.transcription || '',
-                paragraphs: parsedParagraphs, // Use the stored paragraphs
-                audioUrl: data.audio_url || '',
-                keyPoints: data.key_points || '',
-                XMLData: data.xml_data || '',
-            };
-            await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
-
         } catch (error) {
-            console.error('Error fetching audio metadata:', {
-                error: error.message,
-                stack: error.stack,
-                uid,
-                audioid
-            });
-            
-            // Show user-friendly error
-            Alert.alert(
-                'Error Loading Audio',
-                'Unable to load audio data. Please check your connection and try again.',
-                [{ text: 'OK' }]
-            );
+            console.error('Error fetching audio metadata:', error);
         } finally {
             setIsLoading(false);
         }
@@ -534,46 +493,26 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 return;
             }
             setAudioDuration(newSound.getDuration());
-            newSound.setNumberOfLoops(isRepeatMode ? -1 : 0); // Set initial loop setting
             setSound(newSound);
         });
     };
-
-    const waveAnimationRef = useRef(null);
-    const waveAnimationRef2 = useRef(null);
 
     const toggleAudioPlayback = () => {
         if (!sound) return;
         
         if (isAudioPlaying) {
             sound.pause();
-            // Pause both wave animations
-            waveAnimationRef.current?.pause();
-            waveAnimationRef2.current?.pause();
         } else {
             sound.play((success) => {
                 if (success) {
-                    if (isRepeatMode) {
-                        sound.setCurrentTime(0);
-                        sound.play();
-                    } else {
-                        setIsAudioPlaying(false);
-                        setAudioPosition(audioDuration);
-                        // Pause animations when audio ends
-                        waveAnimationRef.current?.pause();
-                        waveAnimationRef2.current?.pause();
-                    }
+                    setIsAudioPlaying(false);
+                    setAudioPosition(audioDuration); // Set to the end of the audio
+                    // This resets the position to the start
                 } else {
                     console.error('Playback failed');
-                    setIsAudioPlaying(false);
-                    // Pause animations on failure
-                    waveAnimationRef.current?.pause();
-                    waveAnimationRef2.current?.pause();
                 }
             });
-            // Play both wave animations
-            waveAnimationRef.current?.play();
-            waveAnimationRef2.current?.play();
+            
         }
         setIsAudioPlaying(!isAudioPlaying);
     };
@@ -605,26 +544,20 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         let interval;
         if (isAudioPlaying) {
             interval = setInterval(() => {
-                if (sound && !isSeeking) {
+                if (sound) {
                     sound.getCurrentTime((seconds) => {
                         setAudioPosition(seconds);
                         onAudioProgress({
                             currentTime: seconds,
                             duration: audioDuration
                         });
-
-                        // Check if we're at the end and repeat mode is off
-                        if (seconds >= audioDuration && !isRepeatMode) {
-                            setIsAudioPlaying(false);
-                            sound.setCurrentTime(0);
-                        }
                     });
                 }
             }, 100);
         }
         
         return () => clearInterval(interval);
-    }, [isAudioPlaying, sound, isSeeking, isRepeatMode, audioDuration]);
+    }, [isAudioPlaying, sound]);
 
     const handleShare = async () => {
         try {
@@ -670,36 +603,16 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     };
     
     const handleValueChange = (value) => {
-        if (!sound) return;
-        
-        setIsSeeking(true); // Indicate that we're seeking
         setAudioPosition(value);
-    };
-
-    // Add this new function to handle seek completion
-    const handleSlidingComplete = (value) => {
-        if (!sound) return;
-        
-        sound.setCurrentTime(value);
-        setIsSeeking(false);
-        
-        // If audio was playing before seeking, resume playback
-        if (isAudioPlaying) {
-            sound.play((success) => {
-                if (!success) {
-                    console.error('Playback failed after seeking');
-                }
-            });
-        }
-    };
-
-    const handleLayout = (event) => {
+      };
+    
+      const handleLayout = (event) => {
         const { width } = event.nativeEvent.layout;
         setSliderWidth(width);
-    };
+      };
     
-    // Calculate the position of the custom thumb
-    const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
+      // Calculate the position of the custom thumb
+      const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
     
     const handleTranslateParagraph = async (index) => {
         if (!paragraphs[index]) return;
@@ -767,21 +680,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         setTranscriptionVisible(!isTranscriptionVisible);
     };
 
-    // Add this new effect to handle repeat mode
-    useEffect(() => {
-        if (!sound) return;
-
-        // Set up completion callback
-        sound.setNumberOfLoops(isRepeatMode ? -1 : 0); // -1 means infinite loops, 0 means no repeat
-        
-        return () => {
-            // Cleanup
-            if (sound) {
-                sound.setNumberOfLoops(0);
-            }
-        };
-    }, [isRepeatMode, sound]);
-
     return (
         <View style={styles.container}>
                  <View style={styles.headerContainer}>
@@ -831,7 +729,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
   
         {/* Container for inputRange: 120 */}
         <Animated.View style={[
-          styles.audioControlsContainer,
+            styles.audioControlsContainer2,
           {
             opacity: playerHeight.interpolate({
               inputRange: [60, 120],
@@ -849,7 +747,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             ]
           }
         ]}>
-          <View style={[styles.audioControlsContainer2]}>
+       
             {/* Play/Pause Button */}
             <TouchableOpacity onPress={toggleAudioPlayback} style={styles.playButton}>
               <View style={[styles.playButton2]}>
@@ -882,10 +780,9 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
-                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
-                  thumbTintColor="transparent" // Hide the default thumb
+                  thumbTintColor="orange" // Hide the default thumb
                 />
                
               
@@ -894,24 +791,24 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 {/* Lottie Animation for Waves */}
                 <View style={styles.waveAnimationContainer}>
                   <LottieView
-                    ref={waveAnimationRef}
-                    source={require('../assets/waves.json')}
-                    autoPlay={false}
+                    source={require('../assets/waves.json')} // Add your Lottie animation JSON here
+                    autoPlay={isAudioPlaying} // Sync with audio playback
                     loop
                     style={styles.waveAnimation}
                   />
+                  {/* Mask to Reveal Animation */}
                   <Animated.View
                     style={[
                       styles.mask,
                       {
-                        width: `${100 - (audioPosition / audioDuration) * 100}%`,
+                        width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
                       }
                     ]}
                   />
                 </View>
               </View>
             </Animated.View>
-          </View>
+        
         </Animated.View>
   
         {/* Container for inputRange: 60 */}
@@ -938,7 +835,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
           <Animated.View style={[
             styles.waveformBox,
             {
-              width: '100%', // Full width
+              width: '95%', // Full width
               height: playerHeight._value - 40,
             }
           ]}>
@@ -956,7 +853,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
-                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
                   thumbTintColor="transparent" // Hide the default thumb
@@ -965,7 +861,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 <View
                   style={[
                     styles.customThumb,
-                    { left: thumbPosition -5 }, // Adjust for thumb width
+                    { left: thumbPosition -1 }, // Adjust for thumb width
                   ]}
                 />
               </View>
@@ -973,17 +869,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
               {/* Lottie Animation for Waves */}
               <View style={styles.waveAnimationContainer2}>
                 <LottieView
-                  ref={waveAnimationRef2}
-                  source={require('../assets/waves.json')}
-                  autoPlay={false}
+                  source={require('../assets/waves.json')} // Add your Lottie animation JSON here
+                  autoPlay={isAudioPlaying} // Sync with audio playback
                   loop
                   style={styles.waveAnimation2}
                 />
+                {/* Mask to Reveal Animation */}
                 <Animated.View
                   style={[
                     styles.mask2,
                     {
-                      width: `${100 - (audioPosition / audioDuration) * 100}%`,
+                      width: `${100 - (audioPosition / audioDuration) * 100}%`, // Dynamic width based on progress
                     }
                   ]}
                 />
@@ -1081,7 +977,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         scrollY.setValue(offsetY);
                     }}
                     scrollEventThrottle={16}
-                    showsVerticalScrollIndicator={false}
                 >
                     
                     {paragraphs.map((para, index) => (
@@ -1163,7 +1058,99 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     style={styles.buttonImage3}
                 />
             </TouchableOpacity>
-    
+            <TouchableOpacity 
+                onPress={async () => {
+                    try {
+                        // Create PDF path
+                        const pdfPath = `${RNFS.CachesDirectoryPath}/graph_${Date.now()}.pdf`;
+                        
+                        // Create new PDF document
+                        const pdfDoc = await PDFDocument.create();
+                        if (!pdfDoc) {
+                            throw new Error('Failed to create PDF document');
+                        }
+
+                        // Create page with A4 dimensions
+                        const page = pdfDoc.addPage([595.28, 841.89]);
+                        if (!page) {
+                            throw new Error('Failed to create PDF page');
+                        }
+
+                        // Add title
+                        page.drawText('Force Directed Graph', {
+                            x: 50,
+                            y: 800,
+                            size: 20,
+                            color: rgb(0, 0, 0),
+                        });
+
+                        // Add date
+                        page.drawText(`Generated: ${new Date().toLocaleString()}`, {
+                            x: 50,
+                            y: 780,
+                            size: 12,
+                            color: rgb(0, 0, 0),
+                        });
+
+                        // Add graph description
+                        page.drawText('This document contains the visualization of the Force Directed Graph', {
+                            x: 50,
+                            y: 750,
+                            size: 12,
+                            color: rgb(0, 0, 0),
+                        });
+
+                        // Serialize PDF
+                        const pdfBytes = await pdfDoc.save();
+                        if (!pdfBytes || pdfBytes.length === 0) {
+                            throw new Error('Failed to generate PDF bytes');
+                        }
+
+                        // Write to file
+                        await RNFS.writeFile(pdfPath, pdfBytes, 'base64');
+                        
+                        // Verify file
+                        const fileExists = await RNFS.exists(pdfPath);
+                        if (!fileExists) {
+                            throw new Error('PDF file was not created');
+                        }
+
+                        // Get file info
+                        const fileInfo = await RNFS.stat(pdfPath);
+                        if (!fileInfo || fileInfo.size === 0) {
+                            throw new Error('PDF file is empty');
+                        }
+
+                        // Share PDF
+                        await Share.open({
+                            url: `file://${pdfPath}`,
+                            type: 'application/pdf',
+                            title: 'Share Graph PDF',
+                            subject: 'Force Directed Graph Export',
+                            message: 'Here is the exported Force Directed Graph PDF',
+                        });
+
+                        // Clean up after sharing
+                        setTimeout(async () => {
+                            try {
+                                await RNFS.unlink(pdfPath);
+                            } catch (cleanupError) {
+                                console.warn('Error cleaning up PDF:', cleanupError);
+                            }
+                        }, 10000); // Clean up after 10 seconds
+
+                    } catch (error) {
+                        console.error('PDF Export Error:', error);
+                        Alert.alert('Export Error', error.message || 'Failed to export PDF');
+                    }
+                }}
+                style={[styles.centerFloatingButton2]}
+            >
+                <Image
+                    source={require('../assets/downloads.png')}
+                    style={styles.buttonImage4}
+                />
+            </TouchableOpacity>
             </View>
                 </View>
 
@@ -1335,6 +1322,7 @@ const styles = StyleSheet.create({
         width: '100%', // Cover the entire waveform box
         height: '100%',
         overflow: 'hidden', // Clip the animation
+        marginBottom: -20,
        
     },
     waveAnimation: {
@@ -1361,32 +1349,37 @@ const styles = StyleSheet.create({
         backgroundColor: 'white', // Acts as the mask
     },
     audioPlayerContainer: {
-        
+        marginTop: 15,
         alignItems: 'center',
         justifyContent: 'center',
     },
     audioControlsContainer: {
         position: 'absolute',
-       
+        backgroundColor: '#F2F3F7',
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%', // Adjust width as needed
+        borderRadius:10,
     },
     audioControlsContainer2: {
        flexDirection:'row',
        alignItems: 'center',
        justifyContent: 'center',
-       marginTop:30,
+      
+       position: 'absolute',
        backgroundColor: '#F2F3F7',
        borderRadius:50,
        paddingLeft:15,
        paddingRight:15,
+       width: '100%', // Adjust width as needed
 
     },
     waveformBox: {
         backgroundColor: '#FFFFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
+        borderRadius:10,
+        width: '80%', // Adjust width as needed
     },
     waveformBox2: {
         
@@ -1437,7 +1430,7 @@ const styles = StyleSheet.create({
     customThumb: {
         position: 'absolute',
         width: 5,
-        height: 60,
+        height: 90,
         borderRadius:50,
         backgroundColor: 'orange',
         borderRadius: 0,
@@ -1587,7 +1580,8 @@ flexDirection:'row',
         flexDirection: 'row',
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        marginTop: 1,
+        marginTop: -10,
+        marginBottom:10,
       },
       icon: {
         width: 30,
