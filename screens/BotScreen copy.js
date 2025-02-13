@@ -303,7 +303,7 @@ const BotScreen2 = ({ navigation, route }) => {
               <Ionicons 
                 name={isBot ? 'arrow-redo-sharp' : ''} 
                 size={24} 
-                color="#4C8EF7" 
+                color="#4588F5FF" 
                 style={{ marginHorizontal: 5 }}
               />
             </TouchableOpacity>
