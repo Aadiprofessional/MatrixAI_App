@@ -715,9 +715,7 @@ const AudioVideoUploadScreen = () => {
                                    />
                                </TouchableOpacity>
                 <Text style={styles.headerTitle}>Matrix AI</Text>
-                <TouchableOpacity>
-                    <Image source={helpIcon} style={styles.headerIcon} />
-                </TouchableOpacity>
+              
             </View>
             <View style={styles.topButtonsContainer}>
                 <TouchableOpacity style={styles.topButton} onPress={handleFileSelect}>
@@ -1206,6 +1204,8 @@ color:'#000',
     },
     headerTitle: {
         fontSize: 20,
+        position:'absolute',
+        left:'45%',
         fontWeight: 'bold',
         color: '#007bff',
     },
