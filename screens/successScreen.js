@@ -25,8 +25,10 @@ const SuccessScreen = ({ navigation }) => {
       </View>
       <Text style={styles.title}>Success!</Text>
       <Text style={styles.subtitle}>
-        You have successfully become your Ai shop owner
-      </Text>
+  <Text>Your registration as an AI Shop Owner has been successfully completed!{"\n"}</Text>
+  <Text>We are currently verifying your information. This process may take up to 2-3 business days.{"\n\n"}</Text>
+  <Text>Thank you for your patience!</Text>
+</Text>
       <TouchableOpacity
         style={styles.doneButton}
         onPress={() => navigation.navigate('ManageProductsScreen')}

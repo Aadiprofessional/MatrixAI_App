@@ -76,7 +76,7 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleAIShop = () => {
-        navigation.navigate('CartScreen');
+        navigation.navigate('FillInformationScreen');
     };
 
     const handleVoiceSettings = () => {

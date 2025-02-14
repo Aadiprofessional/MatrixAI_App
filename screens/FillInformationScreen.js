@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
+
+import { supabase } from '../supabaseClient';
+import { useAuth } from '../context/AuthContext';
+
 
 const FillInformationScreen = () => {
   const navigation = useNavigation();
   const [idCard, setIdCard] = useState(null);
   const [selfie, setSelfie] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+    const { uid, loading } = useAuth();
 
   const pickImage = (setImage) => {
     const options = {
@@ -22,6 +30,147 @@ const FillInformationScreen = () => {
     });
   };
 
+
+  const checkUserCoins = async (uid, requiredCoins) => {
+    try {
+      console.log('Checking coins for UID:', uid);
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_coins")
+        .eq("uid", uid)
+        .single();
+  
+      if (error) {
+        console.error('Error checking user coins:', error);
+        return false;
+      }
+
+      console.log('User coin balance:', data?.user_coins);
+      console.log('Required coins:', requiredCoins);
+  
+      if (!data || data.user_coins < requiredCoins) {
+        console.log('Insufficient coins');
+        return false;
+      }
+  
+      console.log('Sufficient coins');
+      return true;
+    } catch (error) {
+      console.error('Error in checkUserCoins:', error);
+      return false;
+    }
+  };
+  
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const uriToBase64 = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const handlePayRent = async () => {
+    if (!uid) return;
+
+    // Validate all fields
+    if (!name || !email || !address || !idCard || !selfie) {
+      Alert.alert('Error', 'Please fill all fields and upload both images');
+      return;
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+  
+    // First confirmation
+    Alert.alert(
+      'Confirm Payment',
+      'Are you sure you want to pay 100 coins?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            setIsProcessing(true);
+            
+            // Check coins
+            const hasEnoughCoins = await checkUserCoins(uid, 100);
+            
+            if (!hasEnoughCoins) {
+              setIsProcessing(false);
+              Alert.alert(
+                'Insufficient Coins',
+                'You don\'t have enough coins to make this payment. Please recharge.',
+                [
+                  {
+                    text: 'Recharge Now',
+                    onPress: () => navigation.navigate('TransactionScreen')
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  }
+                ]
+              );
+              return;
+            }
+  
+            // Make API call
+            try {
+              const frontImageBase64 = idCard ? await uriToBase64(idCard) : null;
+              const backImageBase64 = selfie ? await uriToBase64(selfie) : null;
+
+              const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/makeSeller', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  uid: uid,
+                  name: name,
+                  frontImage: frontImageBase64,
+                  backImage: backImageBase64,
+                  emailAddress: email,
+                  permanentAddress: address
+                })
+              });
+  
+              const result = await response.json();
+              if (result.success) {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'SuccessScreen' }],
+                });
+              } else {
+                Alert.alert('Error', 'Failed to process payment');
+              }
+            } catch (error) {
+              console.error('API Error:', error);
+              Alert.alert('Error', 'An error occurred while processing your request');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -35,7 +184,12 @@ const FillInformationScreen = () => {
       </View>
 
       <Text style={styles.subtitle}>Enter your details</Text>
-      <TextInput style={styles.input} placeholder="Full Name" />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Full Name" 
+        value={name}
+        onChangeText={setName}
+      />
       
       <View style={styles.uploadContainer}>
         <TouchableOpacity 
@@ -64,18 +218,31 @@ const FillInformationScreen = () => {
         </View>
       </View>
 
-      <TextInput style={styles.input} placeholder="Email address" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Permanent address" />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Official Email" 
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Permanent address" 
+        value={address}
+        onChangeText={setAddress}
+      />
       
-      <TouchableOpacity style={styles.uploadButton}>
-        <Text style={styles.uploadText}>Add GST (Optional)</Text>
-      </TouchableOpacity>
-
+    
       <TouchableOpacity 
         style={styles.payButton}
-        onPress={() => navigation.navigate('SuccessScreen')}
+        onPress={handlePayRent}
+        disabled={isProcessing}
       >
-        <Text style={styles.buttonText}>Pay the Rent</Text>
+        {isProcessing ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.buttonText}>Pay the Rent</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -170,5 +337,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+
 
 export default FillInformationScreen;
