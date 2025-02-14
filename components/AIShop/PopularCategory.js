@@ -3,16 +3,30 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import ImageDealsSection from './ImageDealsSection';
 import VideoDealsSection from './VideoDealsSection';
 import MusicDealsSection from './MusicDealsSection';
+import Banner from './Banner';
 
 const PopularCategory = ({ navigation }) => {
   const [bestDeals, setBestDeals] = useState([]);
+  const[highlight,setHighlight]=useState([]);
   const [bestVideoDeals, setBestVideoDeals] = useState([]);
   const [bestMusicDeals, setBestMusicDeals] = useState([]);
+  const [musicHighlight, setMusicHighlight] = useState([]);
+  const [videoHighlight, setVideoHighlight] = useState([]);
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState(true);
+  const [musicHighlightLoading, setMusicHighlightLoading] = useState(true);
+  const [videoHighlightLoading, setVideoHighlightLoading] = useState(true);
+  const [imageHighlightLoading, setImageHighlightLoading] = useState(true);
+  
   const [musicLoading, setMusicLoading] = useState(true);
   const [videoError, setVideoError] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageHighlightError, setImageHighlightError] = useState(false);
+  const [videoHighlightError, setVideoHighlightError] = useState(false);
+  const [musicHighlightError, setMusicHighlightError] = useState(false);
   const [musicError, setMusicError] = useState(false);
+
+
 
   useEffect(() => {
     const fetchBestDeals = async () => {
@@ -22,14 +36,52 @@ const PopularCategory = ({ navigation }) => {
         setBestDeals(data);
       } catch (error) {
         console.error('Error fetching best deals:', error);
+        setImageError(true);
       } finally {
         setLoading(false);
       }
     };
+    const fetchHighlight = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsImageProducts');
+        const data = await response.json();
+        setHighlight(data);
+      } catch (error) {
+        console.error('Error fetching best deals:', error);
+        setImageHighlightError(true);
+      } finally {
+        setImageHighlightLoading(false);
+      }
+    };
 
+    const fetchHighlightVideo = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsVideoProduct');
+        const data = await response.json();
+        setVideoHighlight(data);
+      } catch (error) {
+        console.error('Error fetching best deals:', error);
+        setVideoHighlightError(true);
+      } finally {
+        setVideoHighlightLoading(false);
+      }
+    };
+
+    const fetchHighlightMusic = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsMusicProduct');
+        const data = await response.json();
+        setMusicHighlight(data);
+      } catch (error) {
+        console.error('Error fetching best deals:', error);
+        setMusicHighlightError(true);
+      } finally {
+        setMusicHighlightLoading(false);
+      }
+    };
     const fetchBestVideoDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProducts');
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
         const data = await response.json();
         setBestVideoDeals(data);
       } catch (error) {
@@ -42,7 +94,7 @@ const PopularCategory = ({ navigation }) => {
 
     const fetchBestMusicDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProducts');
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProduct');
         const data = await response.json();
         setBestMusicDeals(data);
       } catch (error) {
@@ -52,10 +104,12 @@ const PopularCategory = ({ navigation }) => {
         setMusicLoading(false);
       }
     };
-
+fetchHighlight();
     fetchBestDeals();
     fetchBestVideoDeals();
     fetchBestMusicDeals();
+    fetchHighlightMusic();
+    fetchHighlightVideo();
   }, []);
 
   return (
@@ -70,8 +124,22 @@ const PopularCategory = ({ navigation }) => {
         bestDeals={bestDeals}
         loading={loading}
         navigation={navigation}
+        imageError={imageError}
       />
-
+      
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Highlighted Images</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      </View>
+      <ImageDealsSection 
+        bestDeals={highlight}
+        loading={imageHighlightLoading}
+        navigation={navigation}
+        imageError={imageHighlightError}
+      />
+         <Banner />
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Videos</Text>
         <TouchableOpacity>
@@ -84,7 +152,20 @@ const PopularCategory = ({ navigation }) => {
         videoError={videoError}
         navigation={navigation}
       />
+        <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Highlighted Videos</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      </View>
 
+      <VideoDealsSection
+        bestVideoDeals={videoHighlight}
+        videoLoading={videoHighlightLoading}
+        videoError={videoHighlightError}
+        navigation={navigation}
+      />
+   <Banner />
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Music</Text>
         <TouchableOpacity>
@@ -97,6 +178,19 @@ const PopularCategory = ({ navigation }) => {
         musicError={musicError}
         navigation={navigation}
       />
+       <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Highlighted Music</Text>
+        <TouchableOpacity>
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      </View>
+      <MusicDealsSection
+        bestMusicDeals={musicHighlight}
+        musicLoading={musicHighlightLoading}
+        musicError={musicHighlightError}
+        navigation={navigation}
+      />
+         <Banner />
     </View>
   );
 };

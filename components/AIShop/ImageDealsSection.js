@@ -2,12 +2,14 @@ import React from 'react';
 import { View, FlatList, ActivityIndicator } from 'react-native';
 import Card from './Card';
 
-const ImageDealsSection = ({ bestDeals, loading, navigation }) => {
+const ImageDealsSection = ({ bestDeals, loading, navigation,imageError }) => {
   return (
     <View>
       {loading ? (
-        <ActivityIndicator size="small" color="#0000ff" />
-      ) : (
+       <ActivityIndicator size="small" color="#0000ff" />
+             ) : imageError ? (
+               <Text style={styles.errorText}>No Data Found</Text>
+             ) : (
         <FlatList
           data={bestDeals}
           keyExtractor={(item) => item.imageproductid}

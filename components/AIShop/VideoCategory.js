@@ -1,59 +1,99 @@
-// PopularCategory.js
-import React from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity     } from 'react-native';
-import Card from './Card'; // Assuming you have a Card component
-import VideoCard from './VideoCard';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import ImageDealsSection from './ImageDealsSection';
+import VideoDealsSection from './VideoDealsSection';
+import MusicDealsSection from './MusicDealsSection';
 import Banner from './Banner';
-const popularData = [
-  { id: '1', title: 'AI Family by xyz', price: '$2' },
-  { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../../assets/AIShopImage1.png') },
-  { id: '3', title: 'Woman by abc', price: '$3.6', image: require('../../assets/AIShopImage1.png') },
-];
 
-const VideoCategory = () => {
+const VideoCategory = ({ navigation }) => {
+  const [bestDeals, setBestDeals] = useState([]);
+  const[highlight,setHighlight]=useState([]);
+  const [bestVideoDeals, setBestVideoDeals] = useState([]);
+  const [bestMusicDeals, setBestMusicDeals] = useState([]);
+  const [musicHighlight, setMusicHighlight] = useState([]);
+  const [videoHighlight, setVideoHighlight] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [musicHighlightLoading, setMusicHighlightLoading] = useState(true);
+  const [videoHighlightLoading, setVideoHighlightLoading] = useState(true);
+  const [imageHighlightLoading, setImageHighlightLoading] = useState(true);
+  
+  const [musicLoading, setMusicLoading] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageHighlightError, setImageHighlightError] = useState(false);
+  const [videoHighlightError, setVideoHighlightError] = useState(false);
+  const [musicHighlightError, setMusicHighlightError] = useState(false);
+  const [musicError, setMusicError] = useState(false);
+
+
+
+  useEffect(() => {
+   
+
+    const fetchHighlightVideo = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsVideoProduct');
+        const data = await response.json();
+        setVideoHighlight(data);
+      } catch (error) {
+        console.error('Error fetching best deals:', error);
+        setVideoHighlightError(true);
+      } finally {
+        setVideoHighlightLoading(false);
+      }
+    };
+
+   
+    const fetchBestVideoDeals = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
+        const data = await response.json();
+        setBestVideoDeals(data);
+      } catch (error) {
+        console.error('Error fetching video deals:', error);
+        setVideoError(true);
+      } finally {
+        setVideoLoading(false);
+      }
+    };
+
+   
+    fetchBestVideoDeals();
+    fetchHighlightVideo();
+  }, []);
+
   return (
     <View style={styles.container}>
+    
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Latest Release</Text>
+        <Text style={styles.sectionTitle}>Best In Videos</Text>
         <TouchableOpacity>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={popularData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <VideoCard title={item.title} price={item.price} image={item.image} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      <VideoDealsSection
+        bestVideoDeals={bestVideoDeals}
+        videoLoading={videoLoading}
+        videoError={videoError}
+        navigation={navigation}
       />
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Latest Release</Text>
+
+      <Banner />
+        <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Highlighted Videos</Text>
         <TouchableOpacity>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
-        </View>
-      <FlatList
-        data={popularData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <VideoCard title={item.title} price={item.price} image={item.image} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      </View>
+      <VideoDealsSection
+        bestVideoDeals={videoHighlight}
+        videoLoading={videoHighlightLoading}
+        videoError={videoHighlightError}
+        navigation={navigation}
       />
-      <Banner />
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Latest Release</Text>
-        <TouchableOpacity>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-        </View>
-      <FlatList
-        data={popularData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <VideoCard title={item.title} price={item.price} image={item.image} />}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      />  
-      <Banner />
+
+<Banner />
     </View>
   );
 };
@@ -61,12 +101,16 @@ const VideoCategory = () => {
 const styles = StyleSheet.create({
   container: {
     marginTop: 0,
-    },
+  },
+  scrollContainer: {
+    flex: 1,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: 10,
+    marginVertical: 10,
   },
   sectionTitle: {
     fontSize: 18,
@@ -76,8 +120,14 @@ const styles = StyleSheet.create({
     color: 'orange',
     fontSize: 14,
   },
-  });
+  errorText: {
+    textAlign: 'center',
+    color: 'red',
+    marginVertical: 20,
+  },
+  cardList: {
+    paddingLeft: 10,
+  },
+});
 
 export default VideoCategory;
-
-// Similar components can be created for MusicCategory, DocumentCategory, VideoCategory, ImageCategory

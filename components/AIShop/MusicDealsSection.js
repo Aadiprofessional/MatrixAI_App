@@ -19,6 +19,7 @@ const MusicDealsSection = ({ bestMusicDeals, musicLoading, musicError, navigatio
               price={`$${item.price}`} 
               audioUrl={item.audio_url} 
               navigation={navigation} 
+              owner={item.name}
             />
           )}
           horizontal

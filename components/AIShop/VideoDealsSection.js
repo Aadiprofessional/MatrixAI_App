@@ -17,7 +17,7 @@ const VideoDealsSection = ({ bestVideoDeals, videoLoading, videoError, navigatio
             <VideoCard 
               title={item.name} 
               price={`$${item.price}`} 
-              videoUrl={item.video_url} 
+              image={item.thumbnail_url} 
               navigation={navigation} 
             />
           )}
