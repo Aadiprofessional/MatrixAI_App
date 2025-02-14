@@ -1,0 +1,30 @@
+import React from 'react';
+import { View, FlatList, ActivityIndicator } from 'react-native';
+import Card from './Card';
+
+const ImageDealsSection = ({ bestDeals, loading, navigation }) => {
+  return (
+    <View>
+      {loading ? (
+        <ActivityIndicator size="small" color="#0000ff" />
+      ) : (
+        <FlatList
+          data={bestDeals}
+          keyExtractor={(item) => item.imageproductid}
+          renderItem={({ item }) => (
+            <Card 
+              title={item.name} 
+              price={`$${item.price}`} 
+              image={{ uri: item.image_url }} 
+              navigation={navigation} 
+            />
+          )}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        />
+      )}
+    </View>
+  );
+};
+
+export default ImageDealsSection;

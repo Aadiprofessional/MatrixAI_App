@@ -11,13 +11,17 @@ import {
   Alert,
 
 } from 'react-native';
-import Header from './Header.js'
+
 import * as Animatable from 'react-native-animatable';
-import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../hooks/useAuth';
+
 import Icon from 'react-native-vector-icons/Feather';
-import { useCart } from '../components/CartContext';
+
+import Header from '../Header';
+import { useCart } from '../CartContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useCoinsSubscription } from '../../hooks/useCoinsSubscription';
 const { width } = Dimensions.get('window');
 
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
@@ -96,7 +100,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
         { height: backgroundContainerHeight } // Use the animated height
       ]}>
       <Animated.View
-        source={require('../assets/AIShopImage1.png')}
+        source={require('../../assets/AIShopImage1.png')}
         style={[
           styles.backgroundImageContainer,
           {
@@ -109,7 +113,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
         ]}
       >
        <Animated.Image
-          source={require('../assets/AIShop.png')}
+          source={require('../../assets/AIShop.png')}
           style={[
             styles.backgroundImage,
             {
@@ -189,7 +193,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
       >
         <TouchableOpacity onPress={() => navigation.navigate('FillInformationScreen')}>
           <Image
-            source={require('../assets/plus.png')}
+            source={require('../../assets/plus.png')}
             style={styles.plusIcon}
           />
         </TouchableOpacity>

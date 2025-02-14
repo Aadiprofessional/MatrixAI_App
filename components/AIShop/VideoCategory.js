@@ -6,8 +6,8 @@ import VideoCard from './VideoCard';
 import Banner from './Banner';
 const popularData = [
   { id: '1', title: 'AI Family by xyz', price: '$2' },
-  { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../assets/AIShopImage1.png') },
-  { id: '3', title: 'Woman by abc', price: '$3.6', image: require('../assets/AIShopImage1.png') },
+  { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../../assets/AIShopImage1.png') },
+  { id: '3', title: 'Woman by abc', price: '$3.6', image: require('../../assets/AIShopImage1.png') },
 ];
 
 const VideoCategory = () => {

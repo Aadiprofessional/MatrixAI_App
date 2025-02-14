@@ -10,16 +10,17 @@ import {
   FlatList,
   Animated,
 } from 'react-native';
-import SearchHeader from '../components/SearchHeader';
-import CategoryTabs from '../components/CategoryTabs';
+
+import CategoryTabs from '../components/AIShop/CategoryTabs';
 
 
 // Import the category components
-import PopularCategory from '../components/PopularCategory';
-import MusicCategory from '../components/MusicCategory';
+import PopularCategory from '../components/AIShop/PopularCategory';
+import MusicCategory from '../components/AIShop/MusicCategory';
 
-import VideoCategory from '../components/VideoCategory';
-import ImageCategory from '../components/ImageCategory';
+import VideoCategory from '../components/AIShop/VideoCategory';
+import ImageCategory from '../components/AIShop/ImageCategory';
+import SearchHeader from '../components/AIShop/SearchHeader';
 
 const AiShop = ({ navigation }) => {
 

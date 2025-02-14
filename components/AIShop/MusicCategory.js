@@ -2,10 +2,10 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity  } from 'react-native';
 import MusicCard from './MusicCard'; // Assuming you have a Card component
-import Banner from './Banner';
+import Banner from './AIShop/Banner';
 const popularData = [
-  { id: '1', title: 'AI Family by xyz', price: '$2', image: require('../assets/AIShopImage1.png'), owner: 'xyz' },
-  { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../assets/AIShopImage1.png'), owner: 'xyz' },
+  { id: '1', title: 'AI Family by xyz', price: '$2', image: require('../../assets/AIShopImage1.png'), owner: 'xyz' },
+  { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../../assets/AIShopImage1.png'), owner: 'xyz' },
   { id: '3', title: 'Woman by abc', price: '$3.6',  owner: 'abc' },
 ];
 

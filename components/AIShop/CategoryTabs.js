@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 
 const tabIcons = [
-  require('../assets/card/popular.png'),
-  require('../assets/card/music.png'),
-  require('../assets/card/video1.png'),
-  require('../assets/card/ImageIcon.png'),
+  require('../../assets/card/popular.png'),
+  require('../../assets/card/music.png'),
+  require('../../assets/card/video1.png'),
+  require('../../assets/card/ImageIcon.png'),
 ];
 
 const tabs = ['Popular', 'Music', 'Video', 'Image'];
