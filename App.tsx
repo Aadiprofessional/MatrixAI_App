@@ -44,6 +44,7 @@ import RemoveBackground from './screens/RemoveBackGround.js';
 import { ModalProvider } from './components/ModalContext.js';
 import { AuthProvider } from './context/AuthContext';
 import SignUpDetailsScreen2 from './screens/SignUpDetailsScreen copy.js';
+import AddProductScreen from './screens/AddProductScreen.js';
 
 
 
@@ -140,7 +141,7 @@ const App = () => {
                             <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
-                          
+                            <Stack.Screen name="AddProductScreen" component={AddProductScreen}options={{ headerShown: false }} />
                         </Stack.Navigator>
                     </NavigationContainer>
                 </ModalProvider>
