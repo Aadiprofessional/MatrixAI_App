@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import { useAuth } from '../hooks/useAuth';
 import RNRestart from 'react-native-restart';
+import { supabase } from '../supabaseClient';
 
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +13,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ProfileScreen = ({ navigation }) => {
     const { uid, loading } = useAuth();
     const coinCount = useCoinsSubscription(uid);
+    const [isSeller, setIsSeller] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+
+    useEffect(() => {
+        if (uid) {
+            checkUserStatus();
+        }
+    }, [uid]);
+
+    const checkUserStatus = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('seller, verified')
+                .eq('uid', uid)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                setIsSeller(data.seller);
+                setIsVerified(data.verified);
+            }
+        } catch (error) {
+            console.error('Error checking user status:', error.message);
+        }
+    };
 
     const handleUpgradePress = () => {
         navigation.navigate('TimeScreen'); 
@@ -76,7 +104,13 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleAIShop = () => {
-        navigation.navigate('FillInformationScreen');
+        if (!isSeller) {
+            navigation.navigate('FillInformationScreen');
+        } else if (isSeller && !isVerified) {
+            navigation.navigate('SuccessScreen');
+        } else if (isSeller && isVerified) {
+            navigation.navigate('ManageProductsScreen');
+        }
     };
 
     const handleVoiceSettings = () => {
@@ -135,11 +169,26 @@ const ProfileScreen = ({ navigation }) => {
                 label="Inside" 
                 onPress={handleInside} 
             />
-            <MenuItem 
-                iconName="cart-outline" 
-                label="Open your AI Shop" 
-                onPress={handleAIShop} 
-            />
+            {isSeller && isVerified && (
+                <MenuItem 
+                    iconName="add-circle-outline" 
+                    label="Add Products" 
+                    onPress={() => navigation.navigate('AddProductScreen')}
+                />
+            )}
+            {isSeller && isVerified ? (
+                <MenuItem 
+                    iconName="cart-outline" 
+                    label="Your AI Shop" 
+                    onPress={handleAIShop} 
+                />
+            ) : (
+                <MenuItem 
+                    iconName="cart-outline" 
+                    label="Open your AI Shop" 
+                    onPress={handleAIShop} 
+                />
+            )}
             <MenuItem 
                 iconName="chatbubble-outline" 
                 label="Setting Voices" 

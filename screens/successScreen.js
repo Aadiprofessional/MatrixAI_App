@@ -31,7 +31,7 @@ const SuccessScreen = ({ navigation }) => {
 </Text>
       <TouchableOpacity
         style={styles.doneButton}
-        onPress={() => navigation.navigate('ManageProductsScreen')}
+        onPress={() => navigation.replace('Main')}
       >
         <Text style={styles.buttonText}>Done</Text>
       </TouchableOpacity>

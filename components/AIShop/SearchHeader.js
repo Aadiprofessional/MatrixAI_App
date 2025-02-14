@@ -9,8 +9,8 @@ import {
   Dimensions,
   TouchableOpacity,
   Alert,
-
 } from 'react-native';
+import { supabase } from '../../supabaseClient';
 
 import * as Animatable from 'react-native-animatable';
 
@@ -27,6 +27,33 @@ const { width } = Dimensions.get('window');
 const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const { uid, loading } = useAuth();
   const { addToCart, cart } = useCart();  // Access cart from context
+  const [isSeller, setIsSeller] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    if (uid) {
+      checkUserStatus();
+    }
+  }, [uid]);
+
+  const checkUserStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('seller, verified')
+        .eq('uid', uid)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setIsSeller(data.seller);
+        setIsVerified(data.verified);
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error.message);
+    }
+  };
   
   const titleOpacity = useRef(new Animated.Value(1)).current;
 
@@ -182,22 +209,24 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
           </View>
         </TouchableOpacity>
       </Animated.View>
-      <Animated.View
-        style={[
-          styles.plusContainer,
-          {
-            top: plusTop,
-            right: plusRight,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={() => navigation.navigate('FillInformationScreen')}>
-          <Image
-            source={require('../../assets/plus.png')}
-            style={styles.plusIcon}
-          />
-        </TouchableOpacity>
-      </Animated.View>
+      {isSeller && isVerified && (
+        <Animated.View
+          style={[
+            styles.plusContainer,
+            {
+              top: plusTop,
+              right: plusRight,
+            },
+          ]}
+        >
+          <TouchableOpacity onPress={() => navigation.navigate('FillInformationScreen')}>
+            <Image
+              source={require('../../assets/plus.png')}
+              style={styles.plusIcon}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
       </Animated.View>
     </View>
   );
