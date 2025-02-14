@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ImageBackground, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ImageBackground, ScrollView, Alert } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
 import Video from 'react-native-video';
 import Sound from 'react-native-sound';
+import RNFS from 'react-native-fs';
+import { supabase } from '../supabaseClient';
 
 const AddProductScreen = () => {
   const [productName, setProductName] = useState('');
@@ -11,7 +13,9 @@ const AddProductScreen = () => {
   const [price, setPrice] = useState('');
   const [fileType, setFileType] = useState('image');
   const [file, setFile] = useState(null);
+  const [thumbnail, setThumbnail] = useState(null);
   const [sound, setSound] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -20,6 +24,24 @@ const AddProductScreen = () => {
       }
     };
   }, [sound]);
+
+  const handleThumbnailUpload = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        includeBase64: false,
+        maxWidth: 500,
+        maxHeight: 500,
+        quality: 0.8,
+      });
+
+      if (!result.didCancel && result.assets && result.assets.length > 0) {
+        setThumbnail(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error picking thumbnail:', error);
+    }
+  };
 
   const handleFileUpload = async () => {
     try {
@@ -53,9 +75,143 @@ const AddProductScreen = () => {
   const handleFileTypeChange = (type) => {
     setFileType(type);
     setFile(null);
+    setThumbnail(null);
     if (sound) {
       sound.release();
       setSound(null);
+    }
+  };
+
+  const uploadToSupabase = async (uri, fileExtension) => {
+    try {
+      console.log('Starting file upload for:', uri);
+      
+      // Convert React Native file URI to a format Supabase can handle
+      const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+      
+      // Read file using react-native-fs
+      const fileData = await RNFS.readFile(fileUri, 'base64');
+      const byteCharacters = atob(fileData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const arrayBuffer = new Uint8Array(byteNumbers);
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+      const filePath = `products/${fileType}/${fileName}`;
+      console.log('Uploading to path:', filePath);
+      
+      const { data, error } = await supabase.storage
+        .from('user-uploads')
+        .upload(filePath, arrayBuffer, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: `image/${fileExtension}`
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw new Error(`Supabase error: ${error.message}`);
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-uploads')
+        .getPublicUrl(filePath);
+      
+      console.log('Upload successful, public URL:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('Error in uploadToSupabase:', {
+        message: error.message,
+        stack: error.stack,
+        uri,
+        fileExtension
+      });
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  };
+
+  const handleAddProduct = async () => {
+    if (!file || !productName || !description || !price) {
+      Alert.alert('Error', 'Please fill in all fields and upload a file');
+      return;
+    }
+
+    if ((fileType === 'video' || fileType === 'music') && !thumbnail) {
+      Alert.alert('Error', 'Please upload a thumbnail for video/music');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fileUri = file;
+      const fileExtension = fileUri.split('.').pop().toLowerCase();
+      const fileUrl = await uploadToSupabase(fileUri, fileExtension);
+      
+      let thumbnailUrl = null;
+      if (thumbnail) {
+        thumbnailUrl = await uploadToSupabase(thumbnail, 'jpg');
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const productData = {
+        uid: user.id,
+        price: parseFloat(price),
+        description,
+        name: productName,
+        file_url: fileUrl
+      };
+
+      let endpoint = '';
+      if (fileType === 'image') {
+        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadImageProduct';
+      } else if (fileType === 'video') {
+        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadVideoProduct';
+        productData.video_url = fileUrl;
+        productData.thumbnail_url = thumbnailUrl;
+      } else if (fileType === 'music') {
+        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadMusicProduct';
+        productData.thumbnail_url = thumbnailUrl;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('User not authenticated');
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(productData),
+      });
+
+      const result = await response.json();
+      console.log('API Response:', result);
+      if (!result.success) {
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          response: result
+        });
+        throw new Error('Failed to upload product');
+      }
+
+      Alert.alert('Success', 'Product added successfully!');
+      // Reset form
+      setProductName('');
+      setDescription('');
+      setPrice('');
+      setFile(null);
+      setThumbnail(null);
+      setFileType('image');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      Alert.alert('Error', error.message || 'Failed to add product');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -178,8 +334,27 @@ const AddProductScreen = () => {
             <Text style={styles.uploadButtonText}>Upload File</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.addButton}>
-            <Text style={styles.addButtonText}>Add Product</Text>
+          {(fileType === 'video' || fileType === 'music') && (
+            <View style={styles.thumbnailContainer}>
+              <Text style={styles.label}>Thumbnail</Text>
+              {thumbnail ? (
+                <Image source={{ uri: thumbnail }} style={styles.thumbnailPreview} />
+              ) : (
+                <TouchableOpacity style={styles.uploadButton} onPress={handleThumbnailUpload}>
+                  <Text style={styles.uploadButtonText}>Upload Thumbnail</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity 
+            style={[styles.addButton, { opacity: loading ? 0.7 : 1 }]} 
+            onPress={handleAddProduct}
+            disabled={loading}
+          >
+            <Text style={styles.addButtonText}>
+              {loading ? 'Adding Product...' : 'Add Product'}
+            </Text>
           </TouchableOpacity>
         </ImageBackground>
         </View>
@@ -188,6 +363,16 @@ const AddProductScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  thumbnailContainer: {
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  thumbnailPreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginTop: 10,
+  },
   container: {
     flex: 1,
     padding: 20,
