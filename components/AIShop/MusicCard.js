@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import MusicIcon from 'react-native-vector-icons/Ionicons'; // Import music icon
 import WishlistIcon from 'react-native-vector-icons/AntDesign'; // Import wishlist icon
 
-const MusicCard = ({ title, price, owner, image }) => {
+const MusicCard = ({ title, price, owner, image ,musicproductid}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
@@ -15,14 +15,16 @@ const MusicCard = ({ title, price, owner, image }) => {
   const toggleLike = () => {
     setIsLiked(!isLiked);
   };
-
+  const navigateToDetail = () => {
+    navigation.navigate('ProductDetail', {musicproductid });
+  };
   // Function to truncate text
   const truncateText = (text, limit) => {
     return text.length > limit ? text.substring(0, limit) + '...' : text;
   };
 
   return (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={navigateToDetail}>
       <View style={styles.iconContainer}>
         {image ? (
           <Image source={image} style={styles.image} />

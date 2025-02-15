@@ -1,24 +1,67 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useCart } from '../components/CartContext';
+import { useAuth } from '../hooks/useAuth';
 
-const ProductDetailScreen = ({ navigation }) => {
-  const { addToCart, cart } = useCart();  // Access cart from context
+const ProductDetailScreen = ({ route, navigation }) => {
+  const { addToCart, cart } = useCart();
+  const { uid } = useAuth();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const product = {
-    id: '1',
-    name: 'AI generated robot',
-    price: 12.0,
-    image: require('../assets/robot.png'),
-  };
+  const { imageproductid, videoproductid, musicproductid } = route.params;
+console.log('UID IN PRODUCT',uid);
+
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            uid: uid,
+            imageproductid,
+            videoproductid, 
+            musicproductid
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setProduct(data);
+        } else {
+          setError(data.error || 'Failed to fetch product details');
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [uid, imageproductid, videoproductid, musicproductid]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+
 
   return (
     <View style={styles.container}>
-      {/* Backdrop Image with Watermark */}
       <View style={styles.imageContainer}>
         <Image 
-          source={require('../assets/matrix.png')} // Replace with your matrix.png path
+          source={require('../assets/matrix.png')}
           style={styles.watermark} 
           resizeMode="cover"
         />
@@ -26,7 +69,6 @@ const ProductDetailScreen = ({ navigation }) => {
           <Icon name="arrow-back-ios" size={24} color="black" />
         </TouchableOpacity>
 
-        {/* Cart button with item count */}
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
@@ -41,18 +83,26 @@ const ProductDetailScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        <Image 
-          source={require('../assets/robot.png')} // Replace with your AI robot image path
-          style={styles.productImage} 
-        />
+        {product?.image_url && (
+          <Image 
+            source={{ uri: product.image_url }}
+            style={styles.productImage} 
+          />
+        )}
+        {(product?.video_url || product?.music_url) && (
+          <View style={styles.playerContainer}>
+            {/* Video/Music player would go here */}
+            <Text style={styles.playerText}>
+              {product.video_url ? 'Video Player' : 'Music Player'}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Product Details */}
       <ScrollView style={styles.detailsContainer}>
-        <Text style={styles.productTitle}>AI generated robot</Text>
-        <Text style={styles.productPrice}>$12.00</Text>
+        <Text style={styles.productTitle}>{product?.name}</Text>
+        <Text style={styles.productPrice}>${product?.price}</Text>
 
-        {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity style={[styles.tab, styles.activeTab]}>
             <Text style={styles.tabText}>Description</Text>
@@ -62,26 +112,16 @@ const ProductDetailScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Product Description */}
         <Text style={styles.productDescription}>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc consectetur velit at massa vehicula, quis fringilla urna gravida.
+          {product?.description}
         </Text>
 
-        {/* Delivery Information */}
-        <Text style={styles.deliveryText}>
-          <Text style={styles.boldText}>Delivery:</Text> 15 days after payment confirmation
-        </Text>
-        <Text style={styles.deliveryText}>
-          <Text style={styles.boldText}>Delivery:</Text> 15 days after payment confirmation
-        </Text>
-    
         <TouchableOpacity
           style={styles.addToCartButton}
           onPress={() => addToCart(product)}
         >
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
-       
       </ScrollView>
     </View>
   );
@@ -91,6 +131,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center'
   },
   imageContainer: {
     position: 'relative',
@@ -144,6 +200,20 @@ const styles = StyleSheet.create({
     height: 200,
     resizeMode: 'contain',
   },
+  playerContainer: {
+    width: '100%',
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  playerText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
   detailsContainer: {
     flex: 1,
     padding: 20,
@@ -181,40 +251,13 @@ const styles = StyleSheet.create({
     color: '#777',
     marginBottom: 20,
   },
-  deliveryText: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  boldText: {
-    fontWeight: 'bold',
-    color: '#FF6F00',
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 20,
-    borderTopWidth: 1,
-    borderColor: '#eee',
-  },
   addToCartButton: {
-    flex: 1,
     backgroundColor: '#000',
     paddingVertical: 15,
-    marginRight: 10,
     borderRadius: 5,
     alignItems: 'center',
   },
   addToCartText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  buyNowButton: {
-    flex: 1,
-    backgroundColor: '#FF6F00',
-    paddingVertical: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  buyNowText: {
     color: '#fff',
     fontSize: 16,
   },

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
-const Card = ({ title, price, image, navigation }) => {
+const Card = ({ title, price, image, navigation,imageproductid }) => {
   const [isLiked, setIsLiked] = useState(false);
 
   const toggleLike = () => {
@@ -10,7 +10,7 @@ const Card = ({ title, price, image, navigation }) => {
   };
 
   const navigateToDetail = () => {
-    navigation.navigate('ProductDetail', { title, price, image });
+    navigation.navigate('ProductDetail', { imageproductid });
   };
 
   return (

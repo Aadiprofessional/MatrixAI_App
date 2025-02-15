@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';     
 
-const VideoCard = ({ title, price, image, navigation }) => {
+const VideoCard = ({ title, price, image, navigation ,videoproductid}) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);  
   const togglePlayPause = () => {
@@ -14,7 +14,7 @@ const VideoCard = ({ title, price, image, navigation }) => {
   };
 
   const navigateToDetail = () => {
-    navigation.navigate('ProductDetail', { title, price, image });
+    navigation.navigate('ProductDetail', {videoproductid });
   };
 
   return (  

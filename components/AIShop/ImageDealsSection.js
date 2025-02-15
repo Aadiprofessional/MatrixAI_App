@@ -14,12 +14,14 @@ const ImageDealsSection = ({ bestDeals, loading, navigation,imageError }) => {
           data={bestDeals}
           keyExtractor={(item) => item.imageproductid}
           renderItem={({ item }) => (
-            <Card 
-              title={item.name} 
-              price={`$${item.price}`} 
-              image={{ uri: item.image_url }} 
-              navigation={navigation} 
-            />
+          <Card
+            key={item.id}
+            title={item.name}
+            price={`$${item.price}`}
+            image={{ uri: item.image_url }}
+            imageproductid={item.imageproductid}
+            navigation={navigation}
+          />
           )}
           horizontal
           showsHorizontalScrollIndicator={false}

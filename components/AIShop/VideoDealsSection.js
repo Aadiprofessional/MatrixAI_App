@@ -18,7 +18,8 @@ const VideoDealsSection = ({ bestVideoDeals, videoLoading, videoError, navigatio
               title={item.name} 
               price={`$${item.price}`} 
               image={item.thumbnail_url} 
-              navigation={navigation} 
+              navigation={navigation}
+              videoproductid={item.videoproductid} 
             />
           )}
           horizontal

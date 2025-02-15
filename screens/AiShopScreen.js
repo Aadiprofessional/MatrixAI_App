@@ -27,26 +27,18 @@ const AiShop = ({ navigation }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [selectedTab, setSelectedTab] = useState(0); // Manage selectedTab state here
 
-  const latestRelease = [
-    { id: '1', title: 'AI Family by xyz', price: '$2', image: require('../assets/AIShopImage1.png') },
-    { id: '2', title: 'AI Planet by xyz', price: '$4', image: require('../assets/AIShopImage1.png') },
-    { id: '3', title: 'Woman by abc', price: '$3.6', image: require('../assets/AIShopImage1.png') },
-    { id: '4', title: 'Human AI by xy', price: '$8', image: require('../assets/AIShopImage1.png') },
-    { id: '5', title: 'AI Child Video by mx', price: '$23', image: require('../assets/AIShopImage1.png') },
-    { id: '6', title: 'AI Driving Car by asdf', price: '$7', image: require('../assets/AIShopImage1.png') },
-  ];
-
+ 
   // Render the appropriate category based on the selectedTab
   const renderCategoryComponent = () => {
     switch (selectedTab) {
       case 0:
         return <PopularCategory  navigation={navigation} />;
       case 1:
-        return <MusicCategory />;
+        return <MusicCategory  navigation={navigation}  />;
       case 2:
-        return <VideoCategory />;
+        return <VideoCategory  navigation={navigation} />;
       case 3:
-        return <ImageCategory />;
+        return <ImageCategory  navigation={navigation} />;
       default:
         return null;
     }
