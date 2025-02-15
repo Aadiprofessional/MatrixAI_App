@@ -65,7 +65,10 @@ console.log('UID IN PRODUCT',uid);
           style={styles.watermark} 
           resizeMode="cover"
         />
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
           <Icon name="arrow-back-ios" size={24} color="black" />
         </TouchableOpacity>
 

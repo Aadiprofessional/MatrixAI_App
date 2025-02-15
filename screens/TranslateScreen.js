@@ -976,6 +976,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         const offsetY = event.nativeEvent.contentOffset.y;
                         scrollY.setValue(offsetY);
                     }}
+                    showsVerticalScrollIndicator={false}
+                    bounces={false}
                     scrollEventThrottle={16}
                 >
                     

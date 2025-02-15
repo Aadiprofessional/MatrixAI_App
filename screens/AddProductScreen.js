@@ -7,7 +7,7 @@ import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
 import { supabase } from '../supabaseClient';
 
-const AddProductScreen = () => {
+const AddProductScreen = ({ navigation }) => {
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -228,7 +228,8 @@ const AddProductScreen = () => {
 
   return (
   
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}         showsVerticalScrollIndicator={false}
+      bounces={false}>
         <View style={styles.container}>
           <ImageBackground 
       source={require('../assets/matrix.png')} 
@@ -237,7 +238,7 @@ const AddProductScreen = () => {
 
     >
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => console.log('Go back')}>
+            <TouchableOpacity   onPress={() => navigation.goBack()}>
               <Image 
                 source={require('../assets/back.png')} 
                 style={styles.backButton}

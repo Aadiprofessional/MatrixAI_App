@@ -219,7 +219,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
             },
           ]}
         >
-          <TouchableOpacity onPress={() => navigation.navigate('FillInformationScreen')}>
+          <TouchableOpacity onPress={() => navigation.navigate('AddProductScreen')}>
             <Image
               source={require('../../assets/plus.png')}
               style={styles.plusIcon}
