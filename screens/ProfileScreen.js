@@ -92,7 +92,7 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleBookmark = () => {
-        navigation.navigate('Bookmark');
+        navigation.navigate('WishlistScreen');
     };
 
     const handleVoiceNote = () => {

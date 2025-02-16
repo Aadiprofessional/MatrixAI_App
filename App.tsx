@@ -38,6 +38,7 @@ import ManageProductsScreen from './screens/ManageProductsScreen.js';
 import TransactionScreen2 from './screens/coins/TransactionScreen copy.js';
 import TimeScreen from './screens/coins/TimeScreen.js';
 import { CartProvider } from './components/CartContext.js';
+import { WishlistProvider } from './context/WishlistContext';
 import CartScreen from './screens/CartScreen.js';
 import CameraScreen from './screens/CameraScreen.js';
 import RemoveBackground from './screens/RemoveBackGround.js';
@@ -45,6 +46,7 @@ import { ModalProvider } from './components/ModalContext.js';
 import { AuthProvider } from './context/AuthContext';
 import SignUpDetailsScreen2 from './screens/SignUpDetailsScreen copy.js';
 import AddProductScreen from './screens/AddProductScreen.js';
+import WishlistScreen from './screens/WishlistScreen.js';
 
 
 
@@ -85,7 +87,8 @@ const App = () => {
     return (
         <AuthProvider>
             <CartProvider>
-                <ModalProvider>
+                <WishlistProvider>
+                    <ModalProvider>
                     <NavigationContainer>
                         <Stack.Navigator>
                             {/* Onboarding Screen */}
@@ -142,9 +145,11 @@ const App = () => {
                             <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
                             <Stack.Screen name="AddProductScreen" component={AddProductScreen}options={{ headerShown: false }} />
+                            <Stack.Screen name="WishlistScreen" component={WishlistScreen}options={{ headerShown: false }} />
                         </Stack.Navigator>
                     </NavigationContainer>
-                </ModalProvider>
+                    </ModalProvider>
+                </WishlistProvider>
             </CartProvider>
         </AuthProvider>
     );

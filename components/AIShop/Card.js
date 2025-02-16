@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { WishlistContext } from '../../context/WishlistContext';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
 const Card = ({ title, price, image, navigation,imageproductid }) => {
-  const [isLiked, setIsLiked] = useState(false);
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
+  const isInWishlist = wishlistItems.some(item => item.id === imageproductid);
 
   const toggleLike = () => {
-    setIsLiked(!isLiked);
+    if (isInWishlist) {
+      removeFromWishlist(imageproductid);
+    } else {
+      addToWishlist({
+        id: imageproductid,
+        name: title,
+        price: price,
+        image: image
+      });
+    }
   };
 
   const navigateToDetail = () => {
@@ -24,7 +35,7 @@ const Card = ({ title, price, image, navigation,imageproductid }) => {
             <MusicIcon name="image-outline" size={74} color="#ccc" style={styles.MusicIcon} />
         )}    
         <TouchableOpacity style={styles.heartIcon} onPress={toggleLike}>
-          <Icon name={isLiked ? 'heart' : 'hearto'} size={16} color={isLiked ? 'red' : '#333'} />
+          <Icon name={isInWishlist ? 'heart' : 'hearto'} size={16} color={isInWishlist ? 'red' : '#333'} />
         </TouchableOpacity>
       </View>
       {/* Text Section */}
