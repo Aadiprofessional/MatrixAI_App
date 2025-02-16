@@ -3,6 +3,8 @@ import { View, FlatList, ActivityIndicator, Text } from 'react-native';
 import VideoCard from './VideoCard';
 
 const VideoDealsSection = ({ bestVideoDeals, videoLoading, videoError, navigation }) => {
+  console.log('VideoData',bestVideoDeals );
+  
   return (
     <View>
       {videoLoading ? (

@@ -9,6 +9,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const { uid } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const { imageproductid, videoproductid, musicproductid } = route.params;
@@ -47,7 +48,7 @@ console.log('UID IN PRODUCT',uid);
     fetchProductDetails();
   }, [uid, imageproductid, videoproductid, musicproductid]);
 
-  if (loading) {
+  if (loading && imageLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#000" />
@@ -89,7 +90,9 @@ console.log('UID IN PRODUCT',uid);
         {product?.image_url && (
           <Image 
             source={{ uri: product.image_url }}
-            style={styles.productImage} 
+            style={styles.productImage}
+         
+            
           />
         )}
         {(product?.video_url || product?.music_url) && (
