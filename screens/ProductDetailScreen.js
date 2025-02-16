@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Video from 'react-native-video';
+import MusicIcon from 'react-native-vector-icons/Ionicons';
 import { useCart } from '../components/CartContext';
 import { useAuth } from '../hooks/useAuth';
 
@@ -11,6 +13,33 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const videoRef = useRef(null);
+  const videoUrl = product?.video_url || '';
+  const image = product?.image_url || product?.thumbnail_url || '';
+  const [isLiked, setIsLiked] = useState(false);
+  const new_label = product?.new_label || false;
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+    setShowControls(true);
+    setTimeout(() => setShowControls(false), 3000);
+  };
+
+  const handleVideoPress = () => {
+    setShowControls(!showControls);
+  };
+
+  const handleVideoEnd = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const toggleLike = () => {
+    // Like functionality to be implemented
+  };
 
   const { imageproductid, videoproductid, musicproductid } = route.params;
 console.log('UID IN PRODUCT',uid);
@@ -60,19 +89,13 @@ console.log('UID IN PRODUCT',uid);
 
   return (
     <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <Image 
-          source={require('../assets/matrix.png')}
-          style={styles.watermark} 
-          resizeMode="cover"
-        />
+        <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Icon name="arrow-back-ios" size={24} color="black" />
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
@@ -87,22 +110,76 @@ console.log('UID IN PRODUCT',uid);
           </View>
         </TouchableOpacity>
 
-        {product?.image_url && (
-          <Image 
-            source={{ uri: product.image_url }}
-            style={styles.productImage}
-         
-            
-          />
-        )}
-        {(product?.video_url || product?.music_url) && (
-          <View style={styles.playerContainer}>
-            {/* Video/Music player would go here */}
-            <Text style={styles.playerText}>
-              {product.video_url ? 'Video Player' : 'Music Player'}
-            </Text>
+           
+              
+            </View>
+      <View style={styles.imageContainer}>
+        {isPlaying ? (
+          <View style={styles.videoContainer}>
+            <Video
+              source={{ uri: videoUrl }}
+              ref={videoRef}
+              style={styles.video}
+              paused={!isPlaying}
+              resizeMode="cover"
+              repeat={false}
+              bufferConfig={{
+                minBufferMs: 10000,
+                maxBufferMs: 20000,
+                bufferForPlaybackMs: 10000,
+                bufferForPlaybackAfterRebufferMs: 10000
+              }}
+              onProgress={({ currentTime }) => setCurrentTime(currentTime)}
+              onEnd={handleVideoEnd}
+            />
+            <TouchableOpacity
+              style={styles.videoTouchArea}
+              onPress={handleVideoPress}
+              activeOpacity={1}
+            />
+             <Image source={require('../assets/matrix.png')} style={styles.watermark2} />
+            <TouchableOpacity 
+              onPress={togglePlayPause} 
+              style={[styles.playPauseButton2, { opacity: showControls ? 1 : 0 }]}
+              activeOpacity={0.7}
+              pointerEvents={showControls ? 'auto' : 'none'}
+            >
+              <MusicIcon 
+                name={isPlaying ? 'pause-circle' : 'play-circle'} 
+                size={35} 
+                color="#F9690E" 
+                style={{ backgroundColor: '#fff', borderRadius: 20  }}
+              />
+            </TouchableOpacity>
+              
+          </View>
+        ) : (
+          <View style={styles.imageContainer2}>
+               <Image source={require('../assets/matrix.png')} style={styles.watermark} />
+            {image ? (
+              <Image source={{ uri: image }} style={styles.image} />
+            ) : (
+              <MusicIcon name="videocam-outline" size={74} color="#ccc" style={styles.MusicIcon} />
+            )}
+            { !product?.image_url &&
+            <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
+              <MusicIcon name="play-circle" size={35} color="#F9690E" backgroundColor="#fff" borderRadius={15} />
+            </TouchableOpacity>
+            }
           </View>
         )}
+        
+        {/* New Label */}
+        {new_label && (
+          <View style={styles.newLabel}>
+            <Text style={styles.newLabelText}>Newly Launched</Text>
+          </View>
+        )}
+        
+        {/* Watermark */}
+        
+     
+        
       </View>
 
       <ScrollView style={styles.detailsContainer}>
@@ -138,6 +215,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: '#0066FEFF',
+   
+    marginTop: 30,
+ 
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    backgroundColor: '#fff',
+    borderRadius: 20, 
+    padding: 5,
+  },
+  cartButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 5,
+  },
+  cartIconContainer: {
+    position: 'relative',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -157,14 +263,27 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: 'relative',
     height: 250,
+    marginTop: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
   watermark: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
-    opacity: 0.2,
+    width: '50%',
+    height: '50%',
+    opacity: 0.5,
+    zIndex: 100,
+    resizeMode: 'contain',
+  },
+  watermark2: {
+    position: 'absolute',
+    width: '50%',
+    height: '50%',
+    opacity: 0.5,
+    zIndex: 0,
+   top: 60,
+    alignSelf: 'center',
+    resizeMode: 'contain',
   },
   backButton: {
     position: 'absolute',
@@ -202,9 +321,73 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   productImage: {
-    width: 200,
-    height: 200,
+    width: 300,
+    height: 500,
     resizeMode: 'contain',
+  },
+  videoContainer: {
+    width: '90%',
+    height: '90%',
+    position: 'relative',
+    alignSelf: 'center',
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+  videoTouchArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  playPauseButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 2,
+  },
+  playPauseButton2: {
+    position: 'absolute',
+    bottom: 8,
+    right: 0,
+    zIndex: 20,
+  },
+  imageContainer2: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  image: {
+    width: 300,
+    height: 500,
+    resizeMode: 'contain',
+  },
+  newLabel: {
+    position: 'absolute',
+    top: 20,
+    left: -10,
+    backgroundColor: '#FF6F00',
+    paddingHorizontal: 20,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  newLabelText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  heartIcon: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#fff',
+    padding: 5,
+    borderRadius: 20,
   },
   playerContainer: {
     width: '100%',

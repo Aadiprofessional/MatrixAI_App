@@ -5,7 +5,7 @@ import Sound from 'react-native-sound';
 import MusicIcon from 'react-native-vector-icons/Ionicons'; // Import music icon
 import WishlistIcon from 'react-native-vector-icons/AntDesign'; // Import wishlist icon
 
-const MusicCard = ({ title, price, owner, image, musicproductid, item }) => {
+const MusicCard = ({ title, price, owner, image, musicproductid, item, navigation }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const sound = useRef(null);
