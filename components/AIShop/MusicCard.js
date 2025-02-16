@@ -1,15 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import Sound from 'react-native-sound';
-
-import MusicIcon from 'react-native-vector-icons/Ionicons'; // Import music icon
-import WishlistIcon from 'react-native-vector-icons/AntDesign'; // Import wishlist icon
+import { WishlistContext } from '../../context/WishlistContext';
+import MusicIcon from 'react-native-vector-icons/Ionicons';
+import WishlistIcon from 'react-native-vector-icons/AntDesign';
 
 const MusicCard = ({ title, price, owner, image, musicproductid, item, navigation }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   const sound = useRef(null);
   const [positionMillis, setPositionMillis] = useState(0);
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
+  const isInWishlist = wishlistItems.some(item => item.id === musicproductid);
+
+  const toggleLike = () => {
+    if (isInWishlist) {
+      removeFromWishlist(musicproductid);
+    } else {
+      addToWishlist({
+        id: musicproductid,
+        name: title,
+        price: price,
+        image: item.thumbnail_url,
+        type: 'music'
+      });
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -44,8 +59,6 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
       });
     }
   };
-  console.log(item);
-  
 
   const stopAudio = () => {
     if (sound.current) {
@@ -57,13 +70,10 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
     }
   };
 
-  const toggleLike = () => {
-    setIsLiked(!isLiked);
-  };
   const navigateToDetail = () => {
     navigation.navigate('ProductDetail', {musicproductid });
   };
-  // Function to truncate text
+
   const truncateText = (text, limit) => {
     return text.length > limit ? text.substring(0, limit) + '...' : text;
   };
@@ -92,7 +102,7 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
         <Text style={styles.price}>{truncateText(price, 7)}</Text>
       </View>
       <TouchableOpacity style={styles.wishlistIcon} onPress={toggleLike}>
-          <WishlistIcon name={isLiked ? 'heart' : 'hearto'} size={16} color={isLiked ? 'red' : '#333'} />
+          <WishlistIcon name={isInWishlist ? 'heart' : 'hearto'} size={16} color={isInWishlist ? 'red' : '#333'} />
         </TouchableOpacity>   
     </TouchableOpacity>
   );
@@ -117,8 +127,8 @@ const styles = StyleSheet.create({
     marginInline: 15,
     backgroundColor: '#fff',
     borderRadius: 5,
-    elevation: 2, // For Android shadow
-    shadowColor: '#000', // For iOS shadow
+    elevation: 2,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1,
@@ -129,7 +139,7 @@ const styles = StyleSheet.create({
     marginLeft: -30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0', // Background for the icon
+    backgroundColor: '#f0f0f0',
     borderRadius: 5,
     position: 'relative',
   },
@@ -138,12 +148,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   playPauseButton: {
-    position: 'absolute', // Positioning the button absolutely
-    top: 0, // Adjust to align with the icon
-    left: 0, // Adjust to align with the icon
+    position: 'absolute',
+    top: 0,
+    left: 0,
     zIndex: 2,
-    width: '100%', // Make the button cover the entire icon area
-    height: '100%', // Make the button cover the entire icon area
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -161,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   owner: {
-    fontSize: 12, // Smaller font size for owner name
+    fontSize: 12,
     color: '#888',
   },
   price: {

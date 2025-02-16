@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { WishlistContext } from '../../context/WishlistContext';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
@@ -8,7 +9,8 @@ let currentPlayingVideo = null;
 
 const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, new_label }) => {
   const videoRef = useRef(null);
-  const [isLiked, setIsLiked] = useState(false);
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
+  const isInWishlist = wishlistItems.some(item => item.id === videoproductid);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -61,7 +63,17 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
   };
 
   const toggleLike = () => {
-    setIsLiked(!isLiked);
+    if (isInWishlist) {
+      removeFromWishlist(videoproductid);
+    } else {
+      addToWishlist({
+        id: videoproductid,
+        name: title,
+        price: price,
+        image: image,
+        type: 'video'
+      });
+    }
   };
 
   const navigateToDetail = () => {
@@ -153,7 +165,7 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
         
      
         <TouchableOpacity style={styles.heartIcon} onPress={toggleLike}>
-          <Icon name={isLiked ? 'heart' : 'hearto'} size={16} color={isLiked ? 'red' : '#333'} />
+          <Icon name={isInWishlist ? 'heart' : 'hearto'} size={16} color={isInWishlist ? 'red' : '#333'} />
         </TouchableOpacity>
       </View>
       {/* Text Section */}
