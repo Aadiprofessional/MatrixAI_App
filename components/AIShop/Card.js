@@ -17,6 +17,7 @@ const Card = ({ title, price, image, navigation,imageproductid }) => {
     <TouchableOpacity style={styles.card} onPress={navigateToDetail}>
       {/* Image Section */}
       <View style={styles.imageContainer}>
+        <Image source={require('../../assets/matrix.png')} style={styles.watermark} />
       {image ? (
           <Image source={image} style={styles.image} />
         ) : (
@@ -49,6 +50,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 6,
+      },
+      watermark: {
+        width: 40,
+        height: 40,
+        position: 'absolute',
+        top: 5,
+        left: 15,
+        zIndex: 10,
+        resizeMode: 'contain',
+        opacity: 0.7,
       },
   MusicIcon: {
     position: 'absolute',

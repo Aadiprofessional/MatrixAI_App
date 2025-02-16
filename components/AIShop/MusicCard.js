@@ -1,15 +1,60 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground } from 'react-native';
+import Sound from 'react-native-sound';
 
 import MusicIcon from 'react-native-vector-icons/Ionicons'; // Import music icon
 import WishlistIcon from 'react-native-vector-icons/AntDesign'; // Import wishlist icon
 
-const MusicCard = ({ title, price, owner, image ,musicproductid}) => {
+const MusicCard = ({ title, price, owner, image, musicproductid, item }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const sound = useRef(null);
+  const [positionMillis, setPositionMillis] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      if (sound.current) {
+        sound.current.stop();
+        sound.current.release();
+        sound.current = null;
+      }
+    };
+  }, []);
 
   const togglePlayPause = () => {
-    setIsPlaying(!isPlaying);
+    if (!sound.current) {
+      sound.current = new Sound(item.music_url, null, (error) => {
+        if (error) {
+          console.log('Failed to load the sound', error);
+          return;
+        }
+        sound.current.play(() => {
+          sound.current.release();
+          sound.current = null;
+        });
+        setIsPlaying(true);
+      });
+    } else if (isPlaying) {
+      sound.current.pause(() => {
+        setIsPlaying(false);
+      });
+    } else {
+      sound.current.play(() => {
+        setIsPlaying(true);
+      });
+    }
+  };
+  console.log(item);
+  
+
+  const stopAudio = () => {
+    if (sound.current) {
+      sound.current.stop(() => {
+        sound.current.release();
+        sound.current = null;
+        setIsPlaying(false);
+      });
+    }
   };
 
   const toggleLike = () => {
@@ -26,8 +71,14 @@ const MusicCard = ({ title, price, owner, image ,musicproductid}) => {
   return (
     <TouchableOpacity style={styles.card} onPress={navigateToDetail}>
       <View style={styles.iconContainer}>
-        {image ? (
-          <Image source={image} style={styles.image} />
+        {item.thumbnail_url ? (
+          <ImageBackground 
+            source={{ uri: item.thumbnail_url }} 
+            style={styles.image}
+            resizeMode="cover"
+          >
+            <Image source={require('../../assets/matrix.png')} style={styles.watermark} />
+          </ImageBackground>
         ) : (
           <MusicIcon name="musical-notes-outline" size={44} color="#ccc" style={styles.musicIcon} />
         )}
@@ -48,6 +99,15 @@ const MusicCard = ({ title, price, owner, image ,musicproductid}) => {
 };
 
 const styles = StyleSheet.create({
+  watermark: {
+    width: 40,
+    height: 40,
+    position: 'absolute',
+    top: 35,
+    right: 15,
+    resizeMode: 'contain',
+    opacity: 0.7,
+  },
   card: {
     height: 90, 
     width: 220,

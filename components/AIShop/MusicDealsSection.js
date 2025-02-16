@@ -17,10 +17,10 @@ const MusicDealsSection = ({ bestMusicDeals, musicLoading, musicError, navigatio
             <MusicCard 
               title={item.name} 
               price={`$${item.price}`} 
-              audioUrl={item.audio_url} 
               navigation={navigation} 
               owner={item.name}
               musicproductid={item.musicproductid}
+              item={item}
             />
           )}
           horizontal
