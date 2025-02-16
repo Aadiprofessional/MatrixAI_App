@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIn
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
+import Sound from 'react-native-sound';
 import { useCart } from '../components/CartContext';
 import { useAuth } from '../hooks/useAuth';
 
@@ -21,6 +22,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const image = product?.image_url || product?.thumbnail_url || '';
   const [isLiked, setIsLiked] = useState(false);
   const new_label = product?.new_label || false;
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [sound, setSound] = useState(null);
+  const [musicPosition, setMusicPosition] = useState(0);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -76,6 +80,46 @@ console.log('UID IN PRODUCT',uid);
 
     fetchProductDetails();
   }, [uid, imageproductid, videoproductid, musicproductid]);
+
+  // Initialize and cleanup music player
+  useEffect(() => {
+    if (product?.music_url) {
+      const newSound = new Sound(product.music_url, null, (error) => {
+        if (error) {
+          console.log('Failed to load sound', error);
+          return;
+        }
+        newSound.setCurrentTime(musicPosition);
+      });
+      setSound(newSound);
+
+      return () => {
+        if (newSound) {
+          newSound.release();
+        }
+      };
+    }
+  }, [product?.music_url]);
+
+  // Handle music play/pause
+  const toggleMusicPlay = () => {
+    if (sound) {
+      if (isMusicPlaying) {
+        sound.pause();
+        sound.getCurrentTime((seconds) => setMusicPosition(seconds));
+      } else {
+        sound.play((success) => {
+          if (success) {
+            console.log('Music finished playing');
+            setIsMusicPlaying(false);
+          } else {
+            console.log('Playback failed due to audio decoding errors');
+          }
+        });
+      }
+      setIsMusicPlaying(!isMusicPlaying);
+    }
+  };
 
   if (loading && imageLoading) {
     return (
@@ -155,18 +199,46 @@ console.log('UID IN PRODUCT',uid);
           </View>
         ) : (
           <View style={styles.imageContainer2}>
-               <Image source={require('../assets/matrix.png')} style={styles.watermark} />
-            {image ? (
-              <Image source={{ uri: image }} style={styles.image} />
-            ) : (
+          {!product?.music_url && (
+            <Image source={require('../assets/matrix.png')} style={styles.watermark} />
+          )}
+          
+          {image && !product?.music_url ? (
+            <Image source={{ uri: image }} style={styles.image} />
+          ) : (
+            !product?.music_url && (
               <MusicIcon name="videocam-outline" size={74} color="#ccc" style={styles.MusicIcon} />
-            )}
-            { !product?.image_url &&
-            <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
+            )
+          )}
+        
+          {product?.music_url && (
+            <View style={styles.musicContainer}>
+              <Image source={require('../assets/matrix.png')} style={styles.watermark3} />
+              <Image 
+                source={{ uri: image }} 
+                style={styles.musicThumbnail} 
+              />
+              <TouchableOpacity 
+                onPress={toggleMusicPlay} 
+                style={styles.musicPlayButton}
+              >
+                <MusicIcon 
+                  name={isMusicPlaying ? 'pause-circle' : 'play-circle'} 
+                  size={50} 
+                  color="#F9690E" 
+                  style={{ backgroundColor: '#fff', borderRadius: 25 }}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        
+          {!product?.music_url && !product?.image_url && (
+            <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton3}>
               <MusicIcon name="play-circle" size={35} color="#F9690E" backgroundColor="#fff" borderRadius={15} />
             </TouchableOpacity>
-            }
-          </View>
+          )}
+        </View>
+        
         )}
         
         {/* New Label */}
@@ -285,6 +357,20 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     resizeMode: 'contain',
   },
+  watermark3: {
+    position: 'absolute',
+    width: '50%',
+    height: '50%',
+    opacity: 0.5,
+    zIndex: 10,
+    top: 60,
+    alignSelf: 'center',
+    resizeMode: 'contain',
+    left: 10,
+    resizeMode: 'contain',
+
+
+  },
   backButton: {
     position: 'absolute',
     top: 40,
@@ -354,6 +440,12 @@ const styles = StyleSheet.create({
     bottom: 8,
     right: 0,
     zIndex: 20,
+  },
+  playPauseButton3: {
+    position: 'absolute',
+    bottom: 8,
+    right: 0,
+    zIndex: 200,
   },
   imageContainer2: {
     width: '100%',
@@ -449,6 +541,28 @@ const styles = StyleSheet.create({
   addToCartText: {
     color: '#fff',
     fontSize: 16,
+  },
+  musicContainer: {
+    position: 'relative',
+    width: 200,
+    height: 200,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginVertical: 20,
+  },
+  musicThumbnail: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  musicPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -25 }, { translateY: -25 }],
+    zIndex: 100,
   },
 });
 
