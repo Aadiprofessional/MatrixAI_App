@@ -50,7 +50,7 @@ import WishlistScreen from './screens/WishlistScreen.js';
 import AllMusicAiScreen from './screens/AllMusicAiScreen.js';
 import AllVideoAIScreen from './screens/AllVideoAIScreen.js';
 import AllImagesAiScreen from './screens/AllImagesAiScreen.js';
-
+import SeeAllScreen from './screens/SeeAllScreen.js';
 
 const Stack = createStackNavigator();
 
@@ -151,6 +151,7 @@ const App = () => {
                             <Stack.Screen name="AllMusicAiScreen" component={AllMusicAiScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="AllVideoAIScreen" component={AllVideoAIScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="AllImagesAiScreen" component={AllImagesAiScreen}options={{ headerShown: false }} />
+                            <Stack.Screen name="SeeAllScreen" component={SeeAllScreen}options={{ headerShown: false }} />
                         </Stack.Navigator>
                     </NavigationContainer>
                     </ModalProvider>

@@ -48,38 +48,45 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const { imageproductid, videoproductid, musicproductid } = route.params;
 console.log('UID IN PRODUCT',uid);
 
-  useEffect(() => {
-    const fetchProductDetails = async () => {
-      try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            uid: uid,
-            imageproductid,
-            videoproductid, 
-            musicproductid
-          })
-        });
+useEffect(() => {
+  setLoading(true); // Start loading
 
-        const data = await response.json();
-        
-        if (response.ok) {
-          setProduct(data);
-        } else {
-          setError(data.error || 'Failed to fetch product details');
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchProductDetails = async () => {
+    try {
+      const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uid: uid,
+          imageproductid,
+          videoproductid, 
+          musicproductid
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setProduct(data);
+      } else {
+        setError(data.error || 'Failed to fetch product details');
       }
-    };
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
-    fetchProductDetails();
-  }, [uid, imageproductid, videoproductid, musicproductid]);
+  fetchProductDetails().finally(() => {
+    // Delay stopping the loading state separately
+    setTimeout(() => {
+      setLoading(false);
+    }, 1300); // 500ms delay after fetch completes
+  });
+
+}, [uid, imageproductid, videoproductid, musicproductid]);
+
 
   // Initialize and cleanup music player
   useEffect(() => {
@@ -121,14 +128,14 @@ console.log('UID IN PRODUCT',uid);
     }
   };
 
-  if (loading && imageLoading) {
+  if (loading || imageLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
+      <View style={styles.loadingOverlay}>
+        <ActivityIndicator size="large" color="#fff" />
       </View>
     );
   }
-
+  
 
 
   return (
@@ -297,6 +304,17 @@ const styles = StyleSheet.create({
     marginTop: 30,
  
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark transparent background
+    zIndex: 1000, // Ensure it's above everything
+  },
   backButton: {
     position: 'absolute',
     top: 40,
@@ -319,7 +337,8 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   errorContainer: {
     flex: 1,

@@ -71,7 +71,7 @@ const AllVideoAIScreen = ({ navigation }) => {
         </View>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Videos</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Videos', type: 'Best Deals' })} >
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -85,7 +85,7 @@ const AllVideoAIScreen = ({ navigation }) => {
       <Banner />
         <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Videos</Text>
-        <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Videos', type: 'Highlighted' })}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>

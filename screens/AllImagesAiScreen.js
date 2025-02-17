@@ -69,7 +69,7 @@ fetchHighlight();
         </View>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Images</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Images', type: 'Best Deals' })}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -82,7 +82,7 @@ fetchHighlight();
          <Banner />
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Images</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Images', type: 'Highlighted' })}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>

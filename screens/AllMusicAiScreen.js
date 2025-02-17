@@ -72,7 +72,7 @@ const AllMusicAiScreen = ({ navigation }) => {
             </View>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Music</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Music', type: 'Best Deals' })}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -85,7 +85,7 @@ const AllMusicAiScreen = ({ navigation }) => {
          <Banner />
        <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Music</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Music', type: 'Highlighted' })}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>

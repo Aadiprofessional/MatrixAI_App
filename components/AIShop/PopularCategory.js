@@ -112,11 +112,15 @@ fetchHighlight();
     fetchHighlightVideo();
   }, []);
 
+  const handleSeeAllPress = (category, type) => {
+    navigation.navigate('SeeAllScreen', { category, type });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Images</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Images', 'Best Deals')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -129,7 +133,7 @@ fetchHighlight();
       
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Images</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Images', 'Highlighted')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -142,7 +146,7 @@ fetchHighlight();
          <Banner />
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Videos</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Videos', 'Best Deals')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -154,7 +158,7 @@ fetchHighlight();
       />
         <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Videos</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Videos', 'Highlighted')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -168,7 +172,7 @@ fetchHighlight();
    <Banner />
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Music</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Best Deals')}  >
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -180,7 +184,7 @@ fetchHighlight();
       />
        <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Music</Text>
-        <TouchableOpacity>
+          <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Highlighted')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>

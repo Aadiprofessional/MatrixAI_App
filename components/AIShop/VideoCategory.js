@@ -63,12 +63,16 @@ const VideoCategory = ({ navigation }) => {
     fetchHighlightVideo();
   }, []);
 
+  const handleSeeAllPress = (category, type) => {
+    navigation.navigate('SeeAllScreen', { category, type });
+  };
+
   return (
     <View style={styles.container}>
     
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Best In Videos</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Videos', 'Best Deals')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
@@ -82,7 +86,7 @@ const VideoCategory = ({ navigation }) => {
       <Banner />
         <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Highlighted Videos</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Videos', 'Highlighted')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
