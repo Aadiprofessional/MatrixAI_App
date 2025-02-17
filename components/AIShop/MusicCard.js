@@ -75,6 +75,7 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
   };
 
   const truncateText = (text, limit) => {
+    if (!text) return '';
     return text.length > limit ? text.substring(0, limit) + '...' : text;
   };
 
@@ -98,7 +99,7 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
       </View>
       <View style={styles.details}>
         <Text style={styles.title}>{truncateText(title, 15)}</Text>
-        <Text style={styles.owner}>{truncateText(owner.split(' ')[0], 10)}</Text>
+        <Text style={styles.owner}>{truncateText(owner?.split(' ')[0], 10)}</Text>
         <Text style={styles.price}>{truncateText(price, 7)}</Text>
       </View>
       <TouchableOpacity style={styles.wishlistIcon} onPress={toggleLike}>

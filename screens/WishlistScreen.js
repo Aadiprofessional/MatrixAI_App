@@ -1,9 +1,11 @@
 import React, { useContext } from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { WishlistContext } from '../context/WishlistContext';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import MusicCard from '../components/AIShop/MusicCard';
+import VideoCard from '../components/AIShop/VideoCard';
 
-const WishlistScreen = () => {
+const WishlistScreen = ({ navigation }) => {
   const { wishlistItems, removeFromWishlist } = useContext(WishlistContext);
 
   const renderRightActions = (item) => (
@@ -23,26 +25,54 @@ const WishlistScreen = () => {
     </View>
   );
 
-  const renderItem = ({ item }) => (
-    <Swipeable
-      renderRightActions={() => renderRightActions(item)}
-      overshootRight={false}
-    >
-      <View style={styles.itemContainer}>
-        {item.image && (
-          <Image source={item.image} style={styles.itemImage} />
+  const renderItem = ({ item }) => {
+    const commonProps = {
+      title: item.name,
+      price: item.price,
+      image: item.image,
+      navigation: navigation,
+      item: item
+    };
+
+    return (
+      <Swipeable
+        renderRightActions={() => renderRightActions(item)}
+        overshootRight={false}
+      >
+        {item.type === 'music' ? (
+          <MusicCard 
+            {...commonProps}
+            musicproductid={item.id}
+          />
+        ) : item.type === 'video' ? (
+          <VideoCard
+            {...commonProps}
+            videoproductid={item.id}
+            videoUrl={item.videoUrl}
+          />
+        ) : (
+          <View style={styles.itemContainer}>
+            {item.image && (
+              <Image source={item.image} style={styles.itemImage} />
+            )}
+            <View style={styles.itemDetails}>
+              <Text style={styles.itemTitle}>{item.name}</Text>
+              <Text style={styles.itemPrice}>{item.price}</Text>
+            </View>
+          </View>
         )}
-        <View style={styles.itemDetails}>
-          <Text style={styles.itemTitle}>{item.name}</Text>
-          <Text style={styles.itemPrice}>{item.price}</Text>
-        </View>
-      </View>
-    </Swipeable>
-  );
+      </Swipeable>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Wishlist</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image source={require('../assets/back.png')} style={styles.backButton} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Wishlist</Text>
+      </View>
       {wishlistItems.length > 0 ? (
         <FlatList
           data={wishlistItems}
@@ -61,12 +91,20 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 50,
+    marginBottom: 16,
+  },
+  backButton: {
+    width: 24,
+    height: 24,
+    marginRight: 16,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-    marginTop: 50,
     color: '#000',
   },
   itemContainer: {
@@ -74,8 +112,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   itemImage: {
     width: 60,

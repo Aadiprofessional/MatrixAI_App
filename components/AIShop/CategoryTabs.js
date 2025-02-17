@@ -6,9 +6,10 @@ const tabIcons = [
   require('../../assets/card/music.png'),
   require('../../assets/card/video1.png'),
   require('../../assets/card/ImageIcon.png'),
+  require('../../assets/card/all.png'),
 ];
 
-const tabs = ['Popular', 'Music', 'Video', 'Image'];
+const tabs = ['Popular', 'Music', 'Video', 'Image','All Category'];
 
 const CategoryTabs = ({ selectedTab, setSelectedTab }) => {
   return (

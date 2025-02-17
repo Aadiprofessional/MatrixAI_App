@@ -21,7 +21,7 @@ import MusicCategory from '../components/AIShop/MusicCategory';
 import VideoCategory from '../components/AIShop/VideoCategory';
 import ImageCategory from '../components/AIShop/ImageCategory';
 import SearchHeader from '../components/AIShop/SearchHeader';
-
+import AllCategory from '../components/AIShop/AllCategory';
 const AiShop = ({ navigation }) => {
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -39,6 +39,8 @@ const AiShop = ({ navigation }) => {
         return <VideoCategory  navigation={navigation} />;
       case 3:
         return <ImageCategory  navigation={navigation} />;
+      case 4:
+        return <AllCategory  navigation={navigation} />;
       default:
         return null;
     }

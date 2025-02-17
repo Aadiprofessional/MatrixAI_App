@@ -47,7 +47,9 @@ import { AuthProvider } from './context/AuthContext';
 import SignUpDetailsScreen2 from './screens/SignUpDetailsScreen copy.js';
 import AddProductScreen from './screens/AddProductScreen.js';
 import WishlistScreen from './screens/WishlistScreen.js';
-
+import AllMusicAiScreen from './screens/AllMusicAiScreen.js';
+import AllVideoAIScreen from './screens/AllVideoAIScreen.js';
+import AllImagesAiScreen from './screens/AllImagesAiScreen.js';
 
 
 const Stack = createStackNavigator();
@@ -146,6 +148,9 @@ const App = () => {
                             <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
                             <Stack.Screen name="AddProductScreen" component={AddProductScreen}options={{ headerShown: false }} />
                             <Stack.Screen name="WishlistScreen" component={WishlistScreen}options={{ headerShown: false }} />
+                            <Stack.Screen name="AllMusicAiScreen" component={AllMusicAiScreen}options={{ headerShown: false }} />
+                            <Stack.Screen name="AllVideoAIScreen" component={AllVideoAIScreen}options={{ headerShown: false }} />
+                            <Stack.Screen name="AllImagesAiScreen" component={AllImagesAiScreen}options={{ headerShown: false }} />
                         </Stack.Navigator>
                     </NavigationContainer>
                     </ModalProvider>
