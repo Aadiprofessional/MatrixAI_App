@@ -1,13 +1,36 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import { useCart } from '../components/CartContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
+import { useState } from 'react';
 const CartScreen = ({ navigation }) => {
   const { cart, removeFromCart } = useCart();
+  const [coupon, setCoupon] = useState('');
+  const [discount, setDiscount] = useState(0);  
+
+  const [total, setTotal] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
+const subtotal = () => {
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  setSubtotal(total);
+}
+
+const calculateSubtotal = () => {
+  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  return total;
+};
 
   const renderItem = ({ item }) => (
-    <View style={styles.cartItem}>
+    <TouchableOpacity 
+      style={styles.cartItem}
+      onPress={() => navigation.navigate('ProductDetail', {
+        imageproductid: item.id,
+        videoproductid: item.id,
+        musicproductid: item.id
+      })}
+    >
       <Image source={{ uri: item.image_url }} style={styles.itemImage} />
       <View style={styles.itemDetails}>
         <Text style={styles.itemTitle}>{item.name}</Text>
@@ -20,7 +43,7 @@ const CartScreen = ({ navigation }) => {
       >
         <Icon name="remove-circle" size={24} color="red" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -43,6 +66,18 @@ const CartScreen = ({ navigation }) => {
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.emptyText}>Your cart is empty.</Text>}
       />
+      <View style={styles.couponContainer}>
+        <TextInput
+          style={styles.couponInput}
+            placeholder="Enter coupon code"
+          value={coupon}
+          onChangeText={setCoupon}
+        />
+      </View>
+      <View style={styles.subtotalContainer}>
+        <Text style={styles.subtotalText}>Subtotal:</Text>
+          <Text style={styles.subtotalAmount}>${calculateSubtotal().toFixed(2)}</Text>
+      </View>
       
       <TouchableOpacity style={styles.checkoutButton}>
         <Text style={styles.checkoutText}>Proceed to Payment</Text>
@@ -60,6 +95,27 @@ const styles = StyleSheet.create({
   container2: {
    flexDirection:'row'
   
+  },
+  couponContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  couponInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+  },
+  subtotalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10, // Reduced marginTop
+    paddingVertical: 10,
+    paddingHorizontal: 20, // Added paddingHorizontal
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   backButton: {
    
