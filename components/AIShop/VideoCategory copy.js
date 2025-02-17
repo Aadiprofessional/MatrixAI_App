@@ -5,7 +5,7 @@ import VideoDealsSection from './VideoDealsSection';
 import MusicDealsSection from './MusicDealsSection';
 import Banner from './Banner';
 
-const MusicCategory = ({ navigation }) => {
+const VideoCategory2 = ({ navigation }) => {
   const [bestDeals, setBestDeals] = useState([]);
   const[highlight,setHighlight]=useState([]);
   const [bestVideoDeals, setBestVideoDeals] = useState([]);
@@ -29,36 +29,25 @@ const MusicCategory = ({ navigation }) => {
 
 
   useEffect(() => {
-    
+   
 
-    const fetchHighlightMusic = async () => {
-      try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsMusicProduct');
-        const data = await response.json();
-        setMusicHighlight(data);
-      } catch (error) {
-        console.error('Error fetching best deals:', error);
-        setMusicHighlightError(true);
-      } finally {
-        setMusicHighlightLoading(false);
-      }
-    };
   
-    const fetchBestMusicDeals = async () => {
+   
+    const fetchBestVideoDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProduct');
+        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
         const data = await response.json();
-        setBestMusicDeals(data);
+        setBestVideoDeals(data);
       } catch (error) {
-        console.error('Error fetching music deals:', error);
-        setMusicError(true);
+        console.error('Error fetching video deals:', error);
+        setVideoError(true);
       } finally {
-        setMusicLoading(false);
+        setVideoLoading(false);
       }
     };
 
-    fetchBestMusicDeals();
-    fetchHighlightMusic();
+   
+    fetchBestVideoDeals();
   
   }, []);
 
@@ -70,31 +59,19 @@ const MusicCategory = ({ navigation }) => {
     <View style={styles.container}>
     
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Best In Music</Text>
-        <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Best Deals')}>
+        <Text style={styles.sectionTitle}>Related Videos</Text>
+        <TouchableOpacity onPress={() => handleSeeAllPress('Videos', 'Best Deals')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
       </View>
-      <MusicDealsSection
-        bestMusicDeals={bestMusicDeals}
-        musicLoading={musicLoading}
-        musicError={musicError}
+      <VideoDealsSection
+        bestVideoDeals={bestVideoDeals}
+        videoLoading={videoLoading}
+        videoError={videoError}
         navigation={navigation}
       />
-         <Banner />
-       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Highlighted Music</Text>
-        <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Highlighted')}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-      </View>
-      <MusicDealsSection
-        bestMusicDeals={musicHighlight}
-        musicLoading={musicHighlightLoading}
-        musicError={musicHighlightError}
-        navigation={navigation}
-      />
-         <Banner />
+
+     
     </View>
   );
 };
@@ -131,4 +108,4 @@ const styles = StyleSheet.create({
   },
 });
 
-  export default MusicCategory;
+export default VideoCategory2;

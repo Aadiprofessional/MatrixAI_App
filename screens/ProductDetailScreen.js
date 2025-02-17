@@ -8,6 +8,10 @@ import { useCart } from '../components/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import ImageDealsSection from '../components/AIShop/ImageDealsSection';
 import Banner from '../components/AIShop/Banner'; 
+import ImageCategory2 from '../components/AIShop/ImageCategory copy';
+import MusicCategory2 from '../components/AIShop/MusicCategory copy';
+import VideoCategory2 from '../components/AIShop/VideoCategory copy';
+
 const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCart, cart } = useCart();
   const { uid } = useAuth();
@@ -42,9 +46,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     setCurrentTime(0);
   };
 
-  const toggleLike = () => {
-    // Like functionality to be implemented
-  };
+ 
 
   const { imageproductid, videoproductid, musicproductid } = route.params;
 console.log('UID IN PRODUCT',uid);
@@ -285,21 +287,22 @@ useEffect(() => {
         >
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
-      {product?.category === 'Music' && (
+      {!product?.music_url && product?.image_url && (
         <>
-      <Banner />
-       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Related Products</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Music', type: 'Highlighted' })}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-      </View>
-      <ImageDealsSection
-        bestDeals={bestDeals}
-        loading={loading}
-        navigation={navigation}
-        imageError={imageError}
-        />
+    
+      <ImageCategory2 navigation={navigation} />
+        </>
+      )}
+         {product?.music_url && !product?.image_url && (
+        <>
+    
+      <MusicCategory2 navigation={navigation} />
+        </>
+      )}
+         {product?.video_url && !product?.image_url && (
+        <>
+    
+      <VideoCategory2 navigation={navigation} />
         </>
       )}
       </ScrollView>

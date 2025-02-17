@@ -5,7 +5,7 @@ import VideoDealsSection from './VideoDealsSection';
 import MusicDealsSection from './MusicDealsSection';
 import Banner from './Banner';
 
-const MusicCategory = ({ navigation }) => {
+const MusicCategory2 = ({ navigation }) => {
   const [bestDeals, setBestDeals] = useState([]);
   const[highlight,setHighlight]=useState([]);
   const [bestVideoDeals, setBestVideoDeals] = useState([]);
@@ -31,18 +31,7 @@ const MusicCategory = ({ navigation }) => {
   useEffect(() => {
     
 
-    const fetchHighlightMusic = async () => {
-      try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsMusicProduct');
-        const data = await response.json();
-        setMusicHighlight(data);
-      } catch (error) {
-        console.error('Error fetching best deals:', error);
-        setMusicHighlightError(true);
-      } finally {
-        setMusicHighlightLoading(false);
-      }
-    };
+  
   
     const fetchBestMusicDeals = async () => {
       try {
@@ -58,8 +47,7 @@ const MusicCategory = ({ navigation }) => {
     };
 
     fetchBestMusicDeals();
-    fetchHighlightMusic();
-  
+    
   }, []);
 
   const handleSeeAllPress = (category, type) => {
@@ -70,7 +58,7 @@ const MusicCategory = ({ navigation }) => {
     <View style={styles.container}>
     
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Best In Music</Text>
+        <Text style={styles.sectionTitle}>Related Music</Text>
         <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Best Deals')}>
           <Text style={styles.seeAll}>See all</Text>
         </TouchableOpacity>
@@ -81,20 +69,7 @@ const MusicCategory = ({ navigation }) => {
         musicError={musicError}
         navigation={navigation}
       />
-         <Banner />
-       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Highlighted Music</Text>
-        <TouchableOpacity onPress={() => handleSeeAllPress('Music', 'Highlighted')}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-      </View>
-      <MusicDealsSection
-        bestMusicDeals={musicHighlight}
-        musicLoading={musicHighlightLoading}
-        musicError={musicHighlightError}
-        navigation={navigation}
-      />
-         <Banner />
+     
     </View>
   );
 };
@@ -131,4 +106,4 @@ const styles = StyleSheet.create({
   },
 });
 
-  export default MusicCategory;
+export default MusicCategory2;
