@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import ImageDealsSection from './ImageDealsSection';
-import VideoDealsSection from './VideoDealsSection';
-import MusicDealsSection from './MusicDealsSection';
+
 import Banner from './Banner';
 
 const ImageCategory = ({ navigation }) => {
   const [bestDeals, setBestDeals] = useState([]);
   const[highlight,setHighlight]=useState([]);
-  const [bestVideoDeals, setBestVideoDeals] = useState([]);
-  const [bestMusicDeals, setBestMusicDeals] = useState([]);
-  const [musicHighlight, setMusicHighlight] = useState([]);
-  const [videoHighlight, setVideoHighlight] = useState([]);
+
   const [loading, setLoading] = useState(true);
-  const [videoLoading, setVideoLoading] = useState(true);
-  const [musicHighlightLoading, setMusicHighlightLoading] = useState(true);
-  const [videoHighlightLoading, setVideoHighlightLoading] = useState(true);
+
   const [imageHighlightLoading, setImageHighlightLoading] = useState(true);
   
-  const [musicLoading, setMusicLoading] = useState(true);
-  const [videoError, setVideoError] = useState(false);
+
   const [imageError, setImageError] = useState(false);
   const [imageHighlightError, setImageHighlightError] = useState(false);
-  const [videoHighlightError, setVideoHighlightError] = useState(false);
-  const [musicHighlightError, setMusicHighlightError] = useState(false);
-  const [musicError, setMusicError] = useState(false);
+
 
 
 

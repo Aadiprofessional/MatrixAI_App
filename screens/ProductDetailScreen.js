@@ -6,7 +6,8 @@ import MusicIcon from 'react-native-vector-icons/Ionicons';
 import Sound from 'react-native-sound';
 import { useCart } from '../components/CartContext';
 import { useAuth } from '../hooks/useAuth';
-
+import ImageDealsSection from '../components/AIShop/ImageDealsSection';
+import Banner from '../components/AIShop/Banner'; 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCart, cart } = useCart();
   const { uid } = useAuth();
@@ -284,6 +285,23 @@ useEffect(() => {
         >
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
+      {product?.category === 'Music' && (
+        <>
+      <Banner />
+       <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Related Products</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('SeeAllScreen', { category: 'Music', type: 'Highlighted' })}>
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      </View>
+      <ImageDealsSection
+        bestDeals={bestDeals}
+        loading={loading}
+        navigation={navigation}
+        imageError={imageError}
+        />
+        </>
+      )}
       </ScrollView>
     </View>
   );
