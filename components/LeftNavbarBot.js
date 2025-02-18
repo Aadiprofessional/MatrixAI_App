@@ -21,18 +21,12 @@ const LeftNavbarBot = ({ chats, onSelectChat, onNewChat, onClose, onDeleteChat }
           </TouchableOpacity>
         </View>
 
-        {/* New Chat Button */}
-        <TouchableOpacity style={styles.newChatButton} onPress={onNewChat}>
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 5 }} />
-          <Text style={styles.newChatText}>New Chat</Text>
-        </TouchableOpacity>
-
         {/* List of Chats */}
         <FlatList
           data={chats}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.chatItem}>
+            <View style={styles.chatItemContainer}>
               <TouchableOpacity
                 style={styles.chatContent}
                 onPress={() => onSelectChat(item.id)}
@@ -72,9 +66,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     elevation: 5,
     padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   header: {
     flexDirection: 'row',
+    marginTop:50,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -100,7 +99,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
-  chatItem: {
+  chatItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderColor: '#E0E0E0',

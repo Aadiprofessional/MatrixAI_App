@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   Image,
   DrawerLayoutAndroid,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import Ionicons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import axios from 'axios';
 
@@ -47,6 +49,9 @@ const BotScreen = ({ navigation, route }) => {
   const [dataLoaded, setDataLoaded] = useState(false); // Track if data is loaded
   const [expandedMessages, setExpandedMessages] = useState({}); // Track expanded messages
   const uid = 'user123';
+  const [showAdditionalButtons, setShowAdditionalButtons] = useState(false); 
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   // Function to get response from DeepSeek (Gemini API in your case)
   const openai = new OpenAI({
@@ -221,6 +226,17 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     fetchChatHistory();
   }, []);
 
+  const handleAttach = () => {
+    setShowAdditionalButtons(prev => !prev); // Toggle additional buttons visibility
+    // Change the icon from plus to cross
+  };
+
+  const handleCamera = (navigation) => {
+    navigation.navigate('CameraScreen');
+  };
+  
+
+  
   const selectChat = (chatId) => {
     setCurrentChatId(chatId);
     const selectedChat = chats.find(chat => chat.id === chatId);
@@ -254,9 +270,10 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
           <Text style={styles.botName}>{currentChat ? currentChat.name : chatName}</Text>
           <Text style={styles.botDescription}>{currentChat ? currentChat.description : chatDescription}</Text>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="ellipsis-vertical" size={24} color="#000" style={styles.headerIcon2} />
+        <TouchableOpacity onPress={startNewChat}>
+          <Ionicons name="chat-plus-outline" size={24} color="#4C8EF7" />
         </TouchableOpacity>
+       
       </View>
 
       {/* Chat List */}
@@ -275,14 +292,14 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
         {messages.length === 0 && dataLoaded && (
           <View style={styles.placeholderContainer}>
             <Image source={require('../assets/matrix.png')} style={styles.placeholderImage} />
-            <Text style={styles.placeholderText}>Ask your questions with the Matrix bot</Text>
+            <Text style={styles.placeholderText}>Hi, I'm MatrixAI Bot.</Text>
+            <Text style={styles.placeholderText2}>How can I help you today?</Text>
           </View>
         )}
       </Animatable.View>
 
-      {/* Input Box */}
-      {showInput && (
-        <View style={styles.inputContainer}>
+      
+       <View style={[styles.chatBoxContainer, { bottom: showAdditionalButtons ? 70 : 30}]}>
           <TextInput
             style={[styles.textInput, { textAlignVertical: 'top' }]}
             placeholder="Send a message..."
@@ -293,17 +310,38 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
             numberOfLines={3}
             maxLength={250}
           />
-          {isTyping ? (
-            <TouchableOpacity onPress={handleSendMessage}>
-              <Ionicons name="send" size={24} color="#4C8EF7" style={styles.icon} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => setShowInput(false)}>
-              <Ionicons name="mic" size={24} color="#000" style={styles.icon} />
-            </TouchableOpacity>
-          )}
+            <TouchableOpacity onPress={handleAttach} style={styles.sendButton}>
+                  {showAdditionalButtons ? (
+                    <Ionicons name="close" size={24} color="#4C8EF7" />
+                  ) : (
+                    <Ionicons name="plus" size={24} color="#4C8EF7" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleCamera(navigation)} style={styles.sendButton}>
+                  <Ionicons name="camera" size={24} color="#4C8EF7" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton}>
+                  <Ionicons name="send" size={24} color="#4C8EF7" />
+                </TouchableOpacity>
         </View>
-      )}
+
+         {showAdditionalButtons && (
+                <View style={styles.additionalButtonsContainer}>
+                  <TouchableOpacity style={styles.additionalButton}>
+                    <Ionicons name="camera" size={24} color="#4C8EF7" />
+                    <Text>Photo OCR</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.additionalButton} >
+                    <Ionicons name="image" size={24} color="#4C8EF7" />
+                    <Text>Image OCR</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.additionalButton}>
+                    <Ionicons name="attachment" size={24} color="#4C8EF7" />
+                    <Text>Document</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+  
 
       {isLoading && (
         <View style={styles.loadingContainer}>
@@ -317,12 +355,14 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
       )}
 
       {isSidebarOpen && (
-        <LeftNavbarBot
-          chats={chats}
-          onSelectChat={selectChat}
-          onNewChat={startNewChat}
-          onClose={() => setIsSidebarOpen(false)}
-        />
+        <TouchableWithoutFeedback onPress={() => setIsSidebarOpen(false)}>
+          <LeftNavbarBot
+            chats={chats}
+            onSelectChat={selectChat}
+            onNewChat={startNewChat}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+        </TouchableWithoutFeedback>
       )}
     </SafeAreaView>
   );
@@ -353,6 +393,60 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  sendButton: {
+   padding: 10,
+  },
+  
+  swipeableButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  swipeButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#007AFF',
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  additionalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    position: 'absolute',
+    bottom: 20, // Adjust based on your layout
+    width: '100%',
+  },
+  additionalButton: {
+    alignItems: 'center',
+  },
+  additionalIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  chatBoxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+   
+    width: '90%',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'blue',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    marginHorizontal: '5%',
   },
   headerTextContainer: {
     flex: 1,
@@ -441,14 +535,21 @@ const styles = StyleSheet.create({
     left: '50%',
     transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
     alignItems: 'center',
+
   },
   placeholderImage: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
   },
   placeholderText: {
     fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  placeholderText2: {
+    fontSize: 12,
     color: '#666',
     textAlign: 'center',
   },

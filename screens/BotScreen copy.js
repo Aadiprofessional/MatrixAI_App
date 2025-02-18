@@ -20,6 +20,8 @@ import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import AntDesign from 'react-native-vector-icons/AntDesign';
+
 // Add a module-scope variable to persist summary call status across mounts
 const summaryCalledForAudioId = {};
 
@@ -242,7 +244,7 @@ const BotScreen2 = ({ navigation, route }) => {
             style={styles.swipeButton} 
             onPress={() => handleGeneratePPT(item)}
           >
-            <Ionicons name="document-text-outline" size={24} color="#fff" />
+            <AntDesign name="pptfile1" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       );
@@ -391,8 +393,7 @@ const BotScreen2 = ({ navigation, route }) => {
           <Ionicons name="send" size={24} color="#4C8EF7" />
         </TouchableOpacity>
       </View>
-    
-      {/* Render additional buttons when showAdditionalButtons is true */}
+          
       {showAdditionalButtons && (
         <View style={styles.additionalButtonsContainer}>
           <TouchableOpacity style={styles.additionalButton}>

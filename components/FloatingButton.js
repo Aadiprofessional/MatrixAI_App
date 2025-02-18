@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, StyleSheet, Image, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import ChatSlider from './ChatSlider';
 
 const FloatingButton = () => {
     const [isSliderVisible, setIsSliderVisible] = useState(false);
+    const navigation = useNavigation();
 
-    const toggleSlider = () => {
-        setIsSliderVisible(!isSliderVisible);
+    const handlePress = () => {
+        navigation.navigate('BotScreen',{chatName:'New Chat'});
     };
 
     return (
         <View style={styles.container}>
             <TouchableOpacity 
-                onPress={toggleSlider} 
+                onPress={handlePress} 
                 style={styles.floatingButton}
             >
                 <Image
