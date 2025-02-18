@@ -14,6 +14,7 @@ import {
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
 import { launchImageLibrary } from 'react-native-image-picker';
+
 import axios from 'axios';
 import { GestureHandlerRootView, Swipeable, TouchableWithoutFeedback } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
@@ -45,6 +46,7 @@ const BotScreen2 = ({ navigation, route }) => {
     const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showAdditionalButtons, setShowAdditionalButtons] = useState(false); // New state for additional buttons
+  const swipeableRefs = useRef({});
 
   const toggleMessageExpansion = (messageId) => {
     setExpandedMessages(prev => ({
@@ -253,15 +255,20 @@ const BotScreen2 = ({ navigation, route }) => {
  
     return (
       <GestureHandlerRootView>
-        <Swipeable
-          renderLeftActions={isBot ? renderLeftActions : null}
+          <Swipeable
+            ref={(ref) => {
+              if (ref) {
+                swipeableRefs.current[item.id] = ref;
+              }
+            }}
+            renderLeftActions={isBot ? renderLeftActions : null}
    
-          leftThreshold={40}
-          rightThreshold={40}
-          overshootLeft={false}
-          overshootRight={false}
-          enabled={isBot}
-        >
+            leftThreshold={40}
+            rightThreshold={40}
+            overshootLeft={false}
+            overshootRight={false}
+            enabled={isBot}
+          >
           <View style={{ flexDirection: isBot ? 'row' : 'row-reverse', alignItems: 'center' }}>
             <Animatable.View
               animation={isBot ? "fadeInUp" : undefined}
@@ -301,7 +308,13 @@ const BotScreen2 = ({ navigation, route }) => {
                 <Image source={{ uri: item.image }} style={styles.messageImage} />
               )}
             </Animatable.View>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                if (isBot && swipeableRefs.current[item.id]) {
+                  swipeableRefs.current[item.id].openLeft();
+                }
+              }}
+            >
               <Ionicons 
                 name={isBot ? 'arrow-redo-sharp' : ''} 
                 size={24} 
