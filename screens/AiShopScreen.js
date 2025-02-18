@@ -70,7 +70,10 @@ const AiShop = ({ navigation }) => {
       
 
         {/* Render the selected category component below the ScrollView */}
-      
+        <View style={styles.endTextContainer}>
+          <Text style={styles.crossBee}>MatrixAI❤️</Text>
+          <Text style={styles.AppYard3}>World's best AI tools</Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -80,6 +83,61 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  endTextContainer: {
+    alignItems: 'left',
+    marginTop: 1,
+    marginLeft: 10,
+  },
+  endText: {
+    fontSize: 40,
+
+
+    opacity: 0.1,
+    color: '#000',
+  },
+  emoji: {
+    fontSize: 40,
+ 
+    opacity: 1,
+  },
+  line: {
+    width: '90%',
+    height: 1,
+    backgroundColor: '#000',
+    marginVertical: 10,
+    opacity: 0.1,
+  },
+  crossBee: {
+    fontSize: 40,
+
+    opacity: 0.1,
+
+    color: '#000',
+  },
+  AppYard3: {
+    fontSize: 20,
+
+ 
+    opacity: 0.1,
+
+    color: '#000',
+  },
+  AppYard: {
+    fontSize: 14,
+
+
+    opacity: 0.1,
+
+      color: '#000',
+  },
+  AppYard2: {
+    fontSize: 16,
+
+
+    opacity: 0.1,
+    marginBottom: 10,
+    color: '#000',
   },
   scrollContainer: {
     flex: 1,

@@ -10,7 +10,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 
 import { createStackNavigator } from '@react-navigation/stack';
-const { width } = Dimensions.get('window'); // Get screen width
+import Banner2 from '../components/AIShop/Banner copy';
+
+  const { width } = Dimensions.get('window'); // Get screen width
 
 const HomeScreen = ({ navigation }) => {
   const { uid, loading } = useAuth();
@@ -136,6 +138,7 @@ const HomeScreen = ({ navigation }) => {
           />
         </View>
  <FeatureCardWithDetails/>
+  <Banner2 style={styles.banner}/>
       </ScrollView>
       <FloatingButton />
     </View>
@@ -154,6 +157,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
 
 
+  },
+  banner:{
+ alignSelf:'center',
   },
   welcomeText: {
     fontSize: 18,

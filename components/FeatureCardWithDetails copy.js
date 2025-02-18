@@ -22,25 +22,25 @@ const FeatureCardWithDetails2 = () => {
           </View>
         </View>
 
-        {/* List of features with images */}
-        <View style={styles.featureList}>
-          <View style={styles.featureItem}>
-            <Image source={require('../assets/card/icon1.png')} style={styles.featureIcon} />
-            <Text style={styles.featureText}>Unlimited cloud storage of audio files (up to 500 hours)</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Image source={require('../assets/card/icon2.png')} style={styles.featureIcon} />
-            <Text style={styles.featureText}>Synchronization</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Image source={require('../assets/card/icon3.png')} style={styles.featureIcon} />
-            <Text style={styles.featureText}>5 Hours of Transcribe Time bonus each month</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Image source={require('../assets/card/icon4.png')} style={styles.featureIcon} />
-            <Text style={styles.featureText}>Export to formats txt, pdf, docx, srt, jpg</Text>
-          </View>
-        </View>
+       <View style={styles.featureList}>
+              <View style={styles.featureItem}>
+                <Image source={require('../assets/card/icon1.png')} style={styles.featureIcon} />
+                <Text style={styles.featureText}>Advanced Cloud Storage Solutions</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Image source={require('../assets/card/icon2.png')} style={styles.featureIcon} />
+                <Text style={styles.featureText}>Real-Time Data Sync</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Image source={require('../assets/card/icon3.png')} style={styles.featureIcon} />
+                <Text style={styles.featureText}>Monthly Transcription Bonus</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Image source={require('../assets/card/icon4.png')} style={styles.featureIcon} />
+                <Text style={styles.featureText}>Multi-Format Export</Text>
+              </View>
+            </View>
+    
 
         {/* Upgrade button */}
         <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgradePress}>

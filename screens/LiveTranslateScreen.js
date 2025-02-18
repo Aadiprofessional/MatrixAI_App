@@ -500,6 +500,7 @@ const handleStartListening = async () => {
   } catch (error) {
     console.error('Error starting voice recognition:', error);
     setIsListening(false);
+    Alert.alert('Error', `Failed to start listening: ${error.message}`);
   }
 };
 

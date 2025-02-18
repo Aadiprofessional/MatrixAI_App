@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center', // Center the card vertically
     alignItems: 'center', // Center the card horizontally
-    backgroundColor: '#F8F9FD',
+
   },
   card: {
     width: '90%', // 80% of the screen width
