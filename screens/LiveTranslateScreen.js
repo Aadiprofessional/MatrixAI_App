@@ -465,40 +465,43 @@ const LiveTranslateScreen = () => {
     }
   };
 
-  const handleStartListening = async () => {
-    if (isListening) {
-      console.log('Already listening!');
-      return;
+const handleStartListening = async () => {
+  if (isListening) {
+    console.log('Already listening!');
+    return;
+  }
+
+  setIsListening(true);
+  setIsPaused(false);
+
+  try {
+    console.log('Initializing AudioRecord...');
+    AudioRecord.init({
+      sampleRate: 16000,
+      channels: 1,
+      bitsPerSample: 16,
+      audioSource: 6,
+      wavFile: `${uuidv4()}.wav`,
+    });
+    console.log('Starting AudioRecord...');
+    AudioRecord.start();
+
+    // Get the language code for the selected source language
+    const languageCode = languageCodes[selectedLanguage];
+    if (!languageCode) {
+      throw new Error(`Language code not found for: ${selectedLanguage}`);
     }
 
-    setIsListening(true);
-    setIsPaused(false);
-
-    try {
-      AudioRecord.init({
-        sampleRate: 16000,
-        channels: 1,
-        bitsPerSample: 16,
-        audioSource: 6,
-        wavFile: `${uuidv4()}.wav`,
-      });
-      AudioRecord.start();
-
-      // Get the language code for the selected source language
-      const languageCode = languageCodes[selectedLanguage];
-      if (!languageCode) {
-        throw new Error(`Language code not found for: ${selectedLanguage}`);
-      }
-
-      await Voice.start(languageCode); // Use the correct language code
-      
-      setTranscription('Listening...');
-      setRecordingStartTime(Date.now());
-    } catch (error) {
-      console.error('Error starting voice recognition:', error);
-      setIsListening(false);
-    }
-  };
+    console.log('Starting Voice recognition with language code:', languageCode);
+    await Voice.start(languageCode); // Use the correct language code
+    
+    setTranscription('Listening...');
+    setRecordingStartTime(Date.now());
+  } catch (error) {
+    console.error('Error starting voice recognition:', error);
+    setIsListening(false);
+  }
+};
 
   const handlePauseListening = async () => {
     setIsPaused(true);

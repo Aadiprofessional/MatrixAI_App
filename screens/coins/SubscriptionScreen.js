@@ -10,10 +10,13 @@ const SubscriptionScreen = () => {
   };
 
   const getButtonPrice = () => {
-    if (selectedPlan === '1 week') {
+    if (selectedPlan === '2 week') {
       return '$0.99';
+    } else if (selectedPlan === '1 months') {
+      return '$10.99';
     } else if (selectedPlan === '6 months') {
       return '$19.99';
+      
     } else if (selectedPlan === '1 year') {
       return '$39.99';
     }
@@ -60,13 +63,21 @@ const SubscriptionScreen = () => {
       {/* Plans */}
       <View style={styles.plansContainer}>
         <TouchableOpacity
-          style={[styles.plan, selectedPlan === '1 week' && styles.activePlan]}
-          onPress={() => handlePlanSelect('1 week')}
+          style={[styles.plan, selectedPlan === '2 week' && styles.activePlan]}
+          onPress={() => handlePlanSelect('2 week')}
         >
           <Text style={styles.planTitle}>1 week</Text>
           <Text style={styles.planPrice}>
-            $0.99 / <Image source={require('../../assets/coin.png')} style={styles.planCoinIcon} /> 200
+            $0.99
           </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+          style={[styles.plan, selectedPlan === '1 months' && styles.activePlan]}
+          onPress={() => handlePlanSelect('1 months')}
+        >
+          <Text style={styles.planTitle}>1 months</Text>
+          <Text style={styles.planPrice}>$10.99</Text>
+
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.plan, selectedPlan === '6 months' && styles.activePlan]}

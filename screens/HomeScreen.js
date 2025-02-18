@@ -105,15 +105,15 @@ const HomeScreen = ({ navigation }) => {
         {/* Feature Cards */}
         <View style={styles.featureRow}>
           <FeatureCard
-            title="Speech to Image"
-            description="Convert your Speech into stunning Image."
+            title="Generate Image"
+            description="Create stunning Image with MatrixAI"
             iconSource={require('../assets/card/image.png')}
             navigation={navigation}
             targetScreen="ImageTextScreen"
           />
           <FeatureCard
-            title="Speech to Video"
-            description="Convert your Speech into stunning Video."
+            title="Generate Video"
+            description="Convert your own Video."
             iconSource={require('../assets/card/video.png')}
             navigation={navigation}
             targetScreen="VideoUpload"
@@ -128,8 +128,8 @@ const HomeScreen = ({ navigation }) => {
             targetScreen="RemoveBackground"
           />
           <FeatureCard
-            title="Speech to Presentation"
-            description="Convert your Speech into stunning Text."
+            title="Create Presentation"
+            description="Create your prsentation is less than a minutue"
             iconSource={require('../assets/card/ppt.png')}
             navigation={navigation}
             targetScreen="PPTGenerateScreen"
