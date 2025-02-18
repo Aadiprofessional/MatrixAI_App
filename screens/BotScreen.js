@@ -8,34 +8,45 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-
-
+  DrawerLayoutAndroid,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import axios from 'axios';
 
 import OpenAI from 'openai';
-
+import LeftNavbarBot from '../components/LeftNavbarBot';
 
 const BotScreen = ({ navigation, route }) => {
-  const { chatName, chatDescription, chatImage,chatid} = route.params;
+  const { chatName, chatDescription, chatImage, chatid } = route.params;
   const flatListRef = React.useRef(null);
-  const [messages, setMessages] = useState([
+  const [chats, setChats] = useState([
     {
       id: '1',
-      text: "Hello.👋 I'm your new friend, MatrixAI Bot. You can ask me any questions.",
-      sender: 'bot',
+      name: 'First Chat',
+      description: 'Your initial chat with MatrixAI Bot.',
+      messages: [
+        {
+          id: '1',
+          text: "Hello.👋 I'm your new friend, MatrixAI Bot. You can ask me any questions.",
+          sender: 'bot',
+        },
+      ],
     },
   ]);
+  const [currentChatId, setCurrentChatId] = useState('1');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const currentChat = chats.find(chat => chat.id === currentChatId);
+  const [messages, setMessages] = useState(currentChat ? currentChat.messages : []);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);  // Track if user is typing
   const [dataLoaded, setDataLoaded] = useState(false); // Track if data is loaded
   const [expandedMessages, setExpandedMessages] = useState({}); // Track expanded messages
-  const uid ='user123';
+  const uid = 'user123';
 
   // Function to get response from DeepSeek (Gemini API in your case)
   const openai = new OpenAI({
@@ -43,51 +54,60 @@ const BotScreen = ({ navigation, route }) => {
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816', // Your DeepSeek API key
   });
 
-  const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
-    const maxRetries = 5;
-    const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000); // Max delay is 1 minute
+const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
+  const maxRetries = 5;
+  const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000); // Max delay is 1 minute
 
-    setIsLoading(true);
-    try {
-      // Format message history for API
-      const messageHistory = messages.map(msg => ({
-        role: msg.sender === 'bot' ? 'assistant' : 'user',
-        content: msg.text
-      }));
+  setIsLoading(true);
+  try {
+    // Format message history for API
+    const messageHistory = messages.map(msg => ({
+      role: msg.sender === 'bot' ? 'assistant' : 'user',
+      content: msg.text
+    }));
 
-      const response = await openai.chat.completions.create({
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant.' },
-          ...messageHistory,
-          { role: 'user', content: userMessage },
-        ],
-        model: 'deepseek-chat',
-      });
+    const response = await openai.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        ...messageHistory,
+        { role: 'user', content: userMessage },
+      ],
+      model: 'deepseek-chat',
+    });
 
-      const botMessage = response.choices[0].message.content.trim();
+    const botMessage = response.choices[0].message.content.trim();
 
+    let chatNameUpdated = false;
+    setChats(prevChats => prevChats.map(chat => {
+      if (chat.id === currentChatId && chat.name === 'New Chat' && !chatNameUpdated) {
+        chatNameUpdated = true;
+        return { ...chat, name: `Message: ${botMessage.substring(0, 20)}`, description: userMessage };
+      }
+      return chat;
+    }));
+
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), text: botMessage, sender: 'bot' },
+    ]);
+
+    // Save the bot's message to the server
+    await saveChatHistory(botMessage, 'bot');
+  } catch (error) {
+    if (retryCount < maxRetries) {
+      console.log(`Error occurred. Retrying in ${retryDelay / 1000} seconds...`);
+      setTimeout(() => fetchDeepSeekResponse(userMessage, retryCount + 1), retryDelay);
+    } else {
+      console.error(error);
       setMessages((prev) => [
         ...prev,
-        { id: Date.now().toString(), text: botMessage, sender: 'bot' },
+        { id: Date.now().toString(), text: 'Error fetching response. Try again later.', sender: 'bot' },
       ]);
-
-      // Save the bot's message to the server
-      await saveChatHistory(botMessage, 'bot');
-    } catch (error) {
-      if (retryCount < maxRetries) {
-        console.log(`Error occurred. Retrying in ${retryDelay / 1000} seconds...`);
-        setTimeout(() => fetchDeepSeekResponse(userMessage, retryCount + 1), retryDelay);
-      } else {
-        console.error(error);
-        setMessages((prev) => [
-          ...prev,
-          { id: Date.now().toString(), text: 'Error fetching response. Try again later.', sender: 'bot' },
-        ]);
-      }
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSendMessage = async () => {
     if (inputText.trim()) {
@@ -96,7 +116,12 @@ const BotScreen = ({ navigation, route }) => {
         text: inputText,
         sender: 'user',
       };
-      setMessages((prev) => [...prev, newMessage]);
+      const updatedMessages = [...messages, newMessage];
+      setMessages(updatedMessages);
+      // Update the current chat's messages
+      setChats(prevChats => prevChats.map(chat => 
+        chat.id === currentChatId ? { ...chat, messages: updatedMessages } : chat
+      ));
 
       // Save the user's message to the server
       await saveChatHistory(inputText, 'user');
@@ -175,6 +200,16 @@ const BotScreen = ({ navigation, route }) => {
       try {
         const response = await axios.post('https://matrix-server-gzqd.vercel.app/getChat', { uid, chatid });
         const history = response.data.messages;
+        setChats(prevChats => [
+          ...prevChats,
+          {
+            id: Date.now().toString(),
+            name: 'First Chat',
+            description: 'Your initial chat with MatrixAI Bot.',
+            messages: history,
+          },
+        ]);
+        setCurrentChatId(Date.now().toString());
         setMessages(history); // Set messages from the server
         setDataLoaded(true); // Mark data as loaded
       } catch (error) {
@@ -186,34 +221,63 @@ const BotScreen = ({ navigation, route }) => {
     fetchChatHistory();
   }, []);
 
+  const selectChat = (chatId) => {
+    setCurrentChatId(chatId);
+    const selectedChat = chats.find(chat => chat.id === chatId);
+    setMessages(selectedChat ? selectedChat.messages : []);
+    setIsSidebarOpen(false);
+  };
+
+  const startNewChat = () => {
+    const newChatId = Date.now().toString();
+    const newChat = {
+      id: newChatId,
+      name: 'New Chat',
+      description: '',
+      messages: [],
+    };
+    setChats(prevChats => [newChat, ...prevChats]);
+    setCurrentChatId(newChatId);
+    setMessages([]);
+    setIsSidebarOpen(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/back.png')} style={styles.headerIcon} />
+        <TouchableOpacity onPress={() => setIsSidebarOpen(true)}>
+          <Ionicons name="menu" size={30} color="#000" style={styles.headerIcon} />
         </TouchableOpacity>
         <Image source={require('../assets/Avatar/Cat.png')} style={styles.botIcon} />
         <View style={styles.headerTextContainer}>
-          <Text style={styles.botName}>{chatName}</Text>
-          <Text style={styles.botDescription}>{chatDescription}</Text>
+          <Text style={styles.botName}>{currentChat ? currentChat.name : chatName}</Text>
+          <Text style={styles.botDescription}>{currentChat ? currentChat.description : chatDescription}</Text>
         </View>
         <TouchableOpacity>
-          <Image source={require('../assets/threeDot.png')} style={styles.headerIcon2} />
+          <Ionicons name="ellipsis-vertical" size={24} color="#000" style={styles.headerIcon2} />
         </TouchableOpacity>
       </View>
 
       {/* Chat List */}
       <Animatable.View animation="fadeIn" duration={1000} style={{ flex: 1 }}>
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.chat}
-        onContentSizeChange={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
-        onLayout={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
-      />
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.chat}
+          onContentSizeChange={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
+          onLayout={() => setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100)}
+        />
+
+        {/* Placeholder for New Chat */}
+        {messages.length === 0 && dataLoaded && (
+          <View style={styles.placeholderContainer}>
+            <Image source={require('../assets/matrix.png')} style={styles.placeholderImage} />
+            <Text style={styles.placeholderText}>Ask your questions with the Matrix bot</Text>
+          </View>
+        )}
       </Animatable.View>
 
       {/* Input Box */}
@@ -231,26 +295,35 @@ const BotScreen = ({ navigation, route }) => {
           />
           {isTyping ? (
             <TouchableOpacity onPress={handleSendMessage}>
-              <Image source={require('../assets/send2.png')} style={styles.icon} />
+              <Ionicons name="send" size={24} color="#4C8EF7" style={styles.icon} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => setShowInput(false)}>
-              <Image source={require('../assets/mic.png')} style={styles.icon} />
+              <Ionicons name="mic" size={24} color="#000" style={styles.icon} />
             </TouchableOpacity>
           )}
         </View>
       )}
 
-       {isLoading && (
-             <View style={styles.loadingContainer}>
-               <LottieView
-                 source={require('../assets/dot.json')}
-                 autoPlay
-                 loop
-                 style={styles.loadingAnimation}
-               />
-             </View>
-           )}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <LottieView
+            source={require('../assets/dot.json')}
+            autoPlay
+            loop
+            style={styles.loadingAnimation}
+          />
+        </View>
+      )}
+
+      {isSidebarOpen && (
+        <LeftNavbarBot
+          chats={chats}
+          onSelectChat={selectChat}
+          onNewChat={startNewChat}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -272,13 +345,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginHorizontal: 5,
-    resizeMode: 'contain',
   },
   headerIcon2: {
-    width: 15,
-    height: 15,
     marginHorizontal: 5,
-    resizeMode: 'contain',
   },
   botIcon: {
     width: 40,
@@ -318,7 +387,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     position: 'absolute',
     bottom: -50,
-
     right: 180,
     justifyContent: 'center',
     alignItems: 'center',
@@ -350,10 +418,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   icon: {
-    width: 20,
-    height: 20,
     marginHorizontal: 10,
-    resizeMode: 'contain',
   },
   loading: {
     fontSize: 14,
@@ -369,6 +434,23 @@ const styles = StyleSheet.create({
     color: '#4C8EF7',
     fontSize: 12,
     textDecorationLine: 'underline',
+  },
+  placeholderContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
+    alignItems: 'center',
+  },
+  placeholderImage: {
+    width: 150,
+    height: 150,
+    marginBottom: 20,
+  },
+  placeholderText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 
