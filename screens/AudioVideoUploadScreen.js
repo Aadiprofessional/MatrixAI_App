@@ -892,6 +892,7 @@ const styles = StyleSheet.create({
       popupButton: { padding: 10, backgroundColor: '#0066FE', borderRadius: 5 },
       popupButtonText: { color: 'white' },
    
+      
     dot: {
         width: 16,
         height: 16,

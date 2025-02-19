@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  Animated,
+  Easing
 } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const PPTGenerateScreen = () => {
@@ -15,6 +18,34 @@ const PPTGenerateScreen = () => {
   const [transcription, setTranscription] = useState('Tell me About Your PPT');
   const [selectedNumber, setSelectedNumber] = useState(1); // Default selection
   const navigation = useNavigation();
+  
+  const fadeAnim = new Animated.Value(0);
+  const scaleAnim = new Animated.Value(0);
+  const sendRotation = new Animated.Value(0);
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.timing(sendRotation, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      )
+    ]).start();
+  }, []);
 
   const handleSend = () => {
     if (userText.trim().length > 0) {
@@ -25,6 +56,7 @@ const PPTGenerateScreen = () => {
   const handleGenerate = () => {
     navigation.navigate('CreatePPTScreen', { message: transcription, number: selectedNumber });
   };
+  
   const backgrounds = {
     1: require('../assets/bg/bg3.jpg'),
     2: require('../assets/bg/bg2.jpg'),
@@ -39,32 +71,47 @@ const PPTGenerateScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/back.png')} style={styles.headerIcon} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Transcription Text */}
-      <Text style={styles.transcriptionText}>{transcription}</Text>
-
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      {/* Header Animation */}
+  
+      <Animated.View style={[styles.header, { transform: [{ scale: scaleAnim }] }]}>
+          <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+                                       <Image
+                                           source={require('../assets/back.png')} 
+                                           style={styles.headerIcon}
+                                       />
+                                   </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Matrix AI</Text>
+      </Animated.View>
+    {!isFinished && (
+  <Animated.View style={[styles.placeholderContainer, { opacity: fadeAnim }]}>
+          <Image   
+            source={require('../assets/matrix.png')}
+            style={{width: 120, height: 120,resizeMode:'contain',marginTop:20}}
+          />
+          <Text style={styles.placeholderText}>Hi, Welcome to Matrix AI</Text>
+          <Text style={styles.placeholderText2}>What can I generate for you today?</Text>
+          </Animated.View>
+      )}
+      <LottieView 
+        source={require('../assets/image.json')}
+        autoPlay
+        loop
+        style={{width: '100%', height: 100}}
+      />
       {/* Selection Rectangles */}
       {isFinished && (
-     <View style={styles.selectionContainer}>
-     {[1, 2, 3, 4,5,6,7,8,9,10].map((num) => (
-       <TouchableOpacity
-         key={num}
-         style={[styles.rectangle, selectedNumber === num && styles.selectedRectangle]}
-         onPress={() => setSelectedNumber(num)}
-       >
-         <Image source={backgrounds[num]} style={styles.image} />
-        
-       </TouchableOpacity>
-     ))}
-   </View>
-    
+       <View style={styles.selectionContainer}>
+       {[1, 2, 3, 4,5,6,7,8,9,10].map((num) => (
+         <TouchableOpacity
+           key={num}
+           style={[styles.rectangle, selectedNumber === num && styles.selectedRectangle]}
+           onPress={() => setSelectedNumber(num)}
+         >
+           <Image source={backgrounds[num]} style={styles.image} />
+         </TouchableOpacity>
+       ))}
+     </View>
       )}
 
       {/* Text Input */}
@@ -81,7 +128,9 @@ const PPTGenerateScreen = () => {
             }}
           />
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Image source={require('../assets/send2.png')} style={styles.sendIcon} />
+           
+              <Image source={require('../assets/send2.png')} style={styles.sendIcon} />
+          
           </TouchableOpacity>
         </View>
       )}
@@ -103,7 +152,7 @@ const PPTGenerateScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -126,11 +175,18 @@ const styles = StyleSheet.create({
     height: 24,
     resizeMode: 'contain',
   },
-  transcriptionText: {
+  placeholderContainer: { 
+    alignItems: 'center',
     marginTop: 20,
+  },
+  placeholderText: {
     fontSize: 18,
     color: '#333',
-    textAlign: 'center',
+    marginTop: 10,
+  },
+  placeholderText2: {
+    fontSize: 14,
+    color: '#666',
   },
   selectionContainer: {
     flexDirection: 'row',
@@ -139,15 +195,14 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     width: '100%',
   },
-  
   rectangle: {
     width: '45%',  
-    aspectRatio: 1.5, // Adjust this value to match the aspect ratio of your images
+    aspectRatio: 1.5,
     margin: 5,
     borderWidth: 2,
     borderColor: '#ccc',
     borderRadius: 10,
-    overflow: 'hidden', // Ensure the image doesn't overflow the rectangle
+    overflow: 'hidden',
   },
   selectedRectangle: {
     borderColor: '#007BFF',
@@ -156,9 +211,8 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover', // Ensure the image covers the entire rectangle
+    resizeMode: 'cover',
   },
- 
   textInputContainer: {
     position: 'absolute',
     bottom: 20,

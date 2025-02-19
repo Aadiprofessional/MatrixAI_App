@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  Animated,
+  Easing
 } from 'react-native';
+import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const ImageGenerateScreen = () => {
@@ -15,8 +18,35 @@ const ImageGenerateScreen = () => {
   const [transcription, setTranscription] = useState(
     'Start writing to generate Images (eg: generate tree with red apples)'
   );
+  const fadeAnim = new Animated.Value(0);
+  const scaleAnim = new Animated.Value(0);
+  const sendRotation = new Animated.Value(0);
   const navigation = useNavigation();
-
+  
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.timing(sendRotation, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      )
+    ]).start();
+  }, []);
+  
   const handleSend = () => {
     if (userText.trim().length > 0) {
       setIsFinished(true); // Show buttons after sending the input
@@ -39,20 +69,33 @@ const ImageGenerateScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={require('../assets/back.png')}
-            style={styles.headerIcon}
+<Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+  {/* Header Animation */}
+ 
+  <Animated.View style={[styles.header, { transform: [{ scale: scaleAnim }] }]}>
+             <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+                                 <Image
+                                     source={require('../assets/back.png')} 
+                                     style={styles.headerIcon}
+                                 />
+                             </TouchableOpacity>
+              <Text style={styles.headerTitle}>Matrix AI</Text>
+            
+          </Animated.View>
+          <Animated.View style={[styles.placeholderContainer, { opacity: fadeAnim }]}>
+          <Image   
+            source={require('../assets/matrix.png')}
+            style={{width: 120, height: 120,resizeMode:'contain',marginTop:20}}
           />
-        </TouchableOpacity>
-      </View>
-
-      {/* Transcription Text */}
-      <Text style={styles.transcriptionText}>{transcription}</Text>
-
+          <Text style={styles.placeholderText}>Hi, Welcome to Matrix AI</Text>
+          <Text style={styles.placeholderText2}>What can I generate for you today?</Text>
+        </Animated.View>
+        <LottieView 
+    source={require('../assets/image.json')}
+    autoPlay
+    loop
+    style={{width: '100%', height: 100}}
+  />
       {/* Text Input Box */}
       {!isFinished && (
         <View style={styles.textInputContainer}>
@@ -66,12 +109,16 @@ const ImageGenerateScreen = () => {
               setTranscription(text || 'Start writing to generate Images (eg: generate tree with red apples)');
             }}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Image
-              source={require('../assets/send2.png')}
-              style={styles.sendIcon}
-            />
-          </TouchableOpacity>
+<TouchableOpacity 
+  style={styles.sendButton} 
+  onPress={handleSend}
+ >
+    <Image
+      source={require('../assets/send2.png')}
+      style={[styles.sendIcon, {tintColor: '#FFFFFF'}]}
+    />
+
+</TouchableOpacity>
         </View>
       )}
 
@@ -79,7 +126,7 @@ const ImageGenerateScreen = () => {
       {isFinished && (
         <View style={styles.buttonContainer}>
        
-        
+       
         <TouchableOpacity style={styles.generateButton2} onPress={handleGenerate2}>
           <View style={styles.horizontalContent}>
             <View style={styles.generateContent}>
@@ -108,7 +155,7 @@ const ImageGenerateScreen = () => {
       </View>
    
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -125,6 +172,30 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     width: '100%',
+  },
+  headerTitle:{
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginLeft: 10,
+  },
+  placeholderContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  placeholderImage: { 
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#333',
+
+  },
+  placeholderText2: {
+    fontSize: 14,
+    color: '#666',
   },
   buttonContainer: {
     flexDirection: 'row',
