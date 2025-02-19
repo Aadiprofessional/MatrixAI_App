@@ -268,11 +268,23 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
       
       {showDropdown && (
         <View style={styles.dropdownContainer}>
-          {filteredProducts.map((product, index) => (
-            <View key={index} style={styles.dropdownItem}>
-              <Text>{product.name} ({product.type})</Text>
-            </View>
-          ))}
+          {filteredProducts.map((product, index) => {
+            const navigateToDetail = () => {
+              if (product.type === 'music') {
+                navigation.navigate('ProductDetail', { musicproductid: product.musicproductid });
+              } else if (product.type === 'video') {
+                navigation.navigate('ProductDetail', { videoproductid: product.videoproductid });
+              } else if (product.type === 'image') {
+                navigation.navigate('ProductDetail', { imageproductid: product.imageproductid });
+              }
+            };
+
+            return (
+              <TouchableOpacity key={index} onPress={navigateToDetail} style={styles.dropdownItem}>
+                <Text>{product.name} ({product.type})</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
