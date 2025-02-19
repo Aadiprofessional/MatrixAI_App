@@ -20,7 +20,6 @@ import { GestureHandlerRootView, Swipeable, TouchableWithoutFeedback } from 'rea
 import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 // Add a module-scope variable to persist summary call status across mounts
@@ -28,22 +27,95 @@ const summaryCalledForAudioId = {};
 
 const BotScreen2 = ({ navigation, route }) => {
   const flatListRef = React.useRef(null);
-  const { transcription ,XMLData,uid,audioid} = route.params || {};
+  const { transcription, XMLData, uid, audioid } = route.params || {};
   const [isCameraVisible, setIsCameraVisible] = useState(false);
-    const [dataLoaded, setDataLoaded] = useState(false); // Track if data is loaded
+  const [dataLoaded, setDataLoaded] = useState(false); // Track if data is loaded
+  const [showSummaryPrompt, setShowSummaryPrompt] = useState(true); // New state for summary prompt
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const handleSummaryPrompt = async (choice) => {
+    setShowSummaryPrompt(false); // Hide the prompt immediately
+
+    if (choice === 'yes') {
+      await fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
+    }
+    try {
+      await axios.post('https://matrix-server-gzqd.vercel.app/saveSummaryPreference', {
+        uid,
+        audioid,
+        preference: choice,
+      });
+    } catch (error) {
+      console.error('Error saving summary preference:', error);
+    }
+  };
+
+  useEffect(() => {
+    const checkSummaryPreference = async () => {
+      if (!isMounted.current || !dataLoaded) return;
+
+      if (!audioid || summaryCalledForAudioId[audioid]) {
+        return;
+      }
+
+      try {
+        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getSummaryPreference', {
+          uid,
+          audioid,
+        });
+        const preference = response.data.preference;
+
+        // Check if chat history is empty
+        const chatHistoryIsEmpty = messages.length === 1 && 
+          (messages[0]?.text === "Hello.👋 I'm your new friend, MatrixAI Bot. You can ask me any questions.");
+
+        // If a preference exists ('yes' or 'no') or chat history has data, do not show the prompt
+        if (preference || messages.length > 1) {
+          setShowSummaryPrompt(false);
+
+          if (preference === 'yes' && transcription) {
+            await fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
+          }
+        } else {
+          // Show the prompt only if no preference exists and chat history is empty
+          setShowSummaryPrompt(true);
+        }
+      } catch (error) {
+        console.error('Error fetching summary preference:', error);
+      }
+    };
+
+    if (transcription && audioid) {
+      checkSummaryPreference();
+    }
+  }, [transcription, dataLoaded, audioid]);
+
   const [messages, setMessages] = useState([
     {
       id: '1',
       text: "Hello.👋 I'm your new friend, MatrixAI Bot. You can ask me any questions.",
       sender: 'bot',
     },
+    // Add summary request message conditionally
+    ...(transcription ? [{
+      id: `summary-request-${audioid}`,
+      text: "Help me generate a summary of the given transcription",
+      sender: 'user',
+      fullText: transcription,
+    }] : []),
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState({});
   const [fullTranscription, setFullTranscription] = useState('');
-    const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showAdditionalButtons, setShowAdditionalButtons] = useState(false); // New state for additional buttons
   const swipeableRefs = useRef({});
@@ -59,31 +131,7 @@ const BotScreen2 = ({ navigation, route }) => {
     setShowAdditionalButtons(prev => !prev); // Toggle additional buttons visibility
     // Change the icon from plus to cross
   };
-  
-  
-  
-  useEffect(() => {
-    // Only run this effect once per audio id (when transcription is available)
-    if (transcription && !dataLoaded && audioid && !summaryCalledForAudioId[audioid]) {
-      // Mark that we've already called summary for this audio id
-      summaryCalledForAudioId[audioid] = true;
 
-      setFullTranscription(transcription);
-  
-      // Add auto-generated user message requesting summary
-      const userMessage = {
-        id: Date.now().toString(),
-        text: "Help me generate a summary of the given transcription",
-        sender: 'user',
-        fullText: transcription,
-      };
-      setMessages((prev) => [...prev, userMessage]);
-  
-      // Get summary from bot
-      fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
-    }
-  }, [transcription, dataLoaded, audioid]);
-    
   const openai = new OpenAI({
     baseURL: 'https://api.deepseek.com',
     apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
@@ -98,9 +146,7 @@ const BotScreen2 = ({ navigation, route }) => {
   const handleCamera = (navigation) => {
     navigation.navigate('CameraScreen');
   };
-  
 
- 
   const saveChatHistory = async (messageText, sender) => {
     try {
       const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendChat', {
@@ -114,7 +160,7 @@ const BotScreen2 = ({ navigation, route }) => {
       console.error('Error saving chat history:', error);
     }
   };
-  
+
   const handleSendMessage = () => {
     if (inputText.trim()) {
       const newMessage = {
@@ -129,11 +175,11 @@ const BotScreen2 = ({ navigation, route }) => {
       setIsTyping(false);
     }
   };
-  
+
   const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     const maxRetries = 5;
     const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000);
-  
+
     setIsLoading(true);
     try {
       const response = await openai.chat.completions.create({
@@ -144,12 +190,12 @@ const BotScreen2 = ({ navigation, route }) => {
         ],
         model: "deepseek-chat",
       });
-  
+
       let botMessage = response.choices[0].message.content.trim();
-  
+
       // Clean the bot message of any unwanted characters
       botMessage = botMessage.replace(/(\*\*|\#\#)/g, "");
-  
+
       setMessages((prev) => [
         ...prev,
         { id: Date.now().toString(), text: botMessage, sender: 'bot' },
@@ -161,9 +207,7 @@ const BotScreen2 = ({ navigation, route }) => {
       setIsLoading(false);
     }
   };
-  
-  
-  
+
   const handleAddImage = () => {
     launchImageLibrary({ noData: true }, (response) => {
       if (response.assets) {
@@ -184,36 +228,36 @@ const BotScreen2 = ({ navigation, route }) => {
           uid,
           chatid: audioid, // Using audioid as chatid
         });
-        const history = response.data.messages || [];
-    
-        // Update the state with chat history (handling images as well)
-        setMessages((prev) => [...prev, ...history.map(msg => ({
-          ...msg,
-          image: msg.imageUrl || msg.image, // Ensure image URL is assigned
-          text: msg.text.replace(/(\*\*|\#\#)/g, ""), // Clean previous messages as well
-        }))]);
-    
+
+        const fetchedMessages = response.data.messages || [];
+        const hasChatHistory = fetchedMessages.length > 0;
+
+        setMessages((prev) => [
+          ...prev,
+          ...fetchedMessages.map(msg => ({
+            ...msg,
+            image: msg.imageUrl || msg.image,
+            text: msg.text.replace(/(\*\*|\#\#)/g, ""),
+          }))
+        ]);
+
         setDataLoaded(true);
+        setShowSummaryPrompt(!hasChatHistory); // Set prompt visibility based on chat history
       } catch (error) {
         console.error('Error fetching chat history:', error);
         setDataLoaded(true);
+        setShowSummaryPrompt(true); // Show prompt if there's an error fetching chat history
       }
     };
-    
-  
-    if (audioid) {
-      fetchChatHistory();
-    }
+
+    fetchChatHistory();
   }, [audioid]);
   
-  
-
-
   const handleGeneratePPT = (message) => {
-    navigation.navigate('CreatePPTScreen', { 
+    navigation.navigate('CreatePPTScreen', {
       message: message.text,
-      audioid, 
-      number:1,
+      audioid,
+      number: 1,
     });
   };
 
@@ -226,24 +270,24 @@ const BotScreen2 = ({ navigation, route }) => {
     const isBot = item.sender === 'bot';
     const isUser = item.sender === 'user';
     const isExpanded = expandedMessages[item.id];
-  
+
     // Function to detect if the text contains a URL
     const containsUrl = (text) => {
       const urlRegex = /(https?:\/\/[^\s]+)/g;
       return text && urlRegex.test(text);
     };
-  
+
     const renderLeftActions = () => {
       return (
         <View style={styles.swipeableButtons}>
-          <TouchableOpacity 
-            style={styles.swipeButton} 
+          <TouchableOpacity
+            style={styles.swipeButton}
             onPress={() => handleGenerateMindmap(item)}
           >
             <Ionicons name="git-network-outline" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.swipeButton} 
+          <TouchableOpacity
+            style={styles.swipeButton}
             onPress={() => handleGeneratePPT(item)}
           >
             <AntDesign name="pptfile1" size={24} color="#fff" />
@@ -251,24 +295,23 @@ const BotScreen2 = ({ navigation, route }) => {
         </View>
       );
     };
-  
- 
+
     return (
       <GestureHandlerRootView>
-          <Swipeable
-            ref={(ref) => {
-              if (ref) {
-                swipeableRefs.current[item.id] = ref;
-              }
-            }}
-            renderLeftActions={isBot ? renderLeftActions : null}
-   
-            leftThreshold={40}
-            rightThreshold={40}
-            overshootLeft={false}
-            overshootRight={false}
-            enabled={isBot}
-          >
+        <Swipeable
+          ref={(ref) => {
+            if (ref) {
+              swipeableRefs.current[item.id] = ref;
+            }
+          }}
+          renderLeftActions={isBot ? renderLeftActions : null}
+
+          leftThreshold={40}
+          rightThreshold={40}
+          overshootLeft={false}
+          overshootRight={false}
+          enabled={isBot}
+        >
           <View style={{ flexDirection: isBot ? 'row' : 'row-reverse', alignItems: 'center' }}>
             <Animatable.View
               animation={isBot ? "fadeInUp" : undefined}
@@ -292,17 +335,17 @@ const BotScreen2 = ({ navigation, route }) => {
                   )}
                 </Text>
               )}
-    
+
               {/* Show image if the user sends a URL */}
               {isUser && item.text && containsUrl(item.text) && (
                 <Image source={{ uri: item.text }} style={styles.messageImage} />
               )}
-    
+
               {/* Show image if the user sends an image */}
               {isUser && item.image && !containsUrl(item.text) && (
                 <Image source={{ uri: item.image }} style={styles.messageImage} />
               )}
-    
+
               {/* Bot's message can have both text and images */}
               {isBot && item.image && (
                 <Image source={{ uri: item.image }} style={styles.messageImage} />
@@ -315,10 +358,10 @@ const BotScreen2 = ({ navigation, route }) => {
                 }
               }}
             >
-              <Ionicons 
-                name={isBot ? 'arrow-redo-sharp' : ''} 
-                size={24} 
-                color="#4588F5FF" 
+              <Ionicons
+                name={isBot ? 'arrow-redo-sharp' : ''}
+                size={24}
+                color="#4588F5FF"
                 style={{ marginHorizontal: 5 }}
               />
             </TouchableOpacity>
@@ -327,9 +370,6 @@ const BotScreen2 = ({ navigation, route }) => {
       </GestureHandlerRootView>
     );
   };
-  
-  
-  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -381,9 +421,9 @@ const BotScreen2 = ({ navigation, route }) => {
       )}
 
       {/* Buttons for Mindmap and PPT */}
-    
+
       {/* Chat Input Box */}
-      <View style={[styles.chatBoxContainer, { bottom: showAdditionalButtons ? -10 : -50}]}>
+      <View style={[styles.chatBoxContainer, { bottom: showAdditionalButtons ? -10 : -50 }]}>
         <TextInput
           style={styles.textInput}
           placeholder="Type a message..."
@@ -406,14 +446,14 @@ const BotScreen2 = ({ navigation, route }) => {
           <Ionicons name="send" size={24} color="#4C8EF7" />
         </TouchableOpacity>
       </View>
-          
+
       {showAdditionalButtons && (
         <View style={styles.additionalButtonsContainer}>
           <TouchableOpacity style={styles.additionalButton}>
             <Ionicons name="camera" size={24} color="#4C8EF7" />
             <Text>Photo OCR</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.additionalButton} >
+          <TouchableOpacity style={styles.additionalButton}>
             <Ionicons name="image" size={24} color="#4C8EF7" />
             <Text>Image OCR</Text>
           </TouchableOpacity>
@@ -423,30 +463,48 @@ const BotScreen2 = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
-    
-      <Modal
-                visible={isFullScreen}
-                transparent={false}
-                animationType="slide"
-                onRequestClose={() => setIsFullScreen(false)}
-            >
-                <View style={styles.fullScreenContainer}>
-                    <View style={styles.fullScreenGraphContainer}>
-                        <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid} xmlData={XMLData} />
-                    </View>
-                    <TouchableOpacity 
-                        onPress={() => setIsFullScreen(false)} 
-                        style={styles.closeFullScreenButton}
-                    >
-                        <Image
-                            source={require('../assets/close.png')}
-                            style={styles.closeIcon}
-                        />
-                    </TouchableOpacity>
-                </View>
-            </Modal>
-         
 
+      <Modal
+        visible={isFullScreen}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setIsFullScreen(false)}
+      >
+        <View style={styles.fullScreenContainer}>
+          <View style={styles.fullScreenGraphContainer}>
+            <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid} xmlData={XMLData} />
+          </View>
+          <TouchableOpacity
+            onPress={() => setIsFullScreen(false)}
+            style={styles.closeFullScreenButton}
+          >
+            <Image
+              source={require('../assets/close.png')}
+              style={styles.closeIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {showSummaryPrompt && (
+        <View style={styles.summaryPromptContainer}>
+          <Text style={styles.summaryPromptText}>Would you like to generate a summary of the text provided?</Text>
+          <View style={styles.summaryPromptButtons}>
+            <TouchableOpacity
+              style={styles.summaryPromptButton}
+              onPress={() => handleSummaryPrompt('yes')}
+            >
+              <Text style={styles.summaryPromptButtonText}>Yes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.summaryPromptButton}
+              onPress={() => handleSummaryPrompt('no')}
+            >
+              <Text style={styles.summaryPromptButtonText}>No</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -455,7 +513,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9F9F9',
-    marginBottom:100,
+    marginBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -509,8 +567,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     borderRadius: 10,
-    zIndex:100,
-    bottom:-60,
+    zIndex: 100,
+    bottom: -60,
     marginHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -568,19 +626,19 @@ const styles = StyleSheet.create({
     padding: 0,
     justifyContent: 'center',
     alignItems: 'center',
-},
-fullScreenGraphContainer: {
+  },
+  fullScreenGraphContainer: {
     flex: 1,
     width: '100%',
     height: '100%',
     maxWidth: '100%',
     maxHeight: '100%',
-   marginTop:200,
-   marginRight:50,
+    marginTop: 200,
+    marginRight: 50,
     padding: 10,
     overflow: 'hidden',
-},
-closeFullScreenButton: {
+  },
+  closeFullScreenButton: {
     position: 'absolute',
     top: 50,
     right: 20,
@@ -594,12 +652,12 @@ closeFullScreenButton: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-},
-closeIcon: {
+  },
+  closeIcon: {
     width: 20,
     height: 20,
     tintColor: '#fff',
-},
+  },
   animationContainer: {
     width: '100%',
     height: 600,
@@ -623,7 +681,7 @@ closeIcon: {
   },
   loadingContainer: {
     position: 'absolute',
-  
+
     left: -200,
     right: 0,
     justifyContent: 'center',
@@ -696,6 +754,35 @@ closeIcon: {
     width: 24,
     height: 24,
     resizeMode: 'contain',
+  },
+  summaryPromptContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'center',
+  },
+  summaryPromptText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  summaryPromptButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  summaryPromptButton: {
+    padding: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+  },
+  summaryPromptButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 
