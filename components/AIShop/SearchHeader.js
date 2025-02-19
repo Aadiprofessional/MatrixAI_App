@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
+import axios from 'axios';
+
 import {
   View,
   Text,
@@ -72,9 +74,15 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const backgroundContainerHeight = useRef(new Animated.Value(200)).current;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
   const searchBoxHeight = useRef(new Animated.Value(250)).current; // Use useRef for mutable animated value
 
   useEffect(() => {
+    fetchProducts();
+    
     const targetText = "Let's see the AI world";
     let index = 0;
     setTypingText(''); // Clear text before restarting animation
@@ -85,8 +93,35 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
     }, 100);
 
     return () => clearInterval(interval); // Cleanup on unmount
-  }, []); // Runs every time the component is rendered
+  }, []);
   
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get('https://matrix-server-gzqd.vercel.app/getAllProducts');
+      const allProducts = [
+        ...response.data.images.map(item => ({...item, type: 'image'})),
+        ...response.data.videos.map(item => ({...item, type: 'video'})),
+        ...response.data.music.map(item => ({...item, type: 'music'}))
+      ];
+      setProducts(allProducts);
+      setFilteredProducts(allProducts.slice(0, 3));
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    if (text) {
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      setFilteredProducts(products.slice(0, 3));
+    }
+    setShowDropdown(true);
+  };
   useEffect(() => {
     const scrollThreshold = 150; // Adjust threshold as needed
 
@@ -181,7 +216,9 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
             placeholder="Search your products"
             placeholderTextColor="#9F9F9FFF"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearch}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
             returnKeyType="search"
           />
         </View>
@@ -228,6 +265,16 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
         </Animated.View>
       )}
       </Animated.View>
+      
+      {showDropdown && (
+        <View style={styles.dropdownContainer}>
+          {filteredProducts.map((product, index) => (
+            <View key={index} style={styles.dropdownItem}>
+              <Text>{product.name} ({product.type})</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 };
@@ -342,6 +389,27 @@ const styles = StyleSheet.create({
   cartItemCountText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  
+  dropdownContainer: {
+    position: 'absolute',
+    top: 150,
+    left: '15%',
+    right: '15%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
 });
 
