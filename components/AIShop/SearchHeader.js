@@ -219,7 +219,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
             }}
           >
             <View style={styles.searchBox}>
-              <Icon name="search" size={20} color="#484848" style={styles.icon} />
+            
               <TextInput
                 ref={searchInputRef} // Attach the ref here
                 style={styles.searchInput}
@@ -231,6 +231,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
                 onBlur={() => setShowDropdown(false)} // Close dropdown on blur
                 returnKeyType="search"
               />
+                <Icon name="search" size={20} color="#484848" style={styles.icon} />
             </View>
           </Animated.View>
           <Animated.View
@@ -396,7 +397,8 @@ header: {
     tintColor:'#fff'
   },
   icon: {
-    marginRight: 10,
+   position:'absolute',
+   right:10,
     tintColor:'#007BFF'
   },
   cartButton: {
@@ -437,8 +439,8 @@ header: {
       zIndex: 10000, // Increased zIndex
       width: '70%',
       alignItems:'center',
-      justifyContent:'center',
       alignSelf:'center',
+      
     },
   dropdownItem: {
     paddingVertical: 8,
