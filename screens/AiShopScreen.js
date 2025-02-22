@@ -49,14 +49,14 @@ const AiShop = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Fixed Search Header */}
-      <SearchHeader scrollY={scrollY} navigation={navigation} />
+      <SearchHeader scrollY={scrollY} navigation={navigation} style={{ position: 'absolute', top: 0, width: '100%', zIndex: 5000 }} />
 
       {/* Pass setSelectedTab as a prop to CategoryTabs */}
       <CategoryTabs selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
 
       {/* Scrollable Content */}
       <ScrollView
-        style={styles.scrollContainer}
+        style={[styles.scrollContainer, { zIndex: 1000 }]}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],

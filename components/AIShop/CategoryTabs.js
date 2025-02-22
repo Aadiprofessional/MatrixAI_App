@@ -46,41 +46,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginVertical: 10,
+   
   },
   tabContainer: {
     alignItems: 'center',
   },
   tab: {
-    width: 40,  // Fixed width
-    height: 40,  // Fixed height (square)
+    width: 40,  
+    height: 40,  
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-      width: 25,  // Icon size
+      width: 25,  
     height: 25,
     tintColor: '#333',
   },
   tabText: {
     fontSize: 12,
-    color: 'black', // Default text color
-    marginTop: 5,   // Space between the icon and text
+    color: 'black', 
+    marginTop: 5,   
     textAlign: 'center',
-    width: 60,      // Ensure the text does not overflow
+    width: 60,   
   },
   selectedTab: {
-    backgroundColor: '#F9690E', // Orange background for selected tab
+    backgroundColor: '#F9690E', 
   },
   selectedText: {
-    color: '#000', // White text for selected tab
+    color: '#000',
   },
   iconSeleted: {
-    tintColor: '#fff', // White color for selected icon
+    tintColor: '#fff',
   },
   iconUnselectedPopular: {
-    tintColor: '#F9690E', // Orange color for unselected Popular tab icon
+    tintColor: '#F9690E', 
   },
 });
 

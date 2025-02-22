@@ -10,8 +10,10 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
+
 import { supabase } from '../../supabaseClient';
 
 import * as Animatable from 'react-native-animatable';
@@ -26,8 +28,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCoinsSubscription } from '../../hooks/useCoinsSubscription';
 const { width } = Dimensions.get('window');
 
-const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
+const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropdown }) => {
   const { uid, loading } = useAuth();
+  const searchInputRef = useRef(null); // Create ref for TextInput
   const { addToCart, cart } = useCart();  // Access cart from context
   const [isSeller, setIsSeller] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -77,9 +80,10 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchBoxHeightValue, setSearchBoxHeightValue] = useState(200); // Track search box height
 
   const searchBoxHeight = useRef(new Animated.Value(250)).current; // Use useRef for mutable animated value
-
+  const [searchHeight, setSearchHeight] = useState(250);
   useEffect(() => {
     fetchProducts();
     
@@ -152,142 +156,158 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} } }) => {
   }, [scrollY]); // Ensure scrollY is included in the dependency array
 
   return (
-    <View style={styles.container2}>
-      <View style={styles.fixedHeader}>
-        <Header navigation={navigation} uid={uid} />
-      </View>
-
-      <Animated.View style={[
-        styles.container,
-        { height: backgroundContainerHeight } // Use the animated height
-      ]}>
-      <Animated.View
-        source={require('../../assets/AIShopImage1.png')}
-        style={[
-          styles.backgroundImageContainer,
-          {
-            backgroundColor: scrollY.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['transparent', '#007BFF'],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
-       <Animated.Image
-          source={require('../../assets/AIShop.png')}
-          style={[
-            styles.backgroundImage,
-            {
-              opacity: scrollY.interpolate({
-                inputRange: [0, 100],
-                outputRange: [1, 0],
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
-         
-        />
-      </Animated.View>
-
-      <View style={styles.titleContainer}>
-        <Animated.Text
-          style={[
-            styles.title,
-            { opacity: titleOpacity },
-          ]}
-        >
-          {typingText !== '' && (
-            <View style={styles.speechBubble}>
-              <Animatable.Text animation="fadeIn" style={styles.typingText}>
-                {typingText}
-              </Animatable.Text>
-            </View>
-          )}
-        </Animated.Text>
-      </View>
-    
-
-      <Animated.View style={[styles.searchContainer, { height: searchBoxHeight }]}>
-        <View style={styles.searchBox}>
-          <Icon name="search" size={20} color="#484848" style={styles.icon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search your products"
-            placeholderTextColor="#9F9F9FFF"
-            value={searchQuery}
-            onChangeText={handleSearch}
-            onFocus={() => setShowDropdown(true)}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-            returnKeyType="search"
-          />
+      <View style={styles.container2}>
+        <View style={styles.fixedHeader}>
+          <Header navigation={navigation} uid={uid} />
         </View>
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.plusContainer,
-          {
-            top: plusTop,
-            left: cartLeft,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.cartButton}
-          onPress={() => navigation.navigate('Cart')}
-        >
-          <View style={styles.cartIconContainer}>
-            <Icon name="shopping-cart" size={24} color="white" />
-            {cart.length > 0 && (
-              <View style={styles.cartItemCount}>
-                <Text style={styles.cartItemCountText}>{cart.length}</Text>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-      {isSeller && isVerified && (
-        <Animated.View
-          style={[
-            styles.plusContainer,
-            {
-              top: plusTop,
-              right: plusRight,
-            },
-          ]}
-        >
-          <TouchableOpacity onPress={() => navigation.navigate('AddProductScreen')}>
-            <Image
-              source={require('../../assets/plus.png')}
-              style={styles.plusIcon}
+
+        <Animated.View style={[
+          styles.container,
+          { height: backgroundContainerHeight } // Use the animated height
+        ]}>
+          <Animated.View
+            source={require('../../assets/AIShopImage1.png')}
+            style={[
+              styles.backgroundImageContainer,
+              {
+                backgroundColor: scrollY.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['transparent', '#007BFF'],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ]}
+          >
+            <Animated.Image
+              source={require('../../assets/AIShop.png')}
+              style={[
+                styles.backgroundImage,
+                {
+                  opacity: scrollY.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: [1, 0],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ]}
             />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-      </Animated.View>
-      
-      {showDropdown && (
-        <View style={styles.dropdownContainer}>
-          {filteredProducts.map((product, index) => {
-            const navigateToDetail = () => {
-              if (product.type === 'music') {
-                navigation.navigate('ProductDetail', { musicproductid: product.musicproductid });
-              } else if (product.type === 'video') {
-                navigation.navigate('ProductDetail', { videoproductid: product.videoproductid });
-              } else if (product.type === 'image') {
-                navigation.navigate('ProductDetail', { imageproductid: product.imageproductid });
-              }
-            };
+          </Animated.View>
 
-            return (
-              <TouchableOpacity key={index} onPress={navigateToDetail} style={styles.dropdownItem}>
-                <Text>{product.name} ({product.type})</Text>
+          <View style={styles.titleContainer}>
+            <Animated.Text
+              style={[
+                styles.title,
+                { opacity: titleOpacity },
+              ]}
+            >
+              {typingText !== '' && (
+                <View style={styles.speechBubble}>
+                  <Animatable.Text animation="fadeIn" style={styles.typingText}>
+                    {typingText}
+                  </Animatable.Text>
+                </View>
+              )}
+            </Animated.Text>
+          </View>
+        
+
+          <Animated.View
+            style={[styles.searchAndDropdownContainer, { height: searchBoxHeight }]}
+            onLayout={(event) => {
+              const { height } = event.nativeEvent.layout;
+              setSearchBoxHeightValue(height); // Update search box height
+            }}
+          >
+            <View style={styles.searchBox}>
+              <Icon name="search" size={20} color="#484848" style={styles.icon} />
+              <TextInput
+                ref={searchInputRef} // Attach the ref here
+                style={styles.searchInput}
+                placeholder="Search your products"
+                placeholderTextColor="#9F9F9FFF"
+                value={searchQuery}
+                onChangeText={handleSearch}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setShowDropdown(false)} // Close dropdown on blur
+                returnKeyType="search"
+              />
+            </View>
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.plusContainer,
+              {
+                top: plusTop,
+                left: cartLeft,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() => navigation.navigate('Cart')}
+            >
+              <View style={styles.cartIconContainer}>
+                <Icon name="shopping-cart" size={24} color="white" />
+                {cart.length > 0 && (
+                  <View style={styles.cartItemCount}>
+                    <Text style={styles.cartItemCountText}>{cart.length}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+          {isSeller && isVerified && (
+            <Animated.View
+              style={[
+                styles.plusContainer,
+                {
+                  top: plusTop,
+                  right: plusRight,
+                },
+              ]}
+            >
+              <TouchableOpacity onPress={() => navigation.navigate('AddProductScreen')}>
+                <Image
+                  source={require('../../assets/plus.png')}
+                  style={styles.plusIcon}
+                />
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-    </View>
+            </Animated.View>
+          )}
+        </Animated.View>
+
+        {showDropdown && (
+          <Animated.View
+            style={[
+              styles.dropdown,
+              {
+                top: searchBoxHeight.interpolate({
+                  inputRange: [50, 250], // Adjust these based on your min/max search box height
+                  outputRange: [100, 200], // 50 + 10 to 250 + 10
+                }),
+              },
+            ]}
+          >
+            {filteredProducts.map((product, index) => {
+              const navigateToDetail = () => {
+                if (product.type === 'music') {
+                  navigation.navigate('ProductDetail', { musicproductid: product.musicproductid });
+                } else if (product.type === 'video') {
+                  navigation.navigate('ProductDetail', { videoproductid: product.videoproductid });
+                } else if (product.type === 'image') {
+                  navigation.navigate('ProductDetail', { imageproductid: product.imageproductid });
+                }
+              };
+
+              return (
+                <TouchableOpacity key={index} onPress={navigateToDetail} style={styles.dropdownItem}>
+                  <Text>{product.name} ({product.type})</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </Animated.View>
+        )}
+      </View>
   );
 };
 
@@ -321,17 +341,17 @@ const styles = StyleSheet.create({
     right: 0,
   },
  
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 50,
-    zIndex: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  },
+header: {
+  position: 'absolute',
+
+  left: 0,
+  right: 0,
+  height: 50,
+  zIndex: 100, // Reduced zIndex to ensure it is below the dropdown
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+},
   titleContainer: {
     position: 'absolute',
     top: 60,
@@ -343,13 +363,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-    searchContainer: {
-    position: 'absolute',
-    width: '70%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
+    searchAndDropdownContainer: {
+      position: 'absolute',
+      width: '70%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+    },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,25 +423,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
-  dropdownContainer: {
-    position: 'absolute',
-    top: 150,
-    left: '15%',
-    right: '15%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 1000,
-  },
+    dropdown: {
+      position: 'absolute',
+      backgroundColor: 'white',
+      borderRadius: 10,
+
+      padding: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+      zIndex: 10000, // Increased zIndex
+      width: '70%',
+      alignItems:'center',
+      justifyContent:'center',
+      alignSelf:'center',
+    },
   dropdownItem: {
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    width: '100%',
   },
 });
 
