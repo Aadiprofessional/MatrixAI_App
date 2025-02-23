@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, TextInput, FlatList, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, TextInput, FlatList, StyleSheet, TouchableOpacity, Image, Text, ScrollView } from 'react-native';
 import axios from 'axios';
 import Card from '../../components/AIShop/Card';
 import VideoCard from '../../components/AIShop/VideoCard';
@@ -10,7 +10,8 @@ const SearchScreen = ({ route, navigation }) => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchText, setSearchText] = useState(searchQuery || '');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showButtons, setShowButtons] = useState(true);
+  const scrollOffset = useRef(0);
 
   useEffect(() => {
     const initialize = async () => {
@@ -37,7 +38,16 @@ const SearchScreen = ({ route, navigation }) => {
     } else {
       setFilteredProducts(products);
     }
-    setShowDropdown(true);
+  };
+
+  const handleScroll = (event) => {
+    const currentOffset = event.nativeEvent.contentOffset.y;
+    if (scrollOffset.current > currentOffset) {
+      setShowButtons(true);
+    } else {
+      setShowButtons(false);
+    }
+    scrollOffset.current = currentOffset;
   };
 
   const fetchProducts = async () => {
@@ -88,61 +98,103 @@ const SearchScreen = ({ route, navigation }) => {
           handleSearch(text);
         }}
       />
-      {filteredProducts.length > 0 && (
-        <>
-          {renderSection(
-            'Videos',
-            filteredProducts.filter(product => product.type === 'video'),
-            ({ item }) => (
-              <VideoCard 
-                title={item.name} 
-                price={`$${item.price}`} 
-                image={item.thumbnail_url} 
-                navigation={navigation}
-                videoproductid={item.videoproductid}
-                videoUrl={item.video_url}
-                new_label={item.new_label}
-              />
-            ),
-            item => item.videoproductid.toString()
-          )}
-          {renderSection(
-            'Music',
-            filteredProducts.filter(product => product.type === 'music'),
-            ({ item }) => (
-              <MusicCard 
-                title={item.name} 
-                price={`$${item.price}`} 
-                navigation={navigation} 
-                owner={item.name}
-                musicproductid={item.musicproductid}
-                item={item}
-              />
-            ),
-            item => item.musicproductid.toString()
-          )}
-          {renderSection(
-            'Images',
-            filteredProducts.filter(product => product.type === 'image'),
-            ({ item }) => (
-              <Card
-                key={item.id}
-                title={item.name}
-                price={`$${item.price}`}
-                image={{ uri: item.image_url }}
-                imageproductid={item.imageproductid}
-                navigation={navigation}
-              />
-            ),
-            item => item.imageproductid.toString()
-          )}
-        </>
-      )}
+      <ScrollView style={styles.scrollView} onScroll={handleScroll}bounces={false}   showsVerticalScrollIndicator={false}>
+        {filteredProducts.length > 0 && (
+          <>
+            {renderSection(
+              'Videos',
+              filteredProducts.filter(product => product.type === 'video'),
+              ({ item }) => (
+                <VideoCard 
+                  title={item.name} 
+                  price={`$${item.price}`} 
+                  image={item.thumbnail_url} 
+                  navigation={navigation}
+                  videoproductid={item.videoproductid}
+                  videoUrl={item.video_url}
+                  new_label={item.new_label}
+                />
+              ),
+              item => item.videoproductid.toString()
+            )}
+            {renderSection(
+              'Music',
+              filteredProducts.filter(product => product.type === 'music'),
+              ({ item }) => (
+                <MusicCard 
+                  title={item.name} 
+                  price={`$${item.price}`} 
+                  navigation={navigation} 
+                  owner={item.name}
+                  musicproductid={item.musicproductid}
+                  item={item}
+                />
+              ),
+              item => item.musicproductid.toString()
+            )}
+            {renderSection(
+              'Images',
+              filteredProducts.filter(product => product.type === 'image'),
+              ({ item }) => (
+                <Card
+                  key={item.id}
+                  title={item.name}
+                  price={`$${item.price}`}
+                  image={{ uri: item.image_url }}
+                  imageproductid={item.imageproductid}
+                  navigation={navigation}
+                />
+              ),
+              item => item.imageproductid.toString()
+            )}
+          </>
+        )}
+      </ScrollView>
+      <View style={[styles.buttonContainer, !showButtons && styles.hidden]}>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>Button 1</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>Button 2</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    elevation: 5, // For Android shadow
+    shadowColor: '#000', // For iOS shadow
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    borderRadius:20,
+    transition: 'transform 0.3s ease', // For smooth transition
+  },
+  hidden: {
+    transform: [{ translateY: 100 }], // Move down to hide
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 12,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+  },
   backButton: {
     position: 'absolute',
     top: 16,
