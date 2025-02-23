@@ -5,7 +5,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } 
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const CartScreen = ({ navigation }) => {
-  const { cart, removeFromCart, uid, fetchCart } = useCart();
+  const { cart, removeFromCart, uid, fetchForCartScreen } = useCart();
   const isFocused = useIsFocused();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);  
@@ -15,9 +15,9 @@ const CartScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (isFocused) {
-      fetchCart();
+      fetchForCartScreen();
     }
-  }, [isFocused, fetchCart]);
+  }, [isFocused, fetchForCartScreen]);
 
 const calculateSubtotal = () => {
   if (!Array.isArray(cart)) {

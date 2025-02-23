@@ -3,19 +3,26 @@ import Toast from 'react-native-toast-message';
 
 const CartContext = createContext();
 
-export const CartProvider = ({ children }) => {
+export const CartProvider = ({ children, uid }) => {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [isAppOpenFetchDone, setIsAppOpenFetchDone] = useState(false);
+    const [isCartScreenFetchDone, setIsCartScreenFetchDone] = useState(false);
 
-    let fetchTimeout = null;
-    const debouncedFetchCart = (uid) => {
-        if (fetchTimeout) {
-            clearTimeout(fetchTimeout);
-        }
-        fetchTimeout = setTimeout(() => {
+    useEffect(() => {
+        if (uid && !isAppOpenFetchDone) {
             fetchCart(uid);
-        }, 5000); // Fetch every 5 seconds
+            setIsAppOpenFetchDone(true);
+        }
+    }, [uid]);
+
+    const fetchForCartScreen = () => {
+        if (uid && !isCartScreenFetchDone) {
+            fetchCart(uid);
+            setIsCartScreenFetchDone(true);
+        }
     };
+
 
     const fetchCart = async (uid) => {
         setLoading(true);
@@ -106,13 +113,19 @@ export const CartProvider = ({ children }) => {
     const subtotal = useMemo(() => {
         return cart.reduce((total, item) => total + (item.product.price || 0), 0);
     }, [cart]);
-
-    console.log('fetchCart is defined:', typeof fetchCart === 'function');
+    
+    // Remove the console log as it's not needed in production
     return (
-        <CartContext.Provider value={{ cart, loading, addToCart, removeFromCart, subtotal, fetchCart }}>
+        <CartContext.Provider value={{ cart, loading, addToCart, removeFromCart, subtotal, fetchCart, fetchForCartScreen }}>
             {children}
         </CartContext.Provider>
     );
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+    const context = useContext(CartContext);
+    if (!context) {
+        throw new Error('useCart must be used within a CartProvider');
+    }
+    return context;
+};
