@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import { useCart } from '../components/CartContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
