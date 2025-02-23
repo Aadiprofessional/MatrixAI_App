@@ -1,26 +1,31 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import { useCart } from '../components/CartContext.js';
 import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
-import { useCart } from '../components/CartContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const CartScreen = ({ navigation }) => {
-  const { cart, removeFromCart, uid } = useCart();
+  const { cart, removeFromCart, uid, fetchCart } = useCart();
+  const isFocused = useIsFocused();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);  
-
   const [total, setTotal] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
 
-  const subtotal = () => {
-    const total = cart.reduce((sum, item) => sum + item.product.price, 0);
-    setSubtotal(total);
-  }
+  useEffect(() => {
+    if (isFocused) {
+      fetchCart();
+    }
+  }, [isFocused, fetchCart]);
 
-  const calculateSubtotal = () => {
-    const total = cart.reduce((sum, item) => sum + item.product.price, 0);
-    return total;
-  };
+const calculateSubtotal = () => {
+  if (!Array.isArray(cart)) {
+    return 0;
+  }
+  const total = cart.reduce((sum, item) => sum + item.product.price, 0);
+  return total;
+};
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
@@ -62,7 +67,7 @@ const CartScreen = ({ navigation }) => {
 
       <FlatList
         data={cart}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id?.toString() || `item-${Math.random().toString(36).substr(2, 9)}`} // Ensure unique keys
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.emptyText}>Your cart is empty.</Text>}
       />
@@ -94,29 +99,11 @@ const styles = StyleSheet.create({
   },
   container2: {
     flexDirection: 'row',
-  },
-  couponContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  couponInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    fontSize: 16,
-  },
-  subtotalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10, // Reduced marginTop
-    paddingVertical: 10,
-    paddingHorizontal: 20, // Added paddingHorizontal
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    marginBottom: 20,
   },
   backButton: {
+    marginRight: 10,
   },
   backImage: {
     width: 30,
@@ -125,7 +112,6 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
   },
   cartItem: {
     flexDirection: 'row',
@@ -156,6 +142,27 @@ const styles = StyleSheet.create({
     color: '#777',
     textAlign: 'center',
     marginTop: 20,
+  },
+  couponContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  couponInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+  },
+  subtotalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   checkoutButton: {
     backgroundColor: '#007BFF',

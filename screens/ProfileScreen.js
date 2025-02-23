@@ -96,11 +96,11 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleVoiceNote = () => {
-        navigation.navigate('VoiceNoteScreen');
+        navigation.navigate('VoiceNote');
     };
 
     const handleInside = () => {
-        navigation.navigate('InsideScreen');
+        navigation.navigate('Inside');
     };
 
     const handleAIShop = () => {
@@ -114,15 +114,15 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleVoiceSettings = () => {
-        navigation.navigate('VoiceSettingsScreen');
+        navigation.navigate('VoiceSettings');
     };
 
     const handleTrash = () => {
-        navigation.navigate('TrashScreen');
+        navigation.navigate('Trash');
     };
 
     const handleSettings = () => {
-        navigation.navigate('SettingsScreen');
+        navigation.navigate('Settings');
     };
 
     const storagePath = `users/${uid}/`;
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingHorizontal: 20,
-        marginTop: 50,
+        marginTop:50,
     },
     scrollContent: {
         paddingBottom: 100, // Adjust the value as needed
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     timeIconContainer2: {
-        flexDirection: 'column',
+        flexDirection:'column',
         padding: 8,
         marginRight: 10,
     },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     },
     buyTimeText: {
         color: '#007AFF',
-        padding: 10,
+        padding:10,
         fontWeight: 'bold',
     },
     menuItem: {

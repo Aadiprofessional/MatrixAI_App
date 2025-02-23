@@ -287,7 +287,25 @@ try {
   onPress={() => {
     console.log('Product to add to cart:', product); // Log the product object
     const productType = product.image_url ? 'image' : product.video_url ? 'video' : product.music_url ? 'music' : '';
-    addToCart(uid, product.imageproductid, productType);
+    const productId = product.id || product.imageproductid || product.videoproductid || product.musicproductid;
+addToCart(uid, productId, productType)
+  .then(responseData => {
+    if (responseData && responseData.message === 'Product already added to cart') {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: responseData.message,
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error adding product to cart:', error);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: 'Failed to add product to cart',
+    });
+  });
   }}
 >
   <Text style={styles.addToCartText}>Add to Cart</Text>

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+import Toast from 'react-native-toast-message';
 
 const CartContext = createContext();
 
@@ -6,40 +7,79 @@ export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    let fetchTimeout = null;
+    const debouncedFetchCart = (uid) => {
+        if (fetchTimeout) {
+            clearTimeout(fetchTimeout);
+        }
+        fetchTimeout = setTimeout(() => {
+            fetchCart(uid);
+        }, 5000); // Fetch every 5 seconds
+    };
+
     const fetchCart = async (uid) => {
         setLoading(true);
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getCartProducts/${uid}`);
+            const response = await fetch(`http://localhost:3000/getCartProducts/${uid}`);
             const data = await response.json();
-            setCart(data);
+            if (Array.isArray(data)) {
+                setCart(data);
+            } else if (data.error) {
+                console.error('Error fetching cart:', data.error);
+                setCart([]);
+            } else {
+                console.error('Unexpected data format:', data);
+                setCart([]);
+            }
         } catch (error) {
-            console.error('Error fetching cart:', error);
+            console.error('Error fetching cart:', error.message);
+            if (response) {
+                console.error('Response status:', response.status);
+                const text = await response.text();
+                console.error('Response body:', text);
+            }
+            setCart([]);
         } finally {
             setLoading(false);
         }
     };
 
-const addToCart = async (uid, product_id, product_type) => {
-  try {
-    const response = await fetch('https://matrix-server-gzqd.vercel.app/addToCart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid, product_id, product_type }),
-    });
-    const responseData = await response.text(); // Log the response as text
-    console.log('Response from addToCart:', responseData); // Log the response
-    if (response.ok) {
-      const data = JSON.parse(responseData);
-      if (data.success) {
-        fetchCart(uid); // Refresh the cart
-      }
-    } else {
-      console.error('Error adding to cart:', responseData); // Log the error response
-    }
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-  }
-};
+    const addToCart = async (uid, product_id, product_type) => {
+        try {
+            const response = await fetch('https://matrix-server-gzqd.vercel.app/addToCart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid, product_id, product_type }),
+            });
+            const responseData = await response.json(); // Parse the response as JSON
+            console.log('Response from addToCart:', responseData); // Log the response
+            if (response.ok) {
+                if (responseData.success) {
+                    fetchCart(uid); // Refresh the cart
+                } else if (responseData.message) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: responseData.message,
+                    });
+                }
+            } else {
+                console.error('Error adding to cart:', responseData); // Log the error response
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Failed to add product to cart',
+                });
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to add product to cart',
+            });
+        }
+    };
 
     const removeFromCart = async (cart_id, uid) => {
         try {
@@ -47,9 +87,19 @@ const addToCart = async (uid, product_id, product_type) => {
             const data = await response.json();
             if (data.success) {
                 fetchCart(uid); // Refresh the cart
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success',
+                    text2: 'Product removed from cart',
+                });
             }
         } catch (error) {
             console.error('Error removing from cart:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to remove product from cart',
+            });
         }
     };
 
@@ -57,6 +107,7 @@ const addToCart = async (uid, product_id, product_type) => {
         return cart.reduce((total, item) => total + (item.product.price || 0), 0);
     }, [cart]);
 
+    console.log('fetchCart is defined:', typeof fetchCart === 'function');
     return (
         <CartContext.Provider value={{ cart, loading, addToCart, removeFromCart, subtotal, fetchCart }}>
             {children}
