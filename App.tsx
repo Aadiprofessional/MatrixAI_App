@@ -51,7 +51,7 @@ import AllMusicAiScreen from './screens/AllMusicAiScreen.js';
 import AllVideoAIScreen from './screens/AllVideoAIScreen.js';
 import AllImagesAiScreen from './screens/AllImagesAiScreen.js';
 import SeeAllScreen from './screens/SeeAllScreen.js';
-import SearchScreen from './components/AIShop/SearchHeader.js'; 
+import SearchScreen from './screens/AIShop/SearchScreen.js';
 const Stack = createStackNavigator();
 
 const App = () => {
