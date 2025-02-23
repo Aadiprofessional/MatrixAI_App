@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, FlatList, ActivityIndicator } from 'react-native';
+import { View, FlatList, ActivityIndicator, Text } from 'react-native';
 import Card from './Card';
 
 const ImageDealsSection = ({ bestDeals, loading, navigation,imageError }) => {
@@ -8,7 +8,7 @@ const ImageDealsSection = ({ bestDeals, loading, navigation,imageError }) => {
       {loading ? (
        <ActivityIndicator size="small" color="#0000ff" />
              ) : imageError ? (
-               <Text style={styles.errorText}>No Data Found</Text>
+               <Text >No Data Found</Text>
              ) : (
         <FlatList
           data={bestDeals}

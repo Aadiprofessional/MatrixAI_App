@@ -286,11 +286,8 @@ try {
   style={styles.addToCartButton}
   onPress={() => {
     console.log('Product to add to cart:', product); // Log the product object
-    const productToAdd = {
-      ...product,
-      id: product.imageproductid || product.videoproductid || product.musicproductid,
-    };
-    addToCart(productToAdd);
+    const productType = product.image_url ? 'image' : product.video_url ? 'video' : product.music_url ? 'music' : '';
+    addToCart(uid, product.id, productType);
   }}
 >
   <Text style={styles.addToCartText}>Add to Cart</Text>

@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import { useCart } from '../components/CartContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useState } from 'react';
+
 const CartScreen = ({ navigation }) => {
-  const { cart, removeFromCart } = useCart();
+  const { cart, removeFromCart, uid } = useCart();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);  
 
@@ -12,34 +12,34 @@ const CartScreen = ({ navigation }) => {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
 
-const subtotal = () => {
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  setSubtotal(total);
-}
+  const subtotal = () => {
+    const total = cart.reduce((sum, item) => sum + item.product.price, 0);
+    setSubtotal(total);
+  }
 
-const calculateSubtotal = () => {
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  return total;
-};
+  const calculateSubtotal = () => {
+    const total = cart.reduce((sum, item) => sum + item.product.price, 0);
+    return total;
+  };
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.cartItem}
       onPress={() => navigation.navigate('ProductDetail', {
-        imageproductid: item.id,
-        videoproductid: item.id,
-        musicproductid: item.id
+        imageproductid: item.product.imageproductid,
+        videoproductid: item.product.videoproductid,
+        musicproductid: item.product.musicproductid
       })}
     >
-      <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+      <Image source={{ uri: item.product.image_url }} style={styles.itemImage} />
       <View style={styles.itemDetails}>
-        <Text style={styles.itemTitle}>{item.name}</Text>
-        <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+        <Text style={styles.itemTitle}>{item.product.name}</Text>
+        <Text style={styles.itemPrice}>${item.product.price.toFixed(2)}</Text>
       </View>
       {/* Remove Button */}
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => removeFromCart(item.id)}
+        onPress={() => removeFromCart(item.id, uid)}
       >
         <Icon name="remove-circle" size={24} color="red" />
       </TouchableOpacity>
@@ -50,14 +50,14 @@ const calculateSubtotal = () => {
     <View style={styles.container}>
       {/* Back Button */}
       <View style={styles.container2}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Image source={require('../assets/back.png')} style={styles.backImage} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image source={require('../assets/back.png')} style={styles.backImage} />
+        </TouchableOpacity>
 
-      <Text style={styles.header}>My Cart</Text>
+        <Text style={styles.header}>My Cart</Text>
       </View>
 
       <FlatList
@@ -69,14 +69,14 @@ const calculateSubtotal = () => {
       <View style={styles.couponContainer}>
         <TextInput
           style={styles.couponInput}
-            placeholder="Enter coupon code"
+          placeholder="Enter coupon code"
           value={coupon}
           onChangeText={setCoupon}
         />
       </View>
       <View style={styles.subtotalContainer}>
         <Text style={styles.subtotalText}>Subtotal:</Text>
-          <Text style={styles.subtotalAmount}>${calculateSubtotal().toFixed(2)}</Text>
+        <Text style={styles.subtotalAmount}>${calculateSubtotal().toFixed(2)}</Text>
       </View>
       
       <TouchableOpacity style={styles.checkoutButton}>
@@ -93,8 +93,7 @@ const styles = StyleSheet.create({
     marginTop: 50,  // Add margin top as requested
   },
   container2: {
-   flexDirection:'row'
-  
+    flexDirection: 'row',
   },
   couponContainer: {
     paddingHorizontal: 20,
@@ -118,8 +117,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
   },
   backButton: {
-   
-   
   },
   backImage: {
     width: 30,
