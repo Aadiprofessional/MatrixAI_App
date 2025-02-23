@@ -6,28 +6,36 @@ import VideoCard from '../../components/AIShop/VideoCard';
 import MusicCard from '../../components/AIShop/MusicCard';
 
 const SearchScreen = ({ route, navigation }) => {
-  const { searchQuery: initialSearchQuery } = route.params;
+  const { searchQuery } = route.params || {};
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
+  const [searchText, setSearchText] = useState(searchQuery || '');
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-    if (initialSearchQuery) {
-      handleSearch(initialSearchQuery);
-    }
-  }, [initialSearchQuery]);
+    const initialize = async () => {
+      const allProducts = await fetchProducts();
+      if (searchQuery) {
+        const filtered = allProducts.filter(product =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setFilteredProducts(filtered);
+      } else {
+        setFilteredProducts(allProducts);
+      }
+    };
+    initialize();
+  }, []);
 
   const handleSearch = (text) => {
-    setSearchQuery(text);
+    setSearchText(text);
     if (text) {
       const filtered = products.filter(product =>
         product.name.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredProducts(filtered);
     } else {
-      setFilteredProducts(products.slice(0, 3));
+      setFilteredProducts(products);
     }
     setShowDropdown(true);
   };
@@ -40,11 +48,11 @@ const SearchScreen = ({ route, navigation }) => {
         ...response.data.videos.map(item => ({ ...item, type: 'video' })),
         ...response.data.music.map(item => ({ ...item, type: 'music' }))
       ];
-
       setProducts(allProducts);
-      setFilteredProducts(allProducts.slice(0, 3));
+      return allProducts;
     } catch (error) {
       console.error('Error fetching products:', error);
+      return [];
     }
   };
 
@@ -74,27 +82,58 @@ const SearchScreen = ({ route, navigation }) => {
       <TextInput
         style={styles.searchBox}
         placeholder="Search..."
-        value={searchQuery}
-        onChangeText={handleSearch}
+        value={searchText}
+        onChangeText={(text) => {
+          setSearchText(text);
+          handleSearch(text);
+        }}
       />
       {filteredProducts.length > 0 && (
         <>
           {renderSection(
             'Videos',
             filteredProducts.filter(product => product.type === 'video'),
-            ({ item }) => <VideoCard video={item} />,
+            ({ item }) => (
+              <VideoCard 
+                title={item.name} 
+                price={`$${item.price}`} 
+                image={item.thumbnail_url} 
+                navigation={navigation}
+                videoproductid={item.videoproductid}
+                videoUrl={item.video_url}
+                new_label={item.new_label}
+              />
+            ),
             item => item.videoproductid.toString()
           )}
           {renderSection(
             'Music',
             filteredProducts.filter(product => product.type === 'music'),
-            ({ item }) => <MusicCard music={item} />,
+            ({ item }) => (
+              <MusicCard 
+                title={item.name} 
+                price={`$${item.price}`} 
+                navigation={navigation} 
+                owner={item.name}
+                musicproductid={item.musicproductid}
+                item={item}
+              />
+            ),
             item => item.musicproductid.toString()
           )}
           {renderSection(
             'Images',
             filteredProducts.filter(product => product.type === 'image'),
-            ({ item }) => <Card product={item} />,
+            ({ item }) => (
+              <Card
+                key={item.id}
+                title={item.name}
+                price={`$${item.price}`}
+                image={{ uri: item.image_url }}
+                imageproductid={item.imageproductid}
+                navigation={navigation}
+              />
+            ),
             item => item.imageproductid.toString()
           )}
         </>

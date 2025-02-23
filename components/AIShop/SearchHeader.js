@@ -155,7 +155,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
 
   const handleSearchNavigation = () => {
     if (searchQuery.trim()) {
-      navigation.navigate('SearchScreen', { query: searchQuery });
+      navigation.navigate('SearchScreen', {searchQuery });
     }
   };
 
