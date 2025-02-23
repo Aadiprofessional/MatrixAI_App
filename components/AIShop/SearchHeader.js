@@ -153,6 +153,12 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
     setShowDropdown(true);
   };
 
+  const handleSearchNavigation = () => {
+    if (searchQuery.trim()) {
+      navigation.navigate('SearchScreen', { query: searchQuery });
+    }
+  };
+
   useEffect(() => {
     const scrollThreshold = 150; // Adjust threshold as needed
 
@@ -169,7 +175,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
       backgroundContainerHeight.setValue(200 * (1 - progress) + 50 * progress); // From 200 to 50
 
       // Adjust title opacity to fade out smoothly
-      titleOpacity.setValue(1 - (progress*2)); // Fade out based on scroll progress
+      titleOpacity.setValue(1 - (progress * 2)); // Fade out based on scroll progress
 
       // Plus button animations
       plusTop.setValue(10 * (1.5 - progress));
@@ -253,11 +259,14 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
                   placeholderTextColor="#9F9F9FFF"
                   value={searchQuery}
                   onChangeText={handleSearch}
+                  onSubmitEditing={() => handleSearchNavigation()}
                   onFocus={() => setShowDropdown(true)}
                   onBlur={() => setShowDropdown(false)} // Close dropdown on blur
                   returnKeyType="search"
                 />
-                <Icon name="search" size={20} color="#484848" style={styles.icon} />
+                <TouchableOpacity onPress={() => handleSearchNavigation()} style={styles.icon} >
+                  <Icon name="search" size={20} color="#484848"  />
+                </TouchableOpacity>
               </View>
             </Animated.View>
             <Animated.View
