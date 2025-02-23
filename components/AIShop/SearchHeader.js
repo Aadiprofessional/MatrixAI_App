@@ -57,6 +57,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
 
   const { uid, loading } = useAuth();
   const { addToCart, cart } = useCart();
+console.log('useCart result:', { addToCart, cart }); // Log the result of useCart
   const [isSeller, setIsSeller] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
@@ -478,7 +479,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: showDropdown ? 50 : -1, // Ensure the dropdown is above all other elements when visible
+    zIndex:  50, // Directly use showDropdown in the style
     width: '70%',
     alignItems: 'center',
     alignSelf: 'center',

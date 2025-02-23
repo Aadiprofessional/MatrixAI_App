@@ -91,70 +91,70 @@ const App = () => {
             <CartProvider>
                 <WishlistProvider>
                     <ModalProvider>
-                    <NavigationContainer>
-                        <Stack.Navigator>
-                            {/* Onboarding Screen */}
-                            {!onboardingCompleted && !isLoggedIn && (
-                                <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
-                                    {(props) => (
-                                        <OnboardingScreen
-                                            {...props}
-                                            onFinish={() => setOnboardingCompleted(true)}
-                                        />
-                                    )}
-                                </Stack.Screen>
-                            )}
+<NavigationContainer>
+    <Stack.Navigator>
+        {/* Onboarding Screen */}
+        {!onboardingCompleted && !isLoggedIn && (
+            <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
+                {(props) => (
+                    <OnboardingScreen
+                        {...props}
+                        onFinish={() => setOnboardingCompleted(true)}
+                    />
+                )}
+            </Stack.Screen>
+        )}
 
-                            {/* Login Screens */}
-                            {!isLoggedIn && (
-                                <>
-                                    <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-                                    <Stack.Screen name="OTPScreen" component={EmailLoginScreen} options={{ headerShown: false }} />
-                                    <Stack.Screen name="OTPCode2" component={OTPCodeScreen2} options={{ headerShown: false }} />
-                                    <Stack.Screen name="OTPCode" component={OTPCodeScreen} options={{ headerShown: false }} />
-                                    <Stack.Screen name="SignUpDetails" component={SignUpDetailsScreen} options={{ headerShown: false }} />
-                                    <Stack.Screen name="SignUpDetails2" component={SignUpDetailsScreen2} options={{ headerShown: false }} />
-                                </>
-                            )}
+        {/* Login Screens */}
+        {!isLoggedIn && (
+            <>
+                <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="OTPScreen" component={EmailLoginScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="OTPCode2" component={OTPCodeScreen2} options={{ headerShown: false }} />
+                <Stack.Screen name="OTPCode" component={OTPCodeScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="SignUpDetails" component={SignUpDetailsScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="SignUpDetails2" component={SignUpDetailsScreen2} options={{ headerShown: false }} />
+            </>
+        )}
 
-                            {/* Main App Screens */}
-                            <Stack.Screen name="Main" component={AppNavigator} options={{ headerShown: false }} />
-                            <Stack.Screen name="BotScreen" component={BotScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="BotScreen2" component={BotScreen2} options={{ headerShown: false }} />
-                            <Stack.Screen name="TranslateScreen" component={AudioVideoUploadScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="TranslateScreen4" component={VoiceTranslateScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="TranslateScreen2" component={TranslateScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="TranslateScreen3" component={TranslatorScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="ImageTextScreen" component={ImageGenerateScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="LiveTranslateScreen" component={LiveTranslateScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="CreateImageScreen" component={CreateImagesScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="CreateImageScreen2" component={CreateImagesScreen2} options={{ headerShown: false }} />
-                            <Stack.Screen name="VideoUpload" component={VideoUploadScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="ImageSelectScreen" component={ImageSelectScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="CreateVideoScreen" component={CreateVideoScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="PPTGenerateScreen" component={PPTGenerateScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="CreatePPTScreen" component={CreatePPTScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="ProductDetail" component={ProductDetailScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="FillInformationScreen" component={FillInformationScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="ReferralScreen" component={ReferralScreen}options={{ headerShown: false }}  />
-                            <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen}options={{ headerShown: false }}  />
-                            <Stack.Screen name="TransactionScreen" component={TransactionScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="TransactionScreen2" component={TransactionScreen2} options={{ headerShown: false }} />
-                            <Stack.Screen name="TimeScreen" component={TimeScreen} options={{ headerShown: false }} />
-                            <Stack.Screen name="Cart" component={CartScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="CameraScreen" component={CameraScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="RemoveBackground" component={RemoveBackground}options={{ headerShown: false }} />
-                            <Stack.Screen name="AddProductScreen" component={AddProductScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="WishlistScreen" component={WishlistScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="AllMusicAiScreen" component={AllMusicAiScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="AllVideoAIScreen" component={AllVideoAIScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="AllImagesAiScreen" component={AllImagesAiScreen}options={{ headerShown: false }} />
-                            <Stack.Screen name="SeeAllScreen" component={SeeAllScreen}options={{ headerShown: false }} />
-                                <Stack.Screen name="SearchScreen" component={SearchScreen}options={{ headerShown: false }} />
-                        </Stack.Navigator>
-                    </NavigationContainer>
+        {/* Main App Screens */}
+        <Stack.Screen name="Main" component={AppNavigator} options={{ headerShown: false }} />
+        <Stack.Screen name="BotScreen" component={BotScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="BotScreen2" component={BotScreen2} options={{ headerShown: false }} />
+        <Stack.Screen name="TranslateScreen" component={AudioVideoUploadScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TranslateScreen4" component={VoiceTranslateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TranslateScreen2" component={TranslateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TranslateScreen3" component={TranslatorScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ImageTextScreen" component={ImageGenerateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="LiveTranslateScreen" component={LiveTranslateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CreateImageScreen" component={CreateImagesScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CreateImageScreen2" component={CreateImagesScreen2} options={{ headerShown: false }} />
+        <Stack.Screen name="VideoUpload" component={VideoUploadScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ImageSelectScreen" component={ImageSelectScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CreateVideoScreen" component={CreateVideoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PPTGenerateScreen" component={PPTGenerateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CreatePPTScreen" component={CreatePPTScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="FillInformationScreen" component={FillInformationScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="SuccessScreen" component={SuccessScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ReferralScreen" component={ReferralScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TransactionScreen" component={TransactionScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TransactionScreen2" component={TransactionScreen2} options={{ headerShown: false }} />
+        <Stack.Screen name="TimeScreen" component={TimeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Cart" component={CartScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CameraScreen" component={CameraScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="RemoveBackground" component={RemoveBackground} options={{ headerShown: false }} />
+        <Stack.Screen name="AddProductScreen" component={AddProductScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="WishlistScreen" component={WishlistScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AllMusicAiScreen" component={AllMusicAiScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AllVideoAIScreen" component={AllVideoAIScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="AllImagesAiScreen" component={AllImagesAiScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="SeeAllScreen" component={SeeAllScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="SearchScreen" component={SearchScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+</NavigationContainer>
                     </ModalProvider>
                 </WishlistProvider>
             </CartProvider>

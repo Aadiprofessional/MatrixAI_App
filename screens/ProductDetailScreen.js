@@ -55,27 +55,28 @@ useEffect(() => {
   setLoading(true); // Start loading
 
   const fetchProductDetails = async () => {
-    try {
-      const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uid: uid,
-          imageproductid,
-          videoproductid, 
-          musicproductid
-        })
-      });
+try {
+  const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      uid: uid,
+      imageproductid,
+      videoproductid, 
+      musicproductid
+    })
+  });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        setProduct(data);
-      } else {
-        setError(data.error || 'Failed to fetch product details');
-      }
+  const data = await response.json();
+  
+  if (response.ok) {
+    console.log('Fetched product:', data); // Log the fetched product to verify its structure
+    setProduct(data);
+  } else {
+    setError(data.error || 'Failed to fetch product details');
+  }
     } catch (err) {
       setError(err.message);
     }
@@ -281,12 +282,19 @@ useEffect(() => {
           {product?.description}
         </Text>
 
-        <TouchableOpacity
-          style={styles.addToCartButton}
-          onPress={() => addToCart(product)}
-        >
-          <Text style={styles.addToCartText}>Add to Cart</Text>
-        </TouchableOpacity>
+<TouchableOpacity
+  style={styles.addToCartButton}
+  onPress={() => {
+    console.log('Product to add to cart:', product); // Log the product object
+    const productToAdd = {
+      ...product,
+      id: product.imageproductid || product.videoproductid || product.musicproductid,
+    };
+    addToCart(productToAdd);
+  }}
+>
+  <Text style={styles.addToCartText}>Add to Cart</Text>
+</TouchableOpacity>
       {!product?.music_url && product?.image_url && (
         <>
     
