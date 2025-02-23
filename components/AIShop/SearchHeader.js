@@ -213,7 +213,7 @@ const SearchHeader = ({ scrollY, navigation = { navigate: () => {} }, closeDropd
               ]}
             >
               <Animated.Image
-                source={require('../../assets/AIShopImage1.png')}
+                source={require('../../assets/AIShop.png')}
                 style={[
                   styles.backgroundImage,
                   {

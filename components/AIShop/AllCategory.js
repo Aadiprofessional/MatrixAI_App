@@ -15,10 +15,11 @@ const AllCategory = ({ navigation }) => {
     require('../../assets/card/music.png'),
     require('../../assets/card/video1.png'),
     require('../../assets/card/ImageIcon.png'),
- 
+    require('../../assets/card/all.png'),
   ];
-  
-  const tabs = ['Music', 'Video', 'Image'];
+
+
+  const tabs = ['Music', 'Video', 'Image','All Products'];
 
   return (
     <View style={styles.container}>
@@ -36,7 +37,10 @@ const AllCategory = ({ navigation }) => {
                       navigation.navigate('AllVideoAIScreen');
                     } else if (tab === 'Image') {
                       navigation.navigate('AllImagesAiScreen');
+                    }else if (tab === 'All Products') {
+                      navigation.navigate('SearchScreen');
                     }
+                    
                   }}
                 >
                     <Image source={tabIcons[index]} style={styles.tabIcon} />
