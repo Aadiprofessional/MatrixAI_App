@@ -9,7 +9,7 @@ const tabIcons = [
   require('../../assets/card/all.png'),
 ];
 
-const tabs = ['Popular', 'Music', 'Video', 'Image','All Category'];
+const tabs = ['Popular', 'Music', 'Video', 'Image', 'All Category'];
 
 const CategoryTabs = ({ selectedTab, setSelectedTab }) => {
   return (
@@ -46,33 +46,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginVertical: 10,
-   
+    backgroundColor: '#fff', // Debugging background color
   },
   tabContainer: {
     alignItems: 'center',
   },
   tab: {
-    width: 40,  
-    height: 40,  
+    width: 40,
+    height: 40,
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-      width: 25,  
+    width: 25,
     height: 25,
     tintColor: '#333',
   },
   tabText: {
     fontSize: 12,
-    color: 'black', 
-    marginTop: 5,   
+    color: 'black',
+    marginTop: 5,
     textAlign: 'center',
-    width: 60,   
+    width: 60,
   },
   selectedTab: {
-    backgroundColor: '#F9690E', 
+    backgroundColor: '#F9690E',
   },
   selectedText: {
     color: '#000',
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     tintColor: '#fff',
   },
   iconUnselectedPopular: {
-    tintColor: '#F9690E', 
+    tintColor: '#F9690E',
   },
 });
 

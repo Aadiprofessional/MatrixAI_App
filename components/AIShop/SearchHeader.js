@@ -356,6 +356,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
+    backgroundColor: '#fff', // Debugging background color
   },
   container2: {
     marginTop: 50,
@@ -477,7 +478,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 10000, // Ensure the dropdown is above all other elements
+    zIndex: showDropdown ? 50 : -1, // Ensure the dropdown is above all other elements when visible
     width: '70%',
     alignItems: 'center',
     alignSelf: 'center',

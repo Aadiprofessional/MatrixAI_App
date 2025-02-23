@@ -49,10 +49,10 @@ const AiShop = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Fixed Search Header */}
-      <SearchHeader scrollY={scrollY} navigation={navigation} style={{ position: 'absolute', top: 0, width: '100%', zIndex: 5000 }} />
+      <SearchHeader scrollY={scrollY} navigation={navigation} style={{ position: 'absolute', top: 0, width: '100%', zIndex: 100 }} />
 
       {/* Pass setSelectedTab as a prop to CategoryTabs */}
-      <CategoryTabs selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
+      <CategoryTabs selectedTab={selectedTab} setSelectedTab={setSelectedTab} style={{ zIndex: 200 }} />
 
       {/* Scrollable Content */}
       <ScrollView
@@ -82,7 +82,7 @@ const AiShop = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', // Debugging background color
   },
   endTextContainer: {
     alignItems: 'left',
