@@ -109,7 +109,16 @@ const EditProfile = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <Header title="Edit Profile" onBackPress={() => navigation.goBack()} />
+               <View style={styles.header}>
+                          <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+                                              <Image
+                                                  source={require('../assets/back.png')} 
+                                                  style={styles.headerIcon}
+                                              />
+                                          </TouchableOpacity>
+                           <Text style={styles.headerTitle}>Edit Profile</Text>
+                         
+                       </View>
             
             <View style={styles.imageContainer}>
                 <Image source={require('../assets/avatar.png')} style={styles.profileImage} />
@@ -227,6 +236,26 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginTop:50,
+    },
+    headerTitle: {
+        fontSize: 20,
+        position:'absolute',
+        left:'45%',
+        fontWeight: 'bold',
+        color: '#007bff',
+    },
+    headerIcon: {
+        width: 24,
+        height: 24,
+        resizeMode: 'contain',
     },
 });
 

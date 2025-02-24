@@ -55,6 +55,7 @@ import AllImagesAiScreen from './screens/AllImagesAiScreen.js';
 import SeeAllScreen from './screens/SeeAllScreen.js';
 import SearchScreen from './screens/AIShop/SearchScreen.js';
 import EditProfile from './screens/EditProfile.js';
+import SettingsScreen from './screens/SettingsScreen.js';
 const Stack = createStackNavigator();
 
 interface AuthContextType {
@@ -270,6 +271,11 @@ const App = () => {
                                             <Stack.Screen 
                                                 name="TransactionScreen" 
                                                 component={TransactionScreen} 
+                                                options={{ headerShown: false }} 
+                                            />
+                                             <Stack.Screen 
+                                                name="SettingsScreen" 
+                                                component={SettingsScreen} 
                                                 options={{ headerShown: false }} 
                                             />
                                             <Stack.Screen 

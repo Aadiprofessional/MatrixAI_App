@@ -122,7 +122,7 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const handleSettings = () => {
-        navigation.navigate('Settings');
+        navigation.navigate('SettingsScreen');
     };
 
     const storagePath = `users/${uid}/`;
@@ -189,11 +189,7 @@ const ProfileScreen = ({ navigation }) => {
                     onPress={handleAIShop} 
                 />
             )}
-            <MenuItem 
-                iconName="chatbubble-outline" 
-                label="Setting Voices" 
-                onPress={handleVoiceSettings} 
-            />
+         
             <MenuItem 
                 iconName="trash-outline" 
                 label="Trash" 
