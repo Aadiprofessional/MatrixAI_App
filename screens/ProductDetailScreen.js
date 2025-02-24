@@ -5,6 +5,7 @@ import Video from 'react-native-video';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
 import Sound from 'react-native-sound';
 import { useCart } from '../components/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../hooks/useAuth';
 import ImageDealsSection from '../components/AIShop/ImageDealsSection';
 import Banner from '../components/AIShop/Banner'; 
@@ -56,7 +57,7 @@ useEffect(() => {
 
   const fetchProductDetails = async () => {
 try {
-  const response = await fetch('https://matrix-server-gzqd.vercel.app/getProductDetails', {
+  const response = await fetch('https://matrix-server.vercel.app/getProductDetails', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -168,6 +169,46 @@ try {
            
               
             </View>
+
+      {/* Wishlist Button */}
+      <TouchableOpacity
+        style={styles.wishlistButton}
+        onPress={() => {
+          const productType = product.image_url ? 'image' : 
+                            product.video_url ? 'video' : 
+                            product.music_url ? 'music' : '';
+          const productId = product.id || product.imageproductid || 
+                          product.videoproductid || product.musicproductid;
+          
+          addToWishlist(uid, productId, productType)
+            .then(result => {
+              if (result.success) {
+                Toast.show({
+                  type: 'success',
+                  text1: 'Success',
+                  text2: 'Added to wishlist',
+                });
+              } else {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Error',
+                  text2: result.error || 'Failed to add to wishlist',
+                });
+              }
+            })
+            .catch(error => {
+              console.error('Wishlist error:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.message,
+              });
+            });
+        }}
+      >
+        <Icon name={isLiked ? 'favorite' : 'favorite-border'} size={24} color="#FF6F00" />
+      </TouchableOpacity>
+
       <View style={styles.imageContainer}>
         {isPlaying ? (
           <View style={styles.videoContainer}>

@@ -31,7 +31,7 @@ const AllVideoAIScreen = ({ navigation }) => {
 
     const fetchHighlightVideo = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsVideoProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsVideoProduct');
         const data = await response.json();
         setVideoHighlight(data);
       } catch (error) {
@@ -45,7 +45,7 @@ const AllVideoAIScreen = ({ navigation }) => {
    
     const fetchBestVideoDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsVideoProduct');
         const data = await response.json();
         setBestVideoDeals(data);
       } catch (error) {

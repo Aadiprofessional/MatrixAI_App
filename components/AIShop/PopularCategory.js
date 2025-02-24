@@ -31,7 +31,7 @@ const PopularCategory = ({ navigation }) => {
   useEffect(() => {
     const fetchBestDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsImageProducts');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsImageProducts');
         const data = await response.json();
         setBestDeals(data);
       } catch (error) {
@@ -43,7 +43,7 @@ const PopularCategory = ({ navigation }) => {
     };
     const fetchHighlight = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsImageProducts');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsImageProducts');
         const data = await response.json();
         setHighlight(data);
       } catch (error) {
@@ -56,7 +56,7 @@ const PopularCategory = ({ navigation }) => {
 
     const fetchHighlightVideo = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsVideoProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsVideoProduct');
         const data = await response.json();
         setVideoHighlight(data);
       } catch (error) {
@@ -69,7 +69,7 @@ const PopularCategory = ({ navigation }) => {
 
     const fetchHighlightMusic = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsMusicProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsMusicProduct');
         const data = await response.json();
         setMusicHighlight(data);
       } catch (error) {
@@ -81,7 +81,7 @@ const PopularCategory = ({ navigation }) => {
     };
     const fetchBestVideoDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsVideoProduct');
         const data = await response.json();
         setBestVideoDeals(data);
       } catch (error) {
@@ -94,7 +94,7 @@ const PopularCategory = ({ navigation }) => {
 
     const fetchBestMusicDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsMusicProduct');
         const data = await response.json();
         setBestMusicDeals(data);
       } catch (error) {

@@ -70,7 +70,7 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
                 setError(false);
                 console.log('Verifying OTP for phone:', phone);
 
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/verifyPhoneOtp', {
+                const response = await fetch('https://matrix-server.vercel.app/verifyPhoneOtp', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ const OTPCodeScreen2 = ({ route, navigation }) => {
         }
         setLoading(true);
         try {
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendPhoneOtp', {
+            const response = await fetch('https://matrix-server.vercel.app/sendPhoneOtp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

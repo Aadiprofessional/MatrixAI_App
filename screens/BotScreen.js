@@ -139,7 +139,7 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
 
   const saveChatHistory = async (messageText, sender) => {
     try {
-      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendChat', {
+      const response = await axios.post('https://matrix-server.vercel.app/sendChat', {
         uid,
         chatid,
         updatedMessage: messageText,
@@ -203,7 +203,7 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     // Fetch chat history when component mounts
     const fetchChatHistory = async () => {
       try {
-        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getChat', { uid, chatid });
+        const response = await axios.post('https://matrix-server.vercel.app/getChat', { uid, chatid });
         const history = response.data.messages;
         setChats(prevChats => [
           ...prevChats,

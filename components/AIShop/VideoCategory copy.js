@@ -35,7 +35,7 @@ const VideoCategory2 = ({ navigation }) => {
    
     const fetchBestVideoDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsVideoProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsVideoProduct');
         const data = await response.json();
         setBestVideoDeals(data);
       } catch (error) {

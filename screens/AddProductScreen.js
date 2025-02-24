@@ -166,13 +166,13 @@ const AddProductScreen = ({ navigation }) => {
 
       let endpoint = '';
       if (fileType === 'image') {
-        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadImageProduct';
+        endpoint = 'https://matrix-server.vercel.app/uploadImageProduct';
       } else if (fileType === 'video') {
-        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadVideoProduct';
+        endpoint = 'https://matrix-server.vercel.app/uploadVideoProduct';
         productData.video_url = fileUrl;
         productData.thumbnail_url = thumbnailUrl;
       } else if (fileType === 'music') {
-        endpoint = 'https://matrix-server-gzqd.vercel.app/uploadMusicProduct';
+        endpoint = 'https://matrix-server.vercel.app/uploadMusicProduct';
         productData.thumbnail_url = thumbnailUrl;
       }
 

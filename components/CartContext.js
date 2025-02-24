@@ -53,7 +53,7 @@ export const CartProvider = ({ children, uid }) => {
 
     const addToCart = async (uid, product_id, product_type) => {
         try {
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/addToCart', {
+            const response = await fetch('https://matrix-server.vercel.app/addToCart', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid, product_id, product_type }),
@@ -90,7 +90,7 @@ export const CartProvider = ({ children, uid }) => {
 
     const removeFromCart = async (cart_id, uid) => {
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/removeFromCart/${cart_id}`, { method: 'DELETE' });
+            const response = await fetch(`https://matrix-server.vercel.app/removeFromCart/${cart_id}`, { method: 'DELETE' });
             const data = await response.json();
             if (data.success) {
                 fetchCart(uid); // Refresh the cart

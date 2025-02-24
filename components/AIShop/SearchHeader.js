@@ -128,7 +128,7 @@ console.log('useCart result:', { addToCart, cart }); // Log the result of useCar
   
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('https://matrix-server-gzqd.vercel.app/getAllProducts');
+      const response = await axios.get('https://matrix-server.vercel.app/getAllProducts');
       const allProducts = [
         ...response.data.images.map(item => ({...item, type: 'image'})),
         ...response.data.videos.map(item => ({...item, type: 'video'})),

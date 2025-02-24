@@ -22,7 +22,7 @@ const ImageCategory = ({ navigation }) => {
   useEffect(() => {
     const fetchBestDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsImageProducts');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsImageProducts');
         const data = await response.json();
         setBestDeals(data);
       } catch (error) {
@@ -34,7 +34,7 @@ const ImageCategory = ({ navigation }) => {
     };
     const fetchHighlight = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsImageProducts');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsImageProducts');
         const data = await response.json();
         setHighlight(data);
       } catch (error) {

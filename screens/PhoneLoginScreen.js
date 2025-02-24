@@ -30,7 +30,7 @@ const PhoneLoginScreen = ({ navigation }) => {
         setLoading(true);
     
         try {
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/sendPhoneOtp', {
+            const response = await fetch('https://matrix-server.vercel.app/sendPhoneOtp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

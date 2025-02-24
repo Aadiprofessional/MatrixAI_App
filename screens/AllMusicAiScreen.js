@@ -33,7 +33,7 @@ const AllMusicAiScreen = ({ navigation }) => {
 
     const fetchHighlightMusic = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getHighlightsMusicProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getHighlightsMusicProduct');
         const data = await response.json();
         setMusicHighlight(data);
       } catch (error) {
@@ -46,7 +46,7 @@ const AllMusicAiScreen = ({ navigation }) => {
   
     const fetchBestMusicDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsMusicProduct');
         const data = await response.json();
         setBestMusicDeals(data);
       } catch (error) {

@@ -90,7 +90,7 @@ const ManageProductsScreen = () => {
                       type === 'video' ? 'addBestDealsVideoProduct' :
                       'addBestDealsMusicProduct';
       
-      const response = await fetch(`https://matrix-server-gzqd.vercel.app/${endpoint}`, {
+      const response = await fetch(`https://matrix-server.vercel.app/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ const ManageProductsScreen = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getOwnerAllProducts', {
+        const response = await fetch('https://matrix-server.vercel.app/getOwnerAllProducts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ const ManageProductsScreen = () => {
   const handleRemoveProduct = async (type, id) => {
     setRemoving(id);
     try {
-      await fetch('https://matrix-server-gzqd.vercel.app/removeProduct', {
+      await fetch('https://matrix-server.vercel.app/removeProduct', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

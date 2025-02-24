@@ -161,7 +161,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
   
     const fetchAudioMetadata = async (uid, audioid) => {
         try {
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/getAudioFile', {
+            const response = await fetch('https://matrix-server.vercel.app/getAudioFile', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

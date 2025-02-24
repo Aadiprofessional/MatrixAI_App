@@ -74,7 +74,7 @@ const AudioVideoUploadScreen = () => {
 
     const loadFiles = async () => {
         try {
-            const response = await fetch(`https://matrix-server-gzqd.vercel.app/getAudio/${uid}`);
+            const response = await fetch(`https://matrix-server.vercel.app/getAudio/${uid}`);
             
             // Check response content type
             const contentType = response.headers.get('content-type');
@@ -384,7 +384,7 @@ const AudioVideoUploadScreen = () => {
         try {
             console.log('Deleting file with UID:', uid, 'and AudioID:', audioid); // Debug log
     
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/removeAudio', {
+            const response = await fetch('https://matrix-server.vercel.app/removeAudio', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ const AudioVideoUploadScreen = () => {
         }
     
         try {
-            const response = await fetch('https://matrix-server-gzqd.vercel.app/editAudio', {
+            const response = await fetch('https://matrix-server.vercel.app/editAudio', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

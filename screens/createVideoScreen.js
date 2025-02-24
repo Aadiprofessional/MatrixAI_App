@@ -27,7 +27,7 @@ const CreateVideoScreen = ({ route, navigation }) => {
 const fetchVideoUrl = async (videoId, retries = 0) => {
     try {
       const response = await axios.get(
-        `https://matrix-server-gzqd.vercel.app/getVideo?uid=${UID}&videoId=${videoId}`,
+        `https://matrix-server.vercel.app/getVideo?uid=${UID}&videoId=${videoId}`,
         {
           headers: {
             Authorization:
@@ -65,7 +65,7 @@ const fetchVideoUrl = async (videoId, retries = 0) => {
   const generateVideo = async () => {
     try {
       const response = await axios.post(
-        "https://matrix-server-gzqd.vercel.app/createVideo",
+        "https://matrix-server.vercel.app/createVideo",
         {
           uid: UID,
           imageUrl: ImageUrl,

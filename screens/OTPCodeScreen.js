@@ -53,7 +53,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
                 console.log('Verifying OTP:', enteredOtp);
 
                 // First API call to verify OTP
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/saveUserData', {
+                const response = await fetch('https://matrix-server.vercel.app/saveUserData', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

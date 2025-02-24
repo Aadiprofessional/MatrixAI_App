@@ -35,7 +35,7 @@ const MusicCategory2 = ({ navigation }) => {
   
     const fetchBestMusicDeals = async () => {
       try {
-        const response = await fetch('https://matrix-server-gzqd.vercel.app/getBestDealsMusicProduct');
+        const response = await fetch('https://matrix-server.vercel.app/getBestDealsMusicProduct');
         const data = await response.json();
         setBestMusicDeals(data);
       } catch (error) {

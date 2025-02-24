@@ -29,7 +29,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
         if (phoneRegex.test(phoneNumber.trim())) {
             setLoading(true);
             try {
-                const response = await fetch('https://matrix-server-gzqd.vercel.app/sendOtpWithoutCheck', {
+                const response = await fetch('https://matrix-server.vercel.app/sendOtpWithoutCheck', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

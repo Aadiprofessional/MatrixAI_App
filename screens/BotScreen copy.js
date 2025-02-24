@@ -46,7 +46,7 @@ const BotScreen2 = ({ navigation, route }) => {
       await fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
     }
     try {
-      await axios.post('https://matrix-server-gzqd.vercel.app/saveSummaryPreference', {
+      await axios.post('https://matrix-server.vercel.app/saveSummaryPreference', {
         uid,
         audioid,
         preference: choice,
@@ -65,7 +65,7 @@ const BotScreen2 = ({ navigation, route }) => {
       }
 
       try {
-        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getSummaryPreference', {
+        const response = await axios.post('https://matrix-server.vercel.app/getSummaryPreference', {
           uid,
           audioid,
         });
@@ -149,7 +149,7 @@ const BotScreen2 = ({ navigation, route }) => {
 
   const saveChatHistory = async (messageText, sender) => {
     try {
-      const response = await axios.post('https://matrix-server-gzqd.vercel.app/sendChat', {
+      const response = await axios.post('https://matrix-server.vercel.app/sendChat', {
         uid,
         chatid: audioid, // Using audioid as chatid
         updatedMessage: messageText,
@@ -224,7 +224,7 @@ const BotScreen2 = ({ navigation, route }) => {
   useEffect(() => {
     const fetchChatHistory = async () => {
       try {
-        const response = await axios.post('https://matrix-server-gzqd.vercel.app/getChat', {
+        const response = await axios.post('https://matrix-server.vercel.app/getChat', {
           uid,
           chatid: audioid, // Using audioid as chatid
         });
