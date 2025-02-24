@@ -36,7 +36,7 @@ const calculateSubtotal = () => {
         musicproductid: item.product.musicproductid
       })}
     >
-      <Image source={{ uri: item.product.image_url }} style={styles.itemImage} />
+      <Image source={{ uri: item.product.image_url ||item.product.thumbnail_url}} style={styles.itemImage} />
       <View style={styles.itemDetails}>
         <Text style={styles.itemTitle}>{item.product.name}</Text>
         <Text style={styles.itemPrice}>${item.product.price.toFixed(2)}</Text>

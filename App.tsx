@@ -54,6 +54,7 @@ import AllVideoAIScreen from './screens/AllVideoAIScreen.js';
 import AllImagesAiScreen from './screens/AllImagesAiScreen.js';
 import SeeAllScreen from './screens/SeeAllScreen.js';
 import SearchScreen from './screens/AIShop/SearchScreen.js';
+import EditProfile from './screens/EditProfile.js';
 const Stack = createStackNavigator();
 
 interface AuthContextType {
@@ -314,6 +315,11 @@ const App = () => {
                                             <Stack.Screen 
                                                 name="AllVideoAIScreen" 
                                                 component={AllVideoAIScreen} 
+                                                options={{ headerShown: false }} 
+                                            />
+                                              <Stack.Screen 
+                                                name="EditProfile" 
+                                                component={EditProfile} 
                                                 options={{ headerShown: false }} 
                                             />
                                             <Stack.Screen 
