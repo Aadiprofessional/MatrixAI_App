@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { WishlistContext } from '../../context/WishlistContext';
+import { useAuth } from '../../hooks/useAuth';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
@@ -7,10 +8,11 @@ import Video from 'react-native-video';
 
 let currentPlayingVideo = null;
 
-const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, new_label }) => {
+const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, new_label, wishlist }) => {
   const videoRef = useRef(null);
+  const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist = wishlistItems.some(item => item.id === videoproductid);
+  const isInWishlist = wishlist || wishlistItems.some(item => item.id === videoproductid);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -66,7 +68,7 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
     if (isInWishlist) {
       removeFromWishlist(videoproductid);
     } else {
-      addToWishlist(videoproductid, 'video');
+      addToWishlist(uid, videoproductid, 'video');
     }
   };
 

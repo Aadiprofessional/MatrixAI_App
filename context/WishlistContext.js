@@ -1,5 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import React, { createContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 export const WishlistContext = createContext();
@@ -27,22 +26,21 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
-  const addToWishlist = async (productId, productType) => {
-    const { user } = useAuth(); // Get UID from auth context
-    const uid = user?.id;
+  const addToWishlist = async (userId, productId, productType) => {
     try {
+      if (!userId) {
+        throw new Error('User not logged in');
+      }
+      
       console.log('Full wishlist add request:', {
-        uid: uid || 'undefined', 
-        productId: productId || 'undefined',
-        productType: productType || 'undefined',
+        uid: userId, 
+        productId,
+        productType,
         timestamp: new Date().toISOString()
       });
-      if (!uid || !productId || !productType) {
-        const missing = [];
-        if (!uid) missing.push('uid');
-        if (!productId) missing.push('productId');
-        if (!productType) missing.push('productType');
-        throw new Error(`Missing required parameters: ${missing.join(', ')}`);
+      
+      if (!productId || !productType) {
+        throw new Error('Missing required parameters: productId, productType');
       }
       const response = await fetch(`https://matrix-server.vercel.app/addToWishlist`, {
         method: 'POST',
@@ -50,7 +48,7 @@ export const WishlistProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uid,
+          uid: userId,
           product_id: productId,
           product_type: productType
         }),
@@ -61,7 +59,7 @@ export const WishlistProvider = ({ children }) => {
       }
       const result = JSON.parse(responseText);
       if (result.success) {
-        await fetchWishlistItems(uid);
+        await fetchWishlistItems(userId);
       }
       return result;
     } catch (error) {

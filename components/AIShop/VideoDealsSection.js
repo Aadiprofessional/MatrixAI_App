@@ -26,6 +26,7 @@ const VideoDealsSection = ({ bestVideoDeals, videoLoading, videoError, navigatio
               videoproductid={item.videoproductid}
               videoUrl={item.video_url}
               new_label={item.new_label}
+              wishlist={item.wishlist}
             />
             
           )}

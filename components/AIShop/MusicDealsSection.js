@@ -21,6 +21,7 @@ const MusicDealsSection = ({ bestMusicDeals, musicLoading, musicError, navigatio
               owner={item.name}
               musicproductid={item.musicproductid}
               item={item}
+              wishlist={item.wishlist}
             />
           )}
           horizontal

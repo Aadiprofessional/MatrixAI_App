@@ -1,17 +1,19 @@
 import React, { useState, useContext } from 'react';
 import { WishlistContext } from '../../context/WishlistContext';
+import { useAuth } from '../../hooks/useAuth';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
-const Card = ({ title, price, image, navigation,imageproductid }) => {
+const Card = ({ title, price, image, navigation, imageproductid, item ,wishlist}) => {
+  const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist = wishlistItems.some(item => item.id === imageproductid);
+  const isInWishlist = wishlist || wishlistItems.some(item => item.id === imageproductid);
 
   const toggleLike = () => {
     if (isInWishlist) {
       removeFromWishlist(imageproductid);
     } else {
-      addToWishlist(imageproductid, 'image');
+      addToWishlist(uid, imageproductid, 'image');
     }
   };
 

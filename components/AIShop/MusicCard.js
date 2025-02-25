@@ -2,21 +2,23 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import Sound from 'react-native-sound';
 import { WishlistContext } from '../../context/WishlistContext';
+import { useAuth } from '../../hooks/useAuth';
 import MusicIcon from 'react-native-vector-icons/Ionicons';
 import WishlistIcon from 'react-native-vector-icons/AntDesign';
 
-const MusicCard = ({ title, price, owner, image, musicproductid, item, navigation }) => {
+const MusicCard = ({ title, price, owner, image, musicproductid, item, navigation, wishlist }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const sound = useRef(null);
   const [positionMillis, setPositionMillis] = useState(0);
+  const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist = wishlistItems.some(item => item.id === musicproductid);
+  const isInWishlist =  wishlist || wishlistItems.some(item => item.id === musicproductid);
 
   const toggleLike = () => {
     if (isInWishlist) {
       removeFromWishlist(musicproductid);
     } else {
-      addToWishlist(musicproductid, 'music');
+      addToWishlist(uid, musicproductid, 'music');
     }
   };
 

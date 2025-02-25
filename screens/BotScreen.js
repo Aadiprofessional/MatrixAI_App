@@ -260,6 +260,17 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Image 
+          source={require('../assets/back.png')} 
+          style={styles.backIcon}
+        />
+      </TouchableOpacity>
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setIsSidebarOpen(true)}>
@@ -369,6 +380,23 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
 };
 
 const styles = StyleSheet.create({
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: '50%',
+    zIndex: 1,
+    width:20,
+    height:70,
+    backgroundColor:'#D2D2D257',
+    justifyContent:'center',
+    alignItems:'center',
+    borderRadius:15,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9F9F9',

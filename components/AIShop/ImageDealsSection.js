@@ -18,6 +18,7 @@ const ImageDealsSection = ({ bestDeals, loading, navigation,imageError }) => {
             key={item.id}
             title={item.name}
             price={`$${item.price}`}
+            wishlist={item.wishlist}
             image={{ uri: item.image_url }}
             imageproductid={item.imageproductid}
             navigation={navigation}
