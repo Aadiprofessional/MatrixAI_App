@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+  tools:replace="android:appComponentFactory"
+      android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:usesCleartextTraffic="true"
         tools:targetApi="28"
         tools:ignore="GoogleAppIndexingWarning"/>
