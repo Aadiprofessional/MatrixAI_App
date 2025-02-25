@@ -16,13 +16,7 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
     if (isInWishlist) {
       removeFromWishlist(musicproductid);
     } else {
-      addToWishlist({
-        id: musicproductid,
-        name: title,
-        price: price,
-        image: item.thumbnail_url,
-        type: 'music'
-      });
+      addToWishlist(musicproductid, 'music');
     }
   };
 

@@ -66,13 +66,7 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
     if (isInWishlist) {
       removeFromWishlist(videoproductid);
     } else {
-      addToWishlist({
-        id: videoproductid,
-        name: title,
-        price: price,
-        image: image,
-        type: 'video'
-      });
+      addToWishlist(videoproductid, 'video');
     }
   };
 

@@ -11,12 +11,7 @@ const Card = ({ title, price, image, navigation,imageproductid }) => {
     if (isInWishlist) {
       removeFromWishlist(imageproductid);
     } else {
-      addToWishlist({
-        id: imageproductid,
-        name: title,
-        price: price,
-        image: image
-      });
+      addToWishlist(imageproductid, 'image');
     }
   };
 

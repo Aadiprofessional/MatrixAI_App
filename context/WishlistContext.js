@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../supabaseClient';
 
 export const WishlistContext = createContext();
@@ -26,10 +27,22 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
-  const addToWishlist = async (uid, productId, productType) => {
+  const addToWishlist = async (productId, productType) => {
+    const { user } = useAuth(); // Get UID from auth context
+    const uid = user?.id;
     try {
+      console.log('Full wishlist add request:', {
+        uid: uid || 'undefined', 
+        productId: productId || 'undefined',
+        productType: productType || 'undefined',
+        timestamp: new Date().toISOString()
+      });
       if (!uid || !productId || !productType) {
-        throw new Error('Missing required parameters: uid, productId, productType');
+        const missing = [];
+        if (!uid) missing.push('uid');
+        if (!productId) missing.push('productId');
+        if (!productType) missing.push('productType');
+        throw new Error(`Missing required parameters: ${missing.join(', ')}`);
       }
       const response = await fetch(`https://matrix-server.vercel.app/addToWishlist`, {
         method: 'POST',
