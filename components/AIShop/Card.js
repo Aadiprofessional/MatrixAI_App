@@ -7,13 +7,16 @@ import MusicIcon from 'react-native-vector-icons/Ionicons';
 const Card = ({ title, price, image, navigation, imageproductid, item ,wishlist}) => {
   const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist = wishlist || wishlistItems.some(item => item.id === imageproductid);
+  const [isInWishlist, setIsInWishlist] = useState(wishlist);
 
-  const toggleLike = () => {
-    if (isInWishlist) {
-      removeFromWishlist(imageproductid);
-    } else {
+  const toggleLike = async () => {
+    const newState = !isInWishlist;
+    setIsInWishlist(newState);
+    
+    if (newState) {
       addToWishlist(uid, imageproductid, 'image');
+    } else {
+      removeFromWishlist(imageproductid);
     }
   };
 

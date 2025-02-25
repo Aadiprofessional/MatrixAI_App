@@ -12,13 +12,17 @@ const MusicCard = ({ title, price, owner, image, musicproductid, item, navigatio
   const [positionMillis, setPositionMillis] = useState(0);
   const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist =  wishlist || wishlistItems.some(item => item.id === musicproductid);
+  const [isInWishlist, setIsInWishlist] = useState(wishlist || wishlistItems.some(item => item.id === musicproductid));
 
-  const toggleLike = () => {
+  const toggleLike = async () => {
     if (isInWishlist) {
-      removeFromWishlist(musicproductid);
+      await removeFromWishlist(musicproductid);
+      setIsInWishlist(false);
     } else {
-      addToWishlist(uid, musicproductid, 'music');
+      const result = await addToWishlist(uid, musicproductid, 'music');
+      if (result.success) {
+        setIsInWishlist(true);
+      }
     }
   };
 

@@ -12,7 +12,7 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
   const videoRef = useRef(null);
   const { uid } = useAuth();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useContext(WishlistContext);
-  const isInWishlist = wishlist || wishlistItems.some(item => item.id === videoproductid);
+  const [isInWishlist, setIsInWishlist] = useState(wishlist || wishlistItems.some(item => item.id === videoproductid));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -64,11 +64,15 @@ const VideoCard = ({ title, price, image, navigation, videoproductid, videoUrl, 
     setCurrentTime(0);
   };
 
-  const toggleLike = () => {
+  const toggleLike = async () => {
     if (isInWishlist) {
-      removeFromWishlist(videoproductid);
+      await removeFromWishlist(videoproductid);
+      setIsInWishlist(false);
     } else {
-      addToWishlist(uid, videoproductid, 'video');
+      const result = await addToWishlist(uid, videoproductid, 'video');
+      if (result.success) {
+        setIsInWishlist(true);
+      }
     }
   };
 

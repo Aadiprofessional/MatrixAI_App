@@ -249,12 +249,7 @@ const sortProducts = (order) => {
     <Text style={styles.modalButtonText}>Music</Text>
     {selectedFilter === 'music' && <AntDesign name="checkcircle" size={24} color="#007bff" />}
   </TouchableOpacity>
-  <TouchableOpacity
-    style={styles.modalButton}
-    onPress={() => setFilterModalVisible(!filterModalVisible)}
-  >
-    <Text style={styles.modalButtonText}>Cancel</Text>
-  </TouchableOpacity>
+ 
 </View>
         <Button title="Cancel" onPress={() => setFilterModalVisible(!filterModalVisible)} />
       </View>
@@ -288,12 +283,7 @@ const sortProducts = (order) => {
     <Text style={styles.modalButtonText}>High to Low</Text>
     {sortOrder === 'desc' && <AntDesign name="checkcircle" size={24} color="#007bff" />}
   </TouchableOpacity>
-  <TouchableOpacity
-    style={styles.modalButton}
-    onPress={() => setSortModalVisible(!sortModalVisible)}
-  >
-    <Text style={styles.modalButtonText}>Cancel</Text>
-  </TouchableOpacity>
+ 
 </View>
         <Button title="Cancel" onPress={() => setSortModalVisible(!sortModalVisible)} />
       </View>
@@ -330,7 +320,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   modalView: {
-    margin: 20,
+
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 35,
@@ -346,6 +336,7 @@ const styles = StyleSheet.create({
   },
   modalText: {
     marginBottom: 15,
+    
     textAlign: 'center',
   },
   scrollView: {
