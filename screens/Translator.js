@@ -164,7 +164,7 @@ const TranslatorScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 ,marginTop:50},
+    container: { flex: 1, padding: 20 , },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     headerIcon: { width: 24, height: 24, resizeMode: 'contain' },
     headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#007bff' },

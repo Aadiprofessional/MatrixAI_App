@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    marginTop: 50,
+     
     backgroundColor: '#f9f9f9',
   },
   headerIcon: {

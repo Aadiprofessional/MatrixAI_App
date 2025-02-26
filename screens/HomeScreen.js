@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFFFF',
     padding: 10,
-    marginTop:50,
+    
   },
   header: {
     flexDirection: 'row',

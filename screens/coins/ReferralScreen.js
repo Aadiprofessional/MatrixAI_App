@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFFFF',
-    marginTop: 50,
+     
   },
   backButton: {
     position: 'absolute',

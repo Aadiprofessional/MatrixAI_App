@@ -1,22 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { PermissionsAndroid } from 'react-native';
 
 const CameraScreen = ({ navigation }) => {
   const [hasPermission, setHasPermission] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const devices = useCameraDevices();
-  const device = devices.back; // Using back camera
+  const [device, setDevice] = useState(null);
+  const [isBackCamera, setIsBackCamera] = useState(true);
+
+  // Check if a device is usable
+  const isDeviceUsable = (device) => {
+    return device && 
+           device.formats && 
+           device.formats.length > 0 &&
+           device.supportsFocus;
+  };
+
+  // Get first available camera device
+  const getFirstDevice = () => {
+    if (!devices || !Array.isArray(devices)) return null;
+    
+    // Find first device that meets minimum requirements
+    for (const cameraDevice of devices) {
+      if (isDeviceUsable(cameraDevice)) {
+        return cameraDevice;
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
-    const getPermission = async () => {
-      const permission = await Camera.requestCameraPermission();
-      setHasPermission(permission === 'authorized');
+    const checkCamera = async () => {
+      try {
+        // Request permissions
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            {
+              title: 'Camera Permission',
+              message: 'This app needs access to your camera',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+          setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
+        } else {
+          let permission = await Camera.getCameraPermissionStatus();
+          if (permission !== 'authorized') {
+            permission = await Camera.requestCameraPermission();
+          }
+          setHasPermission(permission === 'authorized');
+        }
+        
+        // Initialize camera device
+        console.log('Available camera devices:', devices);
+        const firstDevice = getFirstDevice();
+        if (firstDevice) {
+          console.log('Initial camera device:', firstDevice.id);
+          setDevice(firstDevice);
+          setIsBackCamera(devices.back?.id === firstDevice.id);
+        } else {
+          console.warn('No usable camera devices found');
+        }
+      } catch (err) {
+        console.warn('Camera setup error:', err);
+        setHasPermission(false);
+      }
+      setIsLoading(false);
     };
 
-    getPermission();
-  }, []);
-
-  
+    checkCamera();
+  }, [devices]);
 
   return (
     <View style={styles.container}>
@@ -24,27 +81,53 @@ const CameraScreen = ({ navigation }) => {
         <Image source={require('../assets/back.png')} style={styles.backIcon} />
       </TouchableOpacity>
 
-      <Camera style={styles.camera} device={device} isActive={true} />
-
-     
-
-        <View style={styles.profileSection}>
-          <TouchableOpacity style={styles.tab}><Text>Friends</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.tabActive}><Text>Recommend</Text></TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <TouchableOpacity>
-            <Image source={require('../assets/voice.png')} style={styles.icon} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Image source={require('../assets/mic.png')} style={styles.icon} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Image source={require('../assets/close.png')} style={styles.icon} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.camera}>
+        {hasPermission ? (
+          device ? (
+            <Camera 
+              style={StyleSheet.absoluteFill}
+              device={device}
+              isActive={true}
+            />
+          ) : (
+            <View style={styles.permissionOverlay}>
+              <Text style={styles.permissionText}>
+                No camera device available
+              </Text>
+            </View>
+          )
+        ) : (
+          <View style={styles.permissionOverlay}>
+            <Text style={styles.permissionText}>
+              Camera permission required
+            </Text>
+          </View>
+        )}
       </View>
+
+      <View style={styles.profileSection}>
+        <TouchableOpacity style={styles.tab}><Text>Friends</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tabActive}><Text>Recommend</Text></TouchableOpacity>
+      </View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity>
+          <Image source={require('../assets/voice.png')} style={styles.icon} />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Image source={require('../assets/mic.png')} style={styles.icon} />
+        </TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            const newDevice = isBackCamera ? devices.front : devices.back;
+            if (newDevice) {
+              setDevice(newDevice);
+              setIsBackCamera(!isBackCamera);
+            }
+          }}>
+            <Image source={require('../assets/Change.png')} style={styles.icon} />
+          </TouchableOpacity>
+      </View>
+    </View>
 
   );
 };
@@ -52,6 +135,18 @@ const CameraScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  permissionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  permissionText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    padding: 20,
   },
   backButton: {
     position: 'absolute',

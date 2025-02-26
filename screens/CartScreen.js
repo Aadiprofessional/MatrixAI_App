@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    marginTop: 50,  // Add margin top as requested
+       // Add margin top as requested
   },
   container2: {
     flexDirection: 'row',

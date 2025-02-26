@@ -589,7 +589,7 @@ const handleStartListening = async () => {
       </View>
   
   {/* Scroll view added for transcription */}
-  <ScrollView style={{ height: 250,marginTop:50 }}>
+  <ScrollView style={{ height: 250,  }}>
     <Text style={styles.documentText}>{transcription}</Text>
   </ScrollView>
 </View>
@@ -761,7 +761,7 @@ marginLeft:10
     borderRadius: 25,
     padding: 8,
     width: '80%',
-    marginTop:50,
+    
     height:50,
     position: 'relative', // Required for absolute positioning of the swap button
   },

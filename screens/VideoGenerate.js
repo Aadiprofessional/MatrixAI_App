@@ -311,7 +311,7 @@ const fetchImages = async (UID) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 50,
+     
   },
   rightActionsContainer: {
     flexDirection: 'row',

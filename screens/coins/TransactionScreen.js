@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fc',
     padding: 20,
-    marginTop: 50,
+     
   },
   backButton: {
     position: 'absolute',

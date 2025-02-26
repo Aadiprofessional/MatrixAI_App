@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', // Debugging background color
   },
   container2: {
-    marginTop: 50,
+     
     zIndex: 1, // Ensure the main container has a lower zIndex
   },
   typingText: {

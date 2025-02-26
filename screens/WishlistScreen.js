@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 50,
+     
     marginBottom: 16,
   },
   backButton: {

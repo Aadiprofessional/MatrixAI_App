@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
    
-        marginTop: 50, // Ensures the container respects the safe area
+       
     },
     rightActionsContainer: {
         flexDirection: 'row',

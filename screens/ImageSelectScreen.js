@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     padding: 16,
-    marginTop: 50,
+     
   },
   horizontalContent: {
     flexDirection: 'row',

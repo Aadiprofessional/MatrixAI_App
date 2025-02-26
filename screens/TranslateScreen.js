@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        marginTop: 50,
+         
     },
     container2: {
         backgroundColor: '#2CF105FF',
@@ -1472,7 +1472,7 @@ const styles = StyleSheet.create({
        width:150,
         borderRadius: 20,
         
-       marginTop:50,
+       
         marginLeft: 120,
        
         padding: 8, // Adjust padding for better touch area
