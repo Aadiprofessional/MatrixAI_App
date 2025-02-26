@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -115,12 +115,72 @@ const LiveTranslateScreen = () => {
   const languages = Object.keys(languageCodes);
   const region = 'eastus';
 
+  const [isVoiceInitialized, setIsVoiceInitialized] = useState(false);
+
+  const initializeVoice = useCallback(async (retryCount = 0) => {
+    if (isVoiceInitialized) return;
+
+    try {
+      // Check if Voice module is available
+      if (!Voice) {
+        throw new Error('Voice module not available - Ensure react-native-voice is installed and linked');
+      }
+
+      // Verify Voice methods exist
+      if (!Voice.destroy || !Voice.removeAllListeners || !Voice.onSpeechStart) {
+        throw new Error('Voice module methods not available - Please ensure proper linking of native modules');
+      }
+
+      // Initialize Voice with retry logic
+      await Voice.destroy().catch(() => {});
+      await Voice.removeAllListeners().catch(() => {});
+      
+      // Set up event listeners
+      Voice.onSpeechStart = () => {
+        setIsListening(true);
+        startCircleAnimation();
+      };
+      Voice.onSpeechEnd = () => {
+        setIsListening(false);
+        stopCircleAnimation();
+      };
+      Voice.onSpeechResults = (e) => {
+        setTranscription(e.value[0] || 'Press Mic to start listening');
+        translateText(e.value[0] || 'Press Mic to start listening');
+      };
+      Voice.onSpeechError = (e) => {
+        console.error('Speech recognition error:', e);
+        setIsListening(false);
+        Alert.alert('Speech Error', e.error?.message || 'Speech recognition failed');
+      };
+
+      setIsVoiceInitialized(true);
+      return true;
+    } catch (error) {
+      console.error('Error initializing Voice (attempt ${retryCount}):', error);
+      
+      if (retryCount < 3) {
+        // Retry with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return initializeVoice(retryCount + 1);
+      }
+
+      Alert.alert(
+        'Voice Error', 
+        `Failed to initialize voice recognition after ${retryCount + 1} attempts: ${error.message}`
+      );
+      return false;
+    }
+  }, [isVoiceInitialized]);
+
   useEffect(() => {
-    Animated.timing(slideAnimation, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    const initializeAnimation = () => {
+      Animated.timing(slideAnimation, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    };
 
     const requestPermissions = async () => {
       if (Platform.OS === 'android') {
@@ -137,26 +197,15 @@ const LiveTranslateScreen = () => {
       }
     };
 
+    initializeAnimation();
     requestPermissions();
-
-    Voice.onSpeechStart = () => {
-      setIsListening(true);
-      startCircleAnimation();
-    };
-    Voice.onSpeechEnd = () => {
-      setIsListening(false);
-      stopCircleAnimation();
-    };
-    Voice.onSpeechResults = (e) => {
-      setTranscription(e.value[0] || 'Press Mic to start listening');
-      translateText(e.value[0] || 'Press Mic to start listening');
-    };
-    Voice.onSpeechError = (e) => console.error('Speech recognition error:', e);
+    initializeVoice();
 
     return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
+      Voice.destroy().then(() => Voice.removeAllListeners());
+      setIsVoiceInitialized(false);
     };
-  }, []);
+  }, [initializeVoice]);
 
 
 
@@ -471,36 +520,55 @@ const handleStartListening = async () => {
     return;
   }
 
-  setIsListening(true);
-  setIsPaused(false);
-
   try {
+    if (!isVoiceInitialized) {
+      await initializeVoice();
+    }
+
+    if (!isVoiceInitialized) {
+      throw new Error('Voice recognition not initialized');
+    }
+
+    // Initialize AudioRecord
     console.log('Initializing AudioRecord...');
-    AudioRecord.init({
+    await AudioRecord.init({
       sampleRate: 16000,
       channels: 1,
       bitsPerSample: 16,
       audioSource: 6,
       wavFile: `${uuidv4()}.wav`,
     });
-    console.log('Starting AudioRecord...');
-    AudioRecord.start();
 
-    // Get the language code for the selected source language
+    // Get language code and validate
     const languageCode = languageCodes[selectedLanguage];
     if (!languageCode) {
       throw new Error(`Language code not found for: ${selectedLanguage}`);
     }
 
+    // Start recording and voice recognition
+    setIsListening(true);
+    setIsPaused(false);
+    console.log('Starting AudioRecord...');
+    await AudioRecord.start();
+    
     console.log('Starting Voice recognition with language code:', languageCode);
-    await Voice.start(languageCode); // Use the correct language code
+    await Voice.start(languageCode);
     
     setTranscription('Listening...');
     setRecordingStartTime(Date.now());
   } catch (error) {
     console.error('Error starting voice recognition:', error);
     setIsListening(false);
+    setIsPaused(false);
     Alert.alert('Error', `Failed to start listening: ${error.message}`);
+    
+    // Cleanup on error
+    try {
+      await Voice.destroy();
+      await AudioRecord.stop();
+    } catch (cleanupError) {
+      console.error('Error during cleanup:', cleanupError);
+    }
   }
 };
 
@@ -589,7 +657,7 @@ const handleStartListening = async () => {
       </View>
   
   {/* Scroll view added for transcription */}
-  <ScrollView style={{ height: 250,  }}>
+  <ScrollView style={{ height: 280,  }}>
     <Text style={styles.documentText}>{transcription}</Text>
   </ScrollView>
 </View>
@@ -699,7 +767,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+
     gap: 20
   },
   button: {
@@ -723,7 +791,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    paddingTop: 70,
+    paddingTop: 20,
     paddingHorizontal: 20,
     justifyContent: 'space-between',
   },
@@ -750,7 +818,7 @@ marginLeft:10
     alignItems: 'center',
   },
   topSection: {
-    paddingTop: 5,
+    paddingTop: 45,
     paddingHorizontal: 20,
     backgroundColor: '#007bff',
   },
@@ -800,7 +868,7 @@ marginLeft:10
     fontSize: 20,
     color: '#fff',
   
-    marginTop: 10,
+    marginTop: 30,
   },
   bottomSection: {
     flex: 1,

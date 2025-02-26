@@ -241,134 +241,14 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 setIsAudioLoading(true);
             }
             
-            // Download chunks with progress tracking
-            const chunks = await Promise.all(chunkUrls.map(async (url, index) => {
-                let retries = 3;
-                while (retries > 0) {
-                    try {
-                        const response = await fetch(url);
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        const blob = await response.blob();
-                        if (!blob || blob.size === 0) {
-                            throw new Error('Empty blob received');
-                        }
-                        return blob;
-                    } catch (error) {
-                        retries--;
-                        if (retries === 0) throw error;
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                }
-            }));
-
-            // Validate chunks
-            if (chunks.some(chunk => !(chunk instanceof Blob) || chunk.size === 0)) {
-                throw new Error('Invalid or empty chunk data received');
-            }
-
-            // Determine content type from first valid chunk
-            const contentType = chunks.find(chunk => chunk.type)?.type || 'audio/mpeg';
-
-            // Combine chunks with detailed validation
-            let combinedBlob;
-            try {
-                console.log('Creating Blob from', chunks.length, 'chunks');
-                combinedBlob = new Blob(chunks, { type: contentType });
-                
-                if (!combinedBlob) {
-                    throw new Error('Blob creation returned null');
-                }
-                
-                if (combinedBlob.size === 0) {
-                    throw new Error('Created empty Blob (0 bytes)');
-                }
-                
-                if (!combinedBlob.type) {
-                    console.warn('Blob has no type, defaulting to audio/mpeg');
-                    combinedBlob = new Blob(chunks, { type: 'audio/mpeg' });
-                }
-                
-                console.log('Created Blob:', {
-                    size: combinedBlob.size,
-                    type: combinedBlob.type
-                });
-            } catch (error) {
-                console.error('Error combining chunks:', {
-                    error: error.message,
-                    chunkCount: chunks.length,
-                    chunkSizes: chunks.map(c => c.size)
-                });
-                return null;
-            }
-
-            // Create URL with enhanced error handling and fallbacks
-            let combinedUrl;
-            try {
-              
-                
-                // Check memory using React Native's Memory module
-                const memoryInfo = await NativeModules.Memory.getMemoryInfo();
-                if (memoryInfo && memoryInfo.used > memoryInfo.total * 0.8) {
-                    console.warn('Low memory detected - using chunked playback');
-                    return {
-                        type: 'chunked',
-                        urls: chunkUrls
-                    };
-                }
-                
-                // Try creating blob URL with timeout
-                combinedUrl = await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        reject(new Error('URL creation timeout'));
-                    }, 5000); // 5 second timeout
-                    
-                    try {
-                        const url = URL.createObjectURL(combinedBlob);
-                        if (!url) {
-                            throw new Error('URL.createObjectURL returned null');
-                        }
-                        if (!url.startsWith('blob:')) {
-                            throw new Error('Invalid URL format');
-                        }
-                        clearTimeout(timeout);
-                        resolve(url);
-                    } catch (error) {
-                        clearTimeout(timeout);
-                        reject(error);
-                    }
-                });
-                
-            
-                return {
-                    type: 'blob',
-                    url: combinedUrl
-                };
-                
-            } catch (error) {
-              
-                
-                // Clean up the blob if URL creation failed
-                if (combinedBlob) {
-                    try {
-                        combinedBlob.close && combinedBlob.close();
-                    } catch (cleanupError) {
-                        console.error('Error cleaning up blob:', cleanupError);
-                    }
-                }
-                
-                // Fallback to direct file streaming
-                console.warn('Falling back to direct file streaming');
-                return {
-                    type: 'direct',
-                    url: chunkUrls[0]
-                };
-            }
-
-            // Set cleanup handler
-          
+            // On Android, use direct streaming instead of blob handling
+            return {
+                type: 'direct',
+                url: chunkUrls[0]
+            };
 
         } catch (error) {
-            console.error('Error downloading/combining audio:', error);
+            console.error('Error handling audio:', error);
             return null;
         } finally {
             if (isMounted.current) {
@@ -436,21 +316,81 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     }, [uid, audioid, selectedButton]); 
         
     const splitTranscription = (text) => {
-        if (!text) return [];
-        const words = text.split(' ');
-        const chunks = [];
-        for (let i = 0; i < words.length; i += 75) {
-            chunks.push(words.slice(i, i + 75).join(' '));
+        if (!text) return { paragraphs: [], words: [] };
+        
+        // Handle Chinese text specifically
+        const isChinese = /[\u4e00-\u9fff]/.test(text);
+        let words = isChinese ? Array.from(text) : text.split(/\s+/);
+        
+        if (isChinese) {
+            // For Chinese text, split into smaller paragraphs
+            const charsPerParagraph = 100; // Reduced from 200 to 100 for better readability
+            const paragraphs = [];
+            
+            // First try to split by common Chinese punctuation
+            const segments = text.split(/[。！？；,，]/g);
+            let currentParagraph = '';
+            
+            for (const segment of segments) {
+                if (!segment.trim()) continue;
+                
+                // If adding this segment would make the paragraph too long, start a new one
+                if ((currentParagraph + segment).length > charsPerParagraph && currentParagraph) {
+                    paragraphs.push(currentParagraph.trim());
+                    currentParagraph = segment;
+                } else {
+                    currentParagraph += (currentParagraph ? '，' : '') + segment;
+                }
+            }
+            
+            // Add the last paragraph if it's not empty
+            if (currentParagraph.trim()) {
+                paragraphs.push(currentParagraph.trim() + '。');
+            }
+            
+            // If no paragraphs were created (no punctuation found), split by character count
+            if (paragraphs.length === 0) {
+                for (let i = 0; i < text.length; i += charsPerParagraph) {
+                    const chunk = text.slice(i, Math.min(i + charsPerParagraph, text.length));
+                    if (chunk.trim()) {
+                        paragraphs.push(chunk.trim());
+                    }
+                }
+            }
+            
+            return { paragraphs, words };
+        } else {
+            // For non-Chinese text, use the original sentence-based splitting
+            const sentences = text.split(/[.!?]\s+/).filter(s => s.trim().length > 0);
+            const paragraphs = [];
+            const sentencesPerParagraph = 9;
+            
+            for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
+                const paragraphSentences = sentences.slice(i, i + sentencesPerParagraph);
+                const paragraph = paragraphSentences.join('. ') + '.';
+                if (paragraph.trim()) {
+                    paragraphs.push(paragraph.trim());
+                }
+            }
+            
+            return { paragraphs, words };
         }
-        return { paragraphs: chunks, words };
+        
+        return { paragraphs, words };
     };
 
-    const calculateParagraphTimings = (paragraphs, duration) => {
-        if (!paragraphs.length || !duration) return [];
-        return paragraphs.map((para, index) => ({
-            start: index * 40,
-            end: (index + 1) * 47,
-            words: para.split(' ')
+    const calculateParagraphTimings = (words, duration) => {
+        if (!words.length || !duration) return [];
+        
+        // Calculate time per paragraph based on total duration and number of paragraphs
+        const wordsPerParagraph = Math.ceil(words.length / Math.ceil(words.length / (9 * 10))); // ~10 words per line, 9 lines
+        const paragraphCount = Math.ceil(words.length / wordsPerParagraph);
+        const timePerParagraph = duration / paragraphCount;
+        
+        return Array(paragraphCount).fill(0).map((_, index) => ({
+            start: index * timePerParagraph,
+            end: (index + 1) * timePerParagraph,
+            words: words.slice(index * wordsPerParagraph, (index + 1) * wordsPerParagraph)
         }));
     };
 
@@ -462,21 +402,28 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
 
 
     const onAudioProgress = (progress) => {
-        if (!progress || !progress.currentTime || !progress.duration || !paragraphs.length) return;
+        if (!progress || !progress.currentTime || !progress.duration || !paragraphs.length || !wordTimings.length) return;
         
         const currentTime = Number(progress.currentTime.toFixed(2));
-        const totalDuration = Number(progress.duration.toFixed(2));
         
-        // Calculate equal duration per paragraph
-        const paraDuration = totalDuration / paragraphs.length;
+        // Find the current paragraph based on timing
+        const currentParaIndex = wordTimings.findIndex(timing => 
+            currentTime >= timing.start && currentTime < timing.end
+        );
         
-        // Calculate current paragraph index
-        const paraIndex = Math.floor(currentTime / paraDuration);
-        
-        if (paraIndex !== currentWordIndex.paraIndex && paraIndex < paragraphs.length) {
+        if (currentParaIndex !== -1 && currentParaIndex !== currentWordIndex.paraIndex) {
             setCurrentWordIndex({
-                paraIndex
+                paraIndex: currentParaIndex
             });
+            
+            // Auto-scroll to the current paragraph
+            if (scrollViewRef.current) {
+                const yOffset = currentParaIndex * 200; // Approximate height per paragraph
+                scrollViewRef.current.scrollTo({
+                    y: yOffset,
+                    animated: true
+                });
+            }
         }
     };
 
@@ -486,15 +433,67 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         if (sound) {
             sound.release();
         }
+
+        // Enable streaming for better performance on Android
+        Sound.setCategory('Playback');
         
-        const newSound = new Sound(audioUrl, null, (error) => {
-            if (error) {
-                console.error('Failed to load sound', error);
-                return;
-            }
-            setAudioDuration(newSound.getDuration());
-            setSound(newSound);
-        });
+        const loadWithRetry = (attempt = 0) => {
+            const maxAttempts = 3;
+            
+            // Create new sound instance with streaming enabled
+            const newSound = new Sound(audioUrl, Sound.MAIN_BUNDLE, (error) => {
+                if (error) {
+                    console.warn(`Failed to load sound (attempt ${attempt + 1}):`, error);
+                    
+                    if (attempt < maxAttempts - 1) {
+                        // Retry with exponential backoff
+                        setTimeout(() => {
+                            loadWithRetry(attempt + 1);
+                        }, Math.pow(2, attempt) * 1000);
+                    } else {
+                        console.error('All audio loading attempts failed');
+                        Alert.alert(
+                            'Audio Error',
+                            'Failed to load audio. Please try again later.',
+                            [{ text: 'OK' }]
+                        );
+                    }
+                    return;
+                }
+                
+                // Configure sound instance
+                newSound.setVolume(1.0);
+                newSound.setNumberOfLoops(0);
+                
+                // Get duration after a small delay to ensure it's loaded
+                setTimeout(() => {
+                    const duration = newSound.getDuration();
+                    if (duration && duration > 0) {
+                        setAudioDuration(duration);
+                        setSound(newSound);
+                    } else {
+                        // If duration is invalid, try streaming mode
+                        newSound.release();
+                        const streamingSound = new Sound(audioUrl, null, (error2) => {
+                            if (error2) {
+                                console.error('Streaming mode failed:', error2);
+                                Alert.alert(
+                                    'Audio Error',
+                                    'Failed to load audio in streaming mode.',
+                                    [{ text: 'OK' }]
+                                );
+                                return;
+                            }
+                            setAudioDuration(streamingSound.getDuration());
+                            setSound(streamingSound);
+                        });
+                        streamingSound.setNumberOfLoops(0);
+                    }
+                }, 100);
+            });
+        };
+        
+        loadWithRetry();
     };
 
     const toggleAudioPlayback = () => {
@@ -502,19 +501,35 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         
         if (isAudioPlaying) {
             sound.pause();
+            setIsAudioPlaying(false);
         } else {
+            // If at the end, start from beginning
+            if (audioPosition >= audioDuration) {
+                sound.setCurrentTime(0);
+                setAudioPosition(0);
+                setCurrentWordIndex({ paraIndex: 0 });
+            }
+            
             sound.play((success) => {
                 if (success) {
-                    setIsAudioPlaying(false);
-                    setAudioPosition(audioDuration); // Set to the end of the audio
-                    // This resets the position to the start
+                    if (isRepeatMode) {
+                        // In repeat mode, start from beginning
+                        sound.setCurrentTime(0);
+                        setAudioPosition(0);
+                        setCurrentWordIndex({ paraIndex: 0 });
+                        sound.play();
+                    } else {
+                        setIsAudioPlaying(false);
+                        setAudioPosition(audioDuration);
+                    }
                 } else {
                     console.error('Playback failed');
+                    setIsAudioPlaying(false);
                 }
             });
             
+            setIsAudioPlaying(true);
         }
-        setIsAudioPlaying(!isAudioPlaying);
     };
 
     const seekAudio = (seconds) => {
@@ -523,14 +538,45 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         const newPosition = Math.max(0, Math.min(audioPosition + seconds, audioDuration));
         sound.setCurrentTime(newPosition);
         setAudioPosition(newPosition);
+        
+        // Trigger audio progress update when seeking
+        onAudioProgress({
+            currentTime: newPosition,
+            duration: audioDuration
+        });
     };
 
    
     
  
     useEffect(() => {
+        // Basic Sound.js configuration
+        Sound.setCategory('Playback');
+        
         if (audioUrl) {
-            loadAudio();
+            // Simple direct initialization for Android
+            const newSound = new Sound(audioUrl, Sound.MAIN_BUNDLE, (error) => {
+                if (error) {
+                    console.error('Failed to load sound:', error);
+                    Alert.alert(
+                        'Audio Error',
+                        'Failed to load audio. Please try again later.',
+                        [{ text: 'OK' }]
+                    );
+                    return;
+                }
+                
+                // Configure sound instance
+                newSound.setVolume(1.0);
+                newSound.setNumberOfLoops(0);
+                
+                // Get duration and set state
+                const duration = newSound.getDuration();
+                if (duration > 0) {
+                    setAudioDuration(duration);
+                    setSound(newSound);
+                }
+            });
         }
         
         return () => {
@@ -604,6 +650,11 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     
     const handleValueChange = (value) => {
         setAudioPosition(value);
+        // Trigger audio progress update when slider value changes
+        onAudioProgress({
+            currentTime: value,
+            duration: audioDuration
+        });
       };
     
       const handleLayout = (event) => {
@@ -1714,6 +1765,27 @@ flexDirection:'row',
         borderLeftColor: '#007bff',
         paddingLeft: 12,
     },
+    paragraphText: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: '#333',
+        flex: 1,
+        marginBottom: 8,
+    },
+    editableText: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: '#333',
+        flex: 1,
+        padding: 8,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 4,
+    },
+    timestamp: {
+        fontSize: 12,
+        marginBottom: 4,
+        fontWeight: '500',
+    },
     
     mindMapContainer: {
         padding: 20,
@@ -1987,6 +2059,15 @@ flexDirection:'row',
         width: 20,
         height: 20,
         tintColor: '#fff',
+    },
+    pencilIcon: {
+        width: 20,
+        height: 20,
+        tintColor: '#007bff',
+        marginLeft: 8,
+    },
+    editIcon: {
+        padding: 4,
     },
 });
 
