@@ -277,6 +277,25 @@ const BotScreen2 = ({ navigation, route }) => {
       return text && urlRegex.test(text);
     };
 
+    // Function to process and format the message text
+    const formatMessageText = (text) => {
+      if (!text) return [];
+      
+      const lines = text.split('\n');
+      return lines.map(line => {
+        // Check for heading (starts with number and dot, or has : at the end)
+        const isHeading = /^\d+\.\s+.+/.test(line) || /.*:$/.test(line);
+        // Check for subheading (starts with - or • or *)
+        const isSubheading = /^[-•*]\s+.+/.test(line);
+        
+        return {
+          text: line,
+          isHeading,
+          isSubheading
+        };
+      });
+    };
+
     const renderLeftActions = () => {
       return (
         <View style={styles.swipeableButtons}>
@@ -323,8 +342,21 @@ const BotScreen2 = ({ navigation, route }) => {
             >
               {/* Text Display (Exclude URLs for User) */}
               {item.text && (!isUser || (isUser && !containsUrl(item.text))) && (
-                <Text style={isBot ? styles.botText : styles.userText}>
-                  {isExpanded ? item.text : item.text.slice(0, 100)}
+                <View>
+                  {formatMessageText(isExpanded ? item.text : item.text.slice(0, 100)).map((line, index) => (
+                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {isBot && line.isHeading && (
+                        <Text style={{ marginRight: 5, color: '#4C8EF7' }}>➤</Text>
+                      )}
+                      <Text style={[
+                        isBot ? styles.botText : styles.userText,
+                        line.isHeading && styles.headingText,
+                        line.isSubheading && styles.subheadingText,
+                      ]}>
+                        {line.text}
+                      </Text>
+                    </View>
+                  ))}
                   {item.text.length > 100 && (
                     <Text
                       style={styles.viewMoreText}
@@ -333,7 +365,7 @@ const BotScreen2 = ({ navigation, route }) => {
                       {isExpanded ? ' View less' : '... View more'}
                     </Text>
                   )}
-                </Text>
+                </View>
               )}
 
               {/* Show image if the user sends a URL */}
@@ -605,6 +637,16 @@ const styles = StyleSheet.create({
   botText: {
     color: '#333',
     fontSize: 16,
+  },
+  headingText: {
+    fontWeight: 'bold',
+    fontSize: 17,
+    marginVertical: 4,
+  },
+  subheadingText: {
+  
+    fontSize: 16,
+    marginVertical: 2,
   },
   userText: {
     color: '#FFF',
