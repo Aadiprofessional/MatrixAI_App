@@ -1,23 +1,26 @@
 import React, { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { useCart } from './CartContext';
 
 const CartInitializer = () => {
     const { fetchCart } = useCart();
 
     useEffect(() => {
-        const initializeCart = async () => {
-            try {
-                const uid = await AsyncStorage.getItem('uid');
-                if (uid && !__DEV__) { // Only fetch in production mode
-                    fetchCart(uid);
-                }
-            } catch (error) {
-                console.error('Error initializing cart:', error);
-            }
-        };
+        // Initial fetch when component mounts
+        fetchCart();
 
-        initializeCart();
+        // Set up app state listener to refresh cart when app comes to foreground
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active') {
+                // App has come to the foreground
+                fetchCart();
+            }
+        });
+
+        // Clean up the subscription
+        return () => {
+            subscription.remove();
+        };
     }, [fetchCart]);
 
     return null;

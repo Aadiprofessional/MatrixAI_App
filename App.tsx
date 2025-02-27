@@ -101,7 +101,7 @@ const App = () => {
             <AuthContext.Consumer>
                 {({ uid }: AuthContextType) => (
                     <>
-                        <CartProvider uid={uid}>
+                        <CartProvider>
                             <WishlistProvider>
                                 <ModalProvider>
                                     <NavigationContainer>

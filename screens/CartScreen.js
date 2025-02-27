@@ -1,55 +1,106 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import { useCart } from '../components/CartContext.js';
-import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Toast from 'react-native-toast-message';
 
 const CartScreen = ({ navigation }) => {
-  const { cart, removeFromCart, uid, fetchForCartScreen } = useCart();
+  const { cart, loading, removeFromCart, uid, fetchCart } = useCart();
   const isFocused = useIsFocused();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);  
   const [total, setTotal] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Only fetch cart when screen comes into focus and not already loading
   useEffect(() => {
-    if (isFocused) {
-      fetchForCartScreen();
+    if (isFocused && uid && !loading) {
+      fetchCart(true); // Force refresh when navigating to cart screen
     }
-  }, [isFocused, fetchForCartScreen]);
+  }, [isFocused, uid]);
 
-const calculateSubtotal = () => {
-  if (!Array.isArray(cart)) {
-    return 0;
-  }
-  const total = cart.reduce((sum, item) => sum + item.product.price, 0);
-  return total;
-};
+  // Handle manual refresh
+  const handleRefresh = useCallback(() => {
+    if (uid) {
+      setIsRefreshing(true);
+      fetchCart(true).finally(() => {
+        setIsRefreshing(false);
+      });
+    }
+  }, [uid, fetchCart]);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.cartItem}
-      onPress={() => navigation.navigate('ProductDetail', {
-        imageproductid: item.product.imageproductid,
-        videoproductid: item.product.videoproductid,
-        musicproductid: item.product.musicproductid
-      })}
-    >
-      <Image source={{ uri: item.product.image_url ||item.product.thumbnail_url}} style={styles.itemImage} />
-      <View style={styles.itemDetails}>
-        <Text style={styles.itemTitle}>{item.product.name}</Text>
-        <Text style={styles.itemPrice}>${item.product.price.toFixed(2)}</Text>
-      </View>
-      {/* Remove Button */}
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => removeFromCart(item.id, uid)}
+  const calculateSubtotal = () => {
+    if (!Array.isArray(cart) || cart.length === 0) {
+      return 0;
+    }
+    return cart.reduce((sum, item) => {
+      const price = item.product?.price || 0;
+      return sum + price;
+    }, 0);
+  };
+
+  const handleRemoveFromCart = (cartId) => {
+    if (!cartId) {
+      console.error('Cannot remove item: Invalid cart ID');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Cannot remove item from cart',
+      });
+      return;
+    }
+    
+    console.log('Removing item with cart ID:', cartId);
+    removeFromCart(cartId);
+  };
+
+  const renderItem = ({ item }) => {
+    console.log('Rendering cart item:', item);
+    
+    // Check if item has valid data
+    if (!item || !item.product) {
+      console.error('Invalid cart item:', item);
+      return null;
+    }
+    
+    return (
+      <TouchableOpacity 
+        style={styles.cartItem}
+        onPress={() => {
+          // Determine which product ID to use based on product type
+          const params = {};
+          if (item.product_type === 'image') {
+            params.imageproductid = item.product_id;
+          } else if (item.product_type === 'video') {
+            params.videoproductid = item.product_id;
+          } else if (item.product_type === 'music') {
+            params.musicproductid = item.product_id;
+          }
+          
+          navigation.navigate('ProductDetail', params);
+        }}
       >
-        <Icon name="remove-circle" size={24} color="red" />
+        <Image 
+          source={{ uri: item.product?.image_url || item.product?.thumbnail_url }} 
+          style={styles.itemImage} 
+        />
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemTitle}>{item.product?.name || 'Product'}</Text>
+          <Text style={styles.itemPrice}>${(item.product?.price || 0).toFixed(2)}</Text>
+        </View>
+        {/* Remove Button */}
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => handleRemoveFromCart(item.cart_id)}
+        >
+          <Icon name="remove-circle" size={24} color="red" />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -65,28 +116,55 @@ const calculateSubtotal = () => {
         <Text style={styles.header}>My Cart</Text>
       </View>
 
-      <FlatList
-        data={cart}
-        keyExtractor={(item) => item.id?.toString() || `item-${Math.random().toString(36).substr(2, 9)}`} // Ensure unique keys
-        renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.emptyText}>Your cart is empty.</Text>}
-      />
-      <View style={styles.couponContainer}>
-        <TextInput
-          style={styles.couponInput}
-          placeholder="Enter coupon code"
-          value={coupon}
-          onChangeText={setCoupon}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007BFF" />
+          <Text style={styles.loadingText}>Loading your cart...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={cart}
+          keyExtractor={(item) => item.cart_id?.toString() || `item-${Math.random().toString(36).substr(2, 9)}`}
+          renderItem={renderItem}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Your cart is empty.</Text>
+              <TouchableOpacity 
+                style={styles.shopButton}
+                onPress={() => navigation.navigate('Home')}
+              >
+                <Text style={styles.shopButtonText}>Continue Shopping</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
-      </View>
-      <View style={styles.subtotalContainer}>
-        <Text style={styles.subtotalText}>Subtotal:</Text>
-        <Text style={styles.subtotalAmount}>${calculateSubtotal().toFixed(2)}</Text>
-      </View>
-      
-      <TouchableOpacity style={styles.checkoutButton}>
-        <Text style={styles.checkoutText}>Proceed to Payment</Text>
-      </TouchableOpacity>
+      )}
+
+      {cart.length > 0 && (
+        <>
+          <View style={styles.couponContainer}>
+            <TextInput
+              style={styles.couponInput}
+              placeholder="Enter coupon code"
+              value={coupon}
+              onChangeText={setCoupon}
+            />
+          </View>
+          <View style={styles.subtotalContainer}>
+            <Text style={styles.subtotalText}>Subtotal:</Text>
+            <Text style={styles.subtotalAmount}>${calculateSubtotal().toFixed(2)}</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.checkoutButton}
+            onPress={() => navigation.navigate('Checkout')}
+          >
+            <Text style={styles.checkoutText}>Proceed to Payment</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 };
@@ -95,7 +173,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-       // Add margin top as requested
   },
   container2: {
     flexDirection: 'row',
@@ -113,6 +190,38 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#777',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  shopButton: {
+    backgroundColor: '#007BFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  shopButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
   cartItem: {
     flexDirection: 'row',
     marginBottom: 20,
@@ -122,6 +231,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     marginRight: 10,
+    borderRadius: 5,
+    backgroundColor: '#f0f0f0',
   },
   itemDetails: {
     flex: 1,
@@ -136,12 +247,7 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     marginLeft: 10,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 20,
+    padding: 5,
   },
   couponContainer: {
     paddingHorizontal: 20,
@@ -164,6 +270,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
+  subtotalText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  subtotalAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6F00',
+  },
   checkoutButton: {
     backgroundColor: '#007BFF',
     padding: 15,
@@ -174,6 +289,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

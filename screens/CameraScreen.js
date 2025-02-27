@@ -91,7 +91,7 @@ const CameraScreen = ({ navigation }) => {
                 text: 'Open Settings', 
                 onPress: () => {
                   // Open app settings so user can enable permissions
-                  if (Platform.OS === 'android') {
+        if (Platform.OS === 'android') {
                     Linking.openSettings();
                   }
                 } 
@@ -107,10 +107,10 @@ const CameraScreen = ({ navigation }) => {
       } catch (err) {
         console.error('Error requesting storage permission:', err);
         setHasStoragePermission(false);
-      }
-    };
-    
-    checkStoragePermission();
+        }
+      };
+      
+      checkStoragePermission();
   }, []);
   
   // Temporary solution: use a timer to take photos periodically instead of frame processor
@@ -250,50 +250,50 @@ const CameraScreen = ({ navigation }) => {
         
         // For debugging
         console.log('Image converted to bytes array, length:', bytes.length);
-        
-        // Create a tensor from the image data
+      
+      // Create a tensor from the image data
         console.log('Creating tensor for YOLO model...');
-        const inputTensor = new ort.Tensor(
+      const inputTensor = new ort.Tensor(
           'uint8',
           bytes,
           [1, bytes.length] // This is a simplified shape - would need to be adjusted
-        );
-        
-        // Run inference
+      );
+      
+      // Run inference
         console.log('Running YOLO inference...');
-        const feeds = { images: inputTensor };
+      const feeds = { images: inputTensor };
         
         let detections = [];
         
         try {
-          const results = await yoloSession.run(feeds);
+      const results = await yoloSession.run(feeds);
           console.log('YOLO inference results:', results);
-          
+      
           // Process results - assuming YOLO output format
-          const output = results[Object.keys(results)[0]];
-          
-          // Process each detection
-          for (let i = 0; i < output.dims[1]; i++) {
-            const confidence = output.data[i * output.dims[2] + 4];
-            if (confidence > 0.5) { // Confidence threshold
+      const output = results[Object.keys(results)[0]];
+      
+      // Process each detection
+      for (let i = 0; i < output.dims[1]; i++) {
+        const confidence = output.data[i * output.dims[2] + 4];
+        if (confidence > 0.5) { // Confidence threshold
               const classId = Math.round(output.data[i * output.dims[2] + 5]);
-              const bbox = {
-                x: output.data[i * output.dims[2]],
-                y: output.data[i * output.dims[2] + 1],
-                width: output.data[i * output.dims[2] + 2],
-                height: output.data[i * output.dims[2] + 3]
-              };
+          const bbox = {
+            x: output.data[i * output.dims[2]],
+            y: output.data[i * output.dims[2] + 1],
+            width: output.data[i * output.dims[2] + 2],
+            height: output.data[i * output.dims[2] + 3]
+          };
               
               // Get class name from class ID
               const className = getClassName(classId);
-              
-              detections.push({
+          
+          detections.push({
                 label: className,
-                confidence: confidence,
-                bbox: bbox
-              });
-            }
-          }
+            confidence: confidence,
+            bbox: bbox
+          });
+        }
+      }
         } catch (modelError) {
           console.error('Error during YOLO model inference:', modelError);
           
@@ -329,7 +329,7 @@ const CameraScreen = ({ navigation }) => {
         
         // Log and update the UI with detected objects
         console.log('Detected objects:', detections);
-        setDetectedObjects(detections);
+      setDetectedObjects(detections);
         
         // Now, use DeepSeek API for advanced scene understanding
         // This provides much more detailed analysis than basic object detection
@@ -433,7 +433,7 @@ Provide a comprehensive but concise description that captures the full context o
       // Extract a concise summary for speech
       const summary = extractSummaryForSpeech(analysis);
       return summary;
-    } catch (err) {
+      } catch (err) {
       console.error('DeepSeek Vision API error:', err);
       
       // Fallback to a simpler analysis based on detected objects
@@ -564,12 +564,12 @@ Please answer based on what you can see in the image. If the answer isn't visibl
         TTS.speak(answer);
       } else if (detectedObjects.length > 0) {
         // Fallback to basic object information if no image context
-        const mainObject = detectedObjects[0].label;
+      const mainObject = detectedObjects[0].label;
         console.log('Providing information about:', mainObject);
         
-        const explanation = await getObjectExplanation(mainObject);
-        setAiResponse(explanation);
-        TTS.speak(explanation);
+      const explanation = await getObjectExplanation(mainObject);
+      setAiResponse(explanation);
+      TTS.speak(explanation);
       } else {
         const noContextResponse = "I don't have enough visual information to answer that question. Please try again when I can see something.";
         setAiResponse(noContextResponse);

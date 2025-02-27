@@ -327,26 +327,37 @@ try {
   style={styles.addToCartButton}
   onPress={() => {
     console.log('Product to add to cart:', product); // Log the product object
-    const productType = product.image_url ? 'image' : product.video_url ? 'video' : product.music_url ? 'music' : '';
-    const productId = product.id || product.imageproductid || product.videoproductid || product.musicproductid;
-addToCart(uid, productId, productType)
-  .then(responseData => {
-    if (responseData && responseData.message === 'Product already added to cart') {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: responseData.message,
+
+    // Determine product type based on available URLs
+    let productType = '';
+    if (product.image_url) productType = 'image';
+    else if (product.video_url) productType = 'video';
+    else if (product.music_url) productType = 'music';
+    
+    // Get the correct product ID
+    const productId = product.imageproductid || product.videoproductid || product.musicproductid;
+    
+    console.log('Adding to cart:', { productId, productType });
+    
+    // Call addToCart with the correct parameters
+    addToCart(productId, productType)
+      .then(responseData => {
+        if (responseData && responseData.message === 'Product already added to cart') {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: responseData.message,
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error adding product to cart:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to add product to cart',
+        });
       });
-    }
-  })
-  .catch(error => {
-    console.error('Error adding product to cart:', error);
-    Toast.show({
-      type: 'error',
-      text1: 'Error',
-      text2: 'Failed to add product to cart',
-    });
-  });
   }}
 >
   <Text style={styles.addToCartText}>Add to Cart</Text>
