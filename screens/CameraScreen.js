@@ -11,7 +11,7 @@ import LottieView from 'lottie-react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const CameraScreen = ({ navigation }) => {
-  const [hasPermission, setHasPermission] = useState(false);
+  const [hasPermission, setHasPermission] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const devices = useCameraDevices();
   const [device, setDevice] = useState(null);
@@ -20,6 +20,7 @@ const CameraScreen = ({ navigation }) => {
   const [detectedObjects, setDetectedObjects] = useState([]);
   const [listening, setListening] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
+  const [cameraError, setCameraError] = useState(null);
 
   // Load YOLO model
   useEffect(() => {
@@ -134,61 +135,86 @@ const CameraScreen = ({ navigation }) => {
     return null;
   };
 
+  // Request camera permissions
   useEffect(() => {
-    const checkCamera = async () => {
+    const requestCameraPermission = async () => {
       try {
-        // Request permissions
+        let cameraPermission;
         if (Platform.OS === 'android') {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.CAMERA,
-            {
-              title: 'Camera Permission',
-              message: 'This app needs access to your camera',
-              buttonNeutral: 'Ask Me Later',
-              buttonNegative: 'Cancel',
-              buttonPositive: 'OK',
-            }
-          );
-          setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
+          cameraPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
+          if (cameraPermission !== PermissionsAndroid.RESULTS.GRANTED) {
+            cameraPermission = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.CAMERA,
+              {
+                title: 'Camera Permission',
+                message: 'This app needs access to your camera',
+                buttonNeutral: 'Ask Me Later',
+                buttonNegative: 'Cancel',
+                buttonPositive: 'OK',
+              }
+            );
+          }
+          setHasPermission(cameraPermission === PermissionsAndroid.RESULTS.GRANTED);
         } else {
-          const status = await Camera.requestCameraPermission();
-          setHasPermission(status === 'authorized');
+          cameraPermission = await Camera.requestCameraPermission();
+          setHasPermission(cameraPermission === 'authorized');
         }
 
-        // Wait for devices to be initialized
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log('Checking camera devices...');
-        
-        if (!devices) {
-          console.log('Devices not yet initialized');
+        // Log the permission status
+        console.log('Camera permission status:', cameraPermission);
+      } catch (err) {
+        console.error('Error requesting camera permission:', err);
+        setCameraError('Failed to request camera permission');
+        setHasPermission(false);
+      }
+    };
+
+    requestCameraPermission();
+  }, []);
+
+  // Handle device initialization
+  useEffect(() => {
+    const initializeCamera = async () => {
+      try {
+        if (!hasPermission) {
+          console.log('Camera permission not granted');
           return;
         }
 
-        console.log('Back camera:', devices.back ? 'Available' : 'Not available');
-        console.log('Front camera:', devices.front ? 'Available' : 'Not available');
-        
-        // Set the camera device
+        if (!devices?.back && !devices?.front) {
+          console.log('No camera devices detected yet, waiting...');
+          return;
+        }
+
+        // Log available devices with more details
+        console.log('Available devices:', devices);
+        devices.forEach((device, index) => {
+          console.log(`Device ${index}:`, device);
+        });
+
+        // Prefer back camera, fall back to front
         if (devices.back) {
-          console.log('Setting back camera as active device');
+          console.log('Using back camera');
           setDevice(devices.back);
           setIsBackCamera(true);
         } else if (devices.front) {
-          console.log('Setting front camera as active device');
+          console.log('Using front camera');
           setDevice(devices.front);
           setIsBackCamera(false);
         } else {
-          console.warn('No usable camera devices found');
+          console.log('No usable camera device found');
+          setCameraError('No camera device found');
         }
       } catch (err) {
-        console.warn('Camera setup error:', err);
-        setHasPermission(false);
+        console.error('Camera initialization error:', err);
+        setCameraError('Failed to initialize camera');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
-    checkCamera();
-  }, [devices]);
+    initializeCamera();
+  }, [hasPermission, devices]);
 
   // Function to process frame and detect objects
   const onFrameProcessed = useCallback(async (frame) => {
@@ -275,45 +301,61 @@ const CameraScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.cameraContainer}>
-        <TouchableOpacity style={styles.flipButton} onPress={() => {
-          const newDevice = isBackCamera ? devices.front : devices.back;
-          if (newDevice) {
-            console.log('Switching camera to:', isBackCamera ? 'front' : 'back');
-            setDevice(newDevice);
-            setIsBackCamera(!isBackCamera);
-          }
-        }}>
-          <Icon name="flip-camera-android" size={24} color="black" />
-        </TouchableOpacity>
-        {hasPermission ? (
-          device ? (
-            <Camera 
+        {hasPermission === null ? (
+          <View style={styles.permissionOverlay}>
+            <Text style={styles.permissionText}>Requesting camera permission...</Text>
+          </View>
+        ) : !hasPermission ? (
+          <View style={styles.permissionOverlay}>
+            <Text style={styles.permissionText}>Camera permission denied</Text>
+          </View>
+        ) : device ? (
+          <>
+            <Camera
               style={StyleSheet.absoluteFill}
               device={device}
               isActive={true}
+              enableZoomGesture={true}
               frameProcessor={{
-                frameProcessor: onFrameProcessed,
+                frameProcessor: frame => {
+                  'worklet';
+                  onFrameProcessed(frame);
+                },
                 fps: 5,
               }}
             />
-          ) : (
-            <View style={styles.permissionOverlay}>
-              <Text style={styles.permissionText}>
-                Initializing camera...
-              </Text>
-            </View>
-          )
+            <TouchableOpacity 
+              style={[styles.flipButton, { backgroundColor: 'rgba(255,255,255,0.7)' }]} 
+              onPress={() => {
+                const newDevice = isBackCamera ? devices.front : devices.back;
+                if (newDevice) {
+                  setDevice(newDevice);
+                  setIsBackCamera(!isBackCamera);
+                }
+              }}
+            >
+              <Icon name="flip-camera-android" size={24} color="black" />
+            </TouchableOpacity>
+          </>
         ) : (
           <View style={styles.permissionOverlay}>
             <Text style={styles.permissionText}>
-              Camera permission required
+              {isLoading ? 'Initializing camera...' : cameraError || 'No camera available'}
             </Text>
           </View>
         )}
 
         {/* Display detected objects */}
         {detectedObjects.map((obj, index) => (
-          <View key={index} style={styles.detectionBox}>
+          <View key={index} style={[
+            styles.detectionBox,
+            {
+              left: obj.bbox.x * 100 + '%',
+              top: obj.bbox.y * 100 + '%',
+              width: obj.bbox.width * 100 + '%',
+              height: obj.bbox.height * 100 + '%',
+            }
+          ]}>
             <Text style={styles.detectionText}>
               {obj.label} ({Math.round(obj.confidence * 100)}%)
             </Text>
@@ -349,13 +391,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 20,
   },
   permissionText: {
     color: 'white',
     fontSize: 16,
     textAlign: 'center',
     padding: 20,
+    fontWeight: '600',
   },
   backButton: {
     position: 'absolute',
@@ -389,19 +433,22 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   cameraContainer: {
-    borderWidth: 2,
-    borderColor: 'white',
-    borderRadius: 15,
-    overflow: 'hidden',
+    flex: 1,
+    marginHorizontal: 10,
     marginVertical: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#000',
     position: 'relative',
-    height: 500,
   },
   flipButton: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 20,
+    right: 20,
     zIndex: 10,
+    padding: 10,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   iconRow: {
     flexDirection: 'row',
@@ -429,15 +476,19 @@ const styles = StyleSheet.create({
   },
   detectionBox: {
     position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#00ff00',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 4,
-    margin: 4,
   },
   detectionText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
 
