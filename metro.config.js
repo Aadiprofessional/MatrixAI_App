@@ -13,7 +13,7 @@ const config = {
     alias: {
       components: path.resolve(__dirname, 'components'),
     },
-    sourceExts: ['json', 'js', 'jsx', 'ts', 'tsx'],
+    sourceExts: ['json', 'js', 'jsx', 'ts', 'tsx', 'cjs', 'mjs', 'worklet'],
   },
 };
 
