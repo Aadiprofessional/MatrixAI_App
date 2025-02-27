@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { PermissionsAndroid } from 'react-native';
@@ -26,13 +26,29 @@ const CameraScreen = ({ navigation }) => {
     const loadModel = async () => {
       try {
         console.log('Loading YOLO model...');
-        const modelPath = require.resolve('../assets/yolov8n.onnx');
-        const session = await ort.InferenceSession.create(modelPath, {
-          executionProviders: ['cpu'],
-          graphOptimizationLevel: 'all'
-        });
+        
+        // Get the correct path to the model file
+        let modelPath;
+        if (Platform.OS === 'android') {
+          // For Android, copy from assets to app storage first
+          const destPath = `${RNFS.DocumentDirectoryPath}/yolov8n.onnx`;
+          await RNFS.copyFileAssets('yolov8n.onnx', destPath);
+          modelPath = destPath;
+        } else {
+          modelPath = `${RNFS.MainBundlePath}/yolov8n.onnx`;
+        }
+        
+        console.log('Attempting to load model from:', modelPath);
+        
+        // Verify file exists
+        const exists = await RNFS.exists(modelPath);
+        if (!exists) {
+          console.error('YOLO model file not found at:', modelPath);
+          return;
+        }
+
+        const session = await ort.InferenceSession.create(modelPath);
         console.log('Model loaded successfully');
-        console.log('Model output shape:', session.outputNames);
         setYoloSession(session);
       } catch (err) {
         console.error('Error loading YOLO model:', err);
@@ -135,20 +151,32 @@ const CameraScreen = ({ navigation }) => {
           );
           setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
         } else {
-          let permission = await Camera.getCameraPermissionStatus();
-          if (permission !== 'authorized') {
-            permission = await Camera.requestCameraPermission();
-          }
-          setHasPermission(permission === 'authorized');
+          const status = await Camera.requestCameraPermission();
+          setHasPermission(status === 'authorized');
         }
+
+        // Wait for devices to be initialized
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Initialize camera device
-        console.log('Available camera devices:', devices);
-        const firstDevice = getFirstDevice();
-        if (firstDevice) {
-          console.log('Initial camera device:', firstDevice.id);
-          setDevice(firstDevice);
-          setIsBackCamera(devices.back?.id === firstDevice.id);
+        console.log('Checking camera devices...');
+        
+        if (!devices) {
+          console.log('Devices not yet initialized');
+          return;
+        }
+
+        console.log('Back camera:', devices.back ? 'Available' : 'Not available');
+        console.log('Front camera:', devices.front ? 'Available' : 'Not available');
+        
+        // Set the camera device
+        if (devices.back) {
+          console.log('Setting back camera as active device');
+          setDevice(devices.back);
+          setIsBackCamera(true);
+        } else if (devices.front) {
+          console.log('Setting front camera as active device');
+          setDevice(devices.front);
+          setIsBackCamera(false);
         } else {
           console.warn('No usable camera devices found');
         }
@@ -161,6 +189,64 @@ const CameraScreen = ({ navigation }) => {
 
     checkCamera();
   }, [devices]);
+
+  // Function to process frame and detect objects
+  const onFrameProcessed = useCallback(async (frame) => {
+    if (!yoloSession || !frame?.data) return;
+
+    try {
+      // Log frame data for debugging
+      console.log('Processing frame:', {
+        width: frame.width,
+        height: frame.height,
+        bytesPerRow: frame.bytesPerRow,
+        dataLength: frame.data.length
+      });
+
+      // Convert frame to tensor format expected by YOLO
+      const inputTensor = new ort.Tensor(
+        'float32',
+        new Float32Array(frame.data),
+        [1, 3, frame.height, frame.width]
+      );
+      
+      // Run inference
+      const feeds = { images: inputTensor };
+      const results = await yoloSession.run(feeds);
+      
+      // Process results - assuming YOLO v8 output format
+      const output = results[Object.keys(results)[0]];
+      const detections = [];
+      
+      // Process each detection
+      for (let i = 0; i < output.dims[1]; i++) {
+        const confidence = output.data[i * output.dims[2] + 4];
+        if (confidence > 0.5) { // Confidence threshold
+          const classId = output.data[i * output.dims[2] + 5];
+          const bbox = {
+            x: output.data[i * output.dims[2]],
+            y: output.data[i * output.dims[2] + 1],
+            width: output.data[i * output.dims[2] + 2],
+            height: output.data[i * output.dims[2] + 3]
+          };
+          
+          detections.push({
+            label: `Object ${Math.round(classId)}`,
+            confidence: confidence,
+            bbox: bbox
+          });
+        }
+      }
+
+      if (detections.length > 0) {
+        console.log('Detected objects:', detections);
+      }
+
+      setDetectedObjects(detections);
+    } catch (err) {
+      console.error('Error processing frame:', err);
+    }
+  }, [yoloSession]);
 
   return (
     <View style={styles.container}>
@@ -192,6 +278,7 @@ const CameraScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.flipButton} onPress={() => {
           const newDevice = isBackCamera ? devices.front : devices.back;
           if (newDevice) {
+            console.log('Switching camera to:', isBackCamera ? 'front' : 'back');
             setDevice(newDevice);
             setIsBackCamera(!isBackCamera);
           }
@@ -204,11 +291,15 @@ const CameraScreen = ({ navigation }) => {
               style={StyleSheet.absoluteFill}
               device={device}
               isActive={true}
+              frameProcessor={{
+                frameProcessor: onFrameProcessed,
+                fps: 5,
+              }}
             />
           ) : (
             <View style={styles.permissionOverlay}>
               <Text style={styles.permissionText}>
-                No camera device available
+                Initializing camera...
               </Text>
             </View>
           )
@@ -219,6 +310,15 @@ const CameraScreen = ({ navigation }) => {
             </Text>
           </View>
         )}
+
+        {/* Display detected objects */}
+        {detectedObjects.map((obj, index) => (
+          <View key={index} style={styles.detectionBox}>
+            <Text style={styles.detectionText}>
+              {obj.label} ({Math.round(obj.confidence * 100)}%)
+            </Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.iconRow}>
@@ -326,6 +426,18 @@ const styles = StyleSheet.create({
   },
   activeIcon: {
     tintColor: '#00FF00',
+  },
+  detectionBox: {
+    position: 'absolute',
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
+    margin: 4,
+  },
+  detectionText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

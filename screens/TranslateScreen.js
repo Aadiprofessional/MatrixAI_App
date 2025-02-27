@@ -1448,18 +1448,20 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                                         {para}
                                     </Text>
                                 )}
-                                {isEditingEnabled && (
-                                    <TouchableOpacity 
-                                        onPress={() => toggleEdit(index)}
-                                        style={styles.editIcon}
-                                    >
-                                        <Image
-                                            source={require('../assets/pencil.png')}
-                                            style={styles.pencilIcon}
-                                        />
-                                    </TouchableOpacity>
-                                )}
+                              
                             </View>
+                            {/* Move the pencil icon above the paragraph */}
+                            {isEditingEnabled && (
+                                <TouchableOpacity 
+                                    onPress={() => toggleEdit(index)}
+                                    style={styles.editIconAbove}
+                                >
+                                    <Image
+                                        source={require('../assets/pencil.png')}
+                                        style={styles.pencilIcon}
+                                    />
+                                </TouchableOpacity>
+                            )}
                             {isTranscriptionVisible && translations[index] && (
                                 <Text style={styles.translatedText}>{translations[index]}</Text>
                             )}
@@ -2449,6 +2451,12 @@ flexDirection:'row',
     },
     editIcon: {
         padding: 4,
+    },
+    editIconAbove: {
+        position: 'absolute',
+        right: 10, // Adjust as necessary for spacing
+        top: 5, // Position it above the paragraph
+        zIndex: 1, // Ensure it appears above other elements
     },
 });
 

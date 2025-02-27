@@ -80,7 +80,7 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
         messages: [
           {
             role: "user",
-            content: `Generate a hierarchical XML structure from this meeting transcript: "${transcription}".
+            content: `Generate a hierarchical XML structure from this meeting transcript in the same language as the input transcription: "${transcription}".
             Create a tree structure with main topics and subtopics.
             Use this format:
             <meeting>
@@ -99,7 +99,8 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
               <topic name="Main Topic 2">
                 <description>Overall description of topic</description>
               </topic>
-            </meeting>`
+            </meeting>
+            Please keep the output in the same language as the input transcription .`
           }
         ],
         temperature: 0.7,
