@@ -24,6 +24,9 @@ const CameraScreen = ({ navigation }) => {
   const cameraRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasStoragePermission, setHasStoragePermission] = useState(null);
+  const [sceneDescription, setSceneDescription] = useState('');
+  const [lastPhotoBase64, setLastPhotoBase64] = useState('');
+  const [captureFrequency, setCaptureFrequency] = useState(5000); // 5 seconds by default
   
   // Check storage permission
   useEffect(() => {
@@ -155,7 +158,7 @@ const CameraScreen = ({ navigation }) => {
             // You could implement a camera reset mechanism here if needed
           }
         }
-      }, 5000); // Take a photo every 5 seconds instead of 2 seconds
+      }, captureFrequency);
     }
     
     return () => {
@@ -164,7 +167,7 @@ const CameraScreen = ({ navigation }) => {
         clearInterval(interval);
       }
     };
-  }, [device, hasPermission, processPhotoWithYolo, isProcessing, hasStoragePermission]);
+  }, [device, hasPermission, processPhotoWithYolo, isProcessing, hasStoragePermission, captureFrequency]);
   
   // Function to process a photo with YOLO
   const processPhotoWithYolo = useCallback(async (photoPath) => {
@@ -221,6 +224,9 @@ const CameraScreen = ({ navigation }) => {
           setIsProcessing(false);
           return;
         }
+        
+        // Save the base64 image for potential use with vision APIs
+        setLastPhotoBase64(imageData);
       } catch (readError) {
         console.error('Error reading photo file:', readError);
         Alert.alert('Error', 'Failed to read photo. Please try again.');
@@ -231,10 +237,8 @@ const CameraScreen = ({ navigation }) => {
       // For debugging, save a simplified version of the image data
       console.log('Image data sample:', imageData.substring(0, 50) + '...');
       
-      // Attempt to run YOLO inference
+      // First, use YOLO for fast object detection
       try {
-        // Uncomment and use the actual YOLO processing code
-        // Convert base64 to Uint8Array for processing
         console.log('Preparing image data for YOLO processing...');
         
         // First, we need to decode the base64 image
@@ -248,12 +252,6 @@ const CameraScreen = ({ navigation }) => {
         console.log('Image converted to bytes array, length:', bytes.length);
         
         // Create a tensor from the image data
-        // Note: This is a simplified approach - in a production app, you would:
-        // 1. Resize the image to the model's expected input size (e.g., 640x640)
-        // 2. Normalize pixel values (typically to 0-1 range)
-        // 3. Convert to the right format (RGB, BGR, etc.)
-        
-        // For now, we'll use a simplified approach to get something working
         console.log('Creating tensor for YOLO model...');
         const inputTensor = new ort.Tensor(
           'uint8',
@@ -272,11 +270,9 @@ const CameraScreen = ({ navigation }) => {
           console.log('YOLO inference results:', results);
           
           // Process results - assuming YOLO output format
-          // This would need to be adjusted based on your specific YOLO model
           const output = results[Object.keys(results)[0]];
           
           // Process each detection
-          // This is a simplified example - would need to be adjusted for your model
           for (let i = 0; i < output.dims[1]; i++) {
             const confidence = output.data[i * output.dims[2] + 4];
             if (confidence > 0.5) { // Confidence threshold
@@ -302,7 +298,6 @@ const CameraScreen = ({ navigation }) => {
           console.error('Error during YOLO model inference:', modelError);
           
           // If the real model fails, fall back to mock detections for now
-          // This helps with development until the model is working correctly
           console.log('Falling back to mock detections due to model error');
           
           // Use more varied mock detections based on common objects
@@ -336,14 +331,22 @@ const CameraScreen = ({ navigation }) => {
         console.log('Detected objects:', detections);
         setDetectedObjects(detections);
         
-        // Send the first detected object to DeepSeek for explanation
-        if (detections.length > 0) {
+        // Now, use DeepSeek API for advanced scene understanding
+        // This provides much more detailed analysis than basic object detection
+        const sceneAnalysis = await getSceneAnalysis(imageData, detections);
+        setSceneDescription(sceneAnalysis);
+        
+        // Speak a summary of what was detected
+        if (sceneAnalysis) {
+          console.log('Scene analysis:', sceneAnalysis);
+          setAiResponse(sceneAnalysis);
+          TTS.speak(sceneAnalysis);
+        } else if (detections.length > 0) {
+          // Fallback to basic object detection if scene analysis fails
           const mainObject = detections[0].label;
           console.log('Getting explanation for:', mainObject);
           const explanation = await getObjectExplanation(mainObject);
           setAiResponse(explanation);
-          
-          // Speak the explanation
           TTS.speak(`I see a ${mainObject}. ${explanation}`);
         } else {
           console.log('No objects detected in this frame');
@@ -368,7 +371,79 @@ const CameraScreen = ({ navigation }) => {
       
       setIsProcessing(false);
     }
-  }, [yoloSession, getObjectExplanation]);
+  }, [yoloSession, getObjectExplanation, getSceneAnalysis]);
+
+  // Advanced scene analysis using DeepSeek API (which can access GPT-4 Vision capabilities)
+  const getSceneAnalysis = useCallback(async (imageBase64, detectedObjects) => {
+    try {
+      console.log('Requesting scene analysis from DeepSeek API...');
+      
+      // Create a list of detected objects to help guide the analysis
+      const objectsList = detectedObjects.map(obj => 
+        `${obj.label} (confidence: ${Math.round(obj.confidence * 100)}%)`
+      ).join(', ');
+      
+      // Create a prompt that asks for detailed scene understanding
+      const prompt = `I'm sending you an image from my camera. 
+      
+YOLO object detection has identified these objects: ${objectsList}.
+
+Please analyze this image and tell me:
+1. What's happening in this scene in detail?
+2. If there are people, what are they doing?
+3. If someone is preparing food or drinks, what specifically are they making?
+4. What are the relationships between objects in the scene?
+5. Is there any text visible in the image? If so, what does it say?
+
+Provide a comprehensive but concise description that captures the full context of what's happening.`;
+
+      // For DeepSeek API with vision capabilities
+      const response = await axios.post(
+        'https://api.deepseek.com/v1/chat/completions',
+        {
+          model: 'deepseek-vision',  // Use vision-capable model
+          messages: [
+            { 
+              role: 'user', 
+              content: [
+                { type: 'text', text: prompt },
+                { 
+                  type: 'image_url', 
+                  image_url: { 
+                    url: `data:image/jpeg;base64,${imageBase64}` 
+                  } 
+                }
+              ]
+            }
+          ],
+          max_tokens: 500
+        },
+        {
+          headers: { 
+            'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('DeepSeek Vision API response:', response.data);
+      const analysis = response.data.choices[0].message.content;
+      console.log('Scene analysis:', analysis);
+      
+      // Extract a concise summary for speech
+      const summary = extractSummaryForSpeech(analysis);
+      return summary;
+    } catch (err) {
+      console.error('DeepSeek Vision API error:', err);
+      
+      // Fallback to a simpler analysis based on detected objects
+      if (detectedObjects.length > 0) {
+        const objectNames = detectedObjects.map(obj => obj.label).join(', ');
+        return `I can see ${objectNames} in the scene.`;
+      }
+      return "I'm having trouble analyzing this scene right now.";
+    }
+  }, []);
 
   // Helper function to get class name from class ID
   const getClassName = (classId) => {
@@ -387,6 +462,25 @@ const CameraScreen = ({ navigation }) => {
     ];
     
     return classId < classNames.length ? classNames[classId] : `Object ${classId}`;
+  };
+
+  // Extract a concise summary suitable for speech from a longer analysis
+  const extractSummaryForSpeech = (analysis) => {
+    // If the analysis is short enough, just return it
+    if (analysis.length < 150) return analysis;
+    
+    // Try to extract the first paragraph or sentence that summarizes the scene
+    const sentences = analysis.split(/[.!?]\s+/);
+    if (sentences.length > 0) {
+      // Return first 1-2 sentences depending on length
+      if (sentences[0].length < 100) {
+        return sentences.slice(0, 2).join('. ') + '.';
+      }
+      return sentences[0] + '.';
+    }
+    
+    // Fallback to truncating
+    return analysis.substring(0, 150) + '...';
   };
 
   // Get object explanation from DeepSeek
@@ -417,27 +511,75 @@ const CameraScreen = ({ navigation }) => {
     }
   }, []);
 
-  // Handle user question about detected object
+  // Handle user question about detected object or scene
   const handleUserQuestion = async (question) => {
-    if (detectedObjects.length > 0) {
-      const mainObject = detectedObjects[0].label;
-      console.log('User asked about:', question);
-      console.log('Providing information about:', mainObject);
+    try {
+      console.log('User asked:', question);
       
-      try {
+      // If we have a recent photo, use it to answer the question with context
+      if (lastPhotoBase64) {
+        console.log('Answering question with visual context...');
+        
+        // Create a prompt that includes the question and context
+        const contextPrompt = `I'm looking at this image through my camera. 
+        
+My question is: "${question}"
+
+Please answer based on what you can see in the image. If the answer isn't visible in the image, let me know.`;
+
+        // For DeepSeek API with vision capabilities
+        const response = await axios.post(
+          'https://api.deepseek.com/v1/chat/completions',
+          {
+            model: 'deepseek-vision',  // Use vision-capable model
+            messages: [
+              { 
+                role: 'user', 
+                content: [
+                  { type: 'text', text: contextPrompt },
+                  { 
+                    type: 'image_url', 
+                    image_url: { 
+                      url: `data:image/jpeg;base64,${lastPhotoBase64}` 
+                    } 
+                  }
+                ]
+              }
+            ],
+            max_tokens: 300
+          },
+          {
+            headers: { 
+              'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Question answer response:', response.data);
+        const answer = response.data.choices[0].message.content;
+        console.log('Answer to question:', answer);
+        
+        setAiResponse(answer);
+        TTS.speak(answer);
+      } else if (detectedObjects.length > 0) {
+        // Fallback to basic object information if no image context
+        const mainObject = detectedObjects[0].label;
+        console.log('Providing information about:', mainObject);
+        
         const explanation = await getObjectExplanation(mainObject);
         setAiResponse(explanation);
         TTS.speak(explanation);
-      } catch (error) {
-        console.error('Error getting explanation:', error);
-        const fallbackResponse = `I see a ${mainObject}, but I couldn't get more information right now.`;
-        setAiResponse(fallbackResponse);
-        TTS.speak(fallbackResponse);
+      } else {
+        const noContextResponse = "I don't have enough visual information to answer that question. Please try again when I can see something.";
+        setAiResponse(noContextResponse);
+        TTS.speak(noContextResponse);
       }
-    } else {
-      const noObjectsResponse = "I don't see any objects to describe right now. Please try again.";
-      setAiResponse(noObjectsResponse);
-      TTS.speak(noObjectsResponse);
+    } catch (error) {
+      console.error('Error handling user question:', error);
+      const errorResponse = "I'm sorry, I couldn't process your question right now.";
+      setAiResponse(errorResponse);
+      TTS.speak(errorResponse);
     }
   };
 
@@ -772,8 +914,8 @@ const CameraScreen = ({ navigation }) => {
           <TouchableOpacity>
             <Icon name="upload" size={24} color="black" />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Icon name="filter-list" size={24} color="black" />
+          <TouchableOpacity onPress={() => setCaptureFrequency(prev => prev === 5000 ? 3000 : 5000)}>
+            <Icon name="speed" size={24} color="black" />
           </TouchableOpacity>
         </View>
       </View>
@@ -860,6 +1002,21 @@ const CameraScreen = ({ navigation }) => {
             >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
+
+            {/* Add a voice input button */}
+            <TouchableOpacity 
+              style={[styles.voiceButton, listening ? styles.voiceButtonActive : {}]} 
+              onPress={toggleListening}
+            >
+              <Icon name="mic" size={24} color={listening ? "#ff0000" : "white"} />
+            </TouchableOpacity>
+
+            {/* Display AI response */}
+            {aiResponse ? (
+              <View style={styles.responseOverlay}>
+                <Text style={styles.responseText}>{aiResponse}</Text>
+              </View>
+            ) : null}
           </>
         ) : (
           <View style={styles.permissionOverlay}>
@@ -872,7 +1029,7 @@ const CameraScreen = ({ navigation }) => {
         {isProcessing && (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.processingText}>Processing with YOLO...</Text>
+            <Text style={styles.processingText}>Analyzing scene...</Text>
           </View>
         )}
 
@@ -895,16 +1052,33 @@ const CameraScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.iconRow}>
-        <TouchableOpacity style={styles.iconCircle}>
-          <Icon name="videocam" size={28} color="black" />
+        <TouchableOpacity style={styles.iconCircle} onPress={toggleListening}>
+          <Icon name="mic" size={28} color={listening ? "red" : "black"} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconCircle}>
-          <Icon name="mic" size={28} color="black" />
+        <TouchableOpacity 
+          style={styles.iconCircle}
+          onPress={async () => {
+            if (cameraRef.current) {
+              try {
+                const photo = await cameraRef.current.takePhoto({
+                  qualityPrioritization: 'speed',
+                  flash: 'off',
+                });
+                console.log('Manual photo taken:', photo.path);
+                processPhotoWithYolo(photo.path);
+              } catch (err) {
+                console.error('Error taking manual photo:', err);
+                Alert.alert('Camera Error', 'Failed to take photo. Please try again.');
+              }
+            }
+          }}
+        >
+          <Icon name="camera" size={28} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconCircle}>
-          <Icon name="more-horiz" size={28} color="black" />
+        <TouchableOpacity style={styles.iconCircle} onPress={() => setCaptureFrequency(prev => prev === 5000 ? 3000 : 5000)}>
+          <Icon name="speed" size={28} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconCircle}>
+        <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.goBack()}>
           <Icon name="close" size={28} color="black" />
         </TouchableOpacity>
       </View>
@@ -1085,6 +1259,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  voiceButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  voiceButtonActive: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  responseOverlay: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 15,
+    borderRadius: 10,
+    maxHeight: 150,
+  },
+  responseText: {
+    color: 'white',
+    fontSize: 14,
   },
 });
 
