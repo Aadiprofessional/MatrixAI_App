@@ -423,6 +423,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     width: '100%',
+    height:'30'
   },
   searchInput: {
     fontSize: 16,

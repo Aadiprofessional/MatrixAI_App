@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, forwardRef } from 'react';const formatTime = (seconds) => {
+import React, { useEffect, useState, useRef, forwardRef } from 'react';
+const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -159,77 +160,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     };
     
   
-    const fetchAudioMetadata = async (uid, audioid) => {
-        try {
-            const response = await fetch('https://matrix-server.vercel.app/getAudioFile', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ uid, audioid }),
-            });
-            const data = await response.json();
-    
-            if (response.ok) {
-                // Set state with fetched data
-                setTranscription(data.transcription || '');
-                setFileName(data.audio_name || 'Untitled');
-                setFileContent(data.file_path || '');
-                setDuration(data.duration)
-    
-                // Handle transcription
-                let paragraphs = [];
-                let wordTimings = [];
-                if (data.transcription) {
-                    const { paragraphs: para, words } = splitTranscription(data.transcription);
-                    paragraphs = para;
-                    setParagraphs(para);
-                    if (data.duration) {
-                        wordTimings = calculateParagraphTimings(words, data.duration);
-                        setWordTimings(wordTimings);
-                    }
-                }
-    
-                // Handle audio chunks with enhanced playback options
-                let audioUrl = data.audio_url;
-                if (data.chunk_urls && Array.isArray(data.chunk_urls)) {
-                    const audioSource = await downloadAndCombineAudio(data.chunk_urls);
-                    if (audioSource && audioSource.type === 'blob') {
-                        audioUrl = audioSource.url;
-                    } else if (audioSource && audioSource.type === 'chunked') {
-                        audioUrl = audioSource.urls[0]; // Start with first chunk URL
-                    } else if (audioSource && audioSource.type === 'direct') {
-                        audioUrl = audioSource.url;
-                    }
-                }
-                setAudioUrl(audioUrl);
-    
-                // Set key points and XML data
-                setKeypoints(data.key_points || '');
-                setXMLData(data.xml_data || '');
-    
-                // Save data to local storage
-                const audioData = {
-                    transcription: data.transcription || '',
-                    fileName: data.audio_name || 'Untitled',
-                    fileContent: data.file_path || '',
-                    paragraphs,
-                    wordTimings,
-                    audioUrl,
-                    keyPoints: data.key_points || '',
-                    XMLData: data.xml_data || '',
-                };
-                await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(audioData));
-            } else {
-                console.error('Error fetching audio metadata:', data.error);
-            }
-        } catch (error) {
-            console.error('Error fetching audio metadata:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-   
     const downloadAndCombineAudio = async (chunkUrls) => {
         if (!chunkUrls || !Array.isArray(chunkUrls) || chunkUrls.length === 0) {
             console.error('Invalid chunk URLs');
@@ -241,15 +171,122 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 setIsAudioLoading(true);
             }
             
-            // On Android, use direct streaming instead of blob handling
+            // Create a unique filename for this audio
+            const audioId = audioid || Date.now().toString();
+            const localFilePath = `${RNFS.DocumentDirectoryPath}/audio_${audioId}.mp3`;
+            
+            // Check if we already have this file cached
+            const fileExists = await RNFS.exists(localFilePath);
+            if (fileExists) {
+                console.log('Using cached audio file:', localFilePath);
+                return {
+                    type: 'file',
+                    url: `file://${localFilePath}`
+                };
+            }
+            
+            console.log('Downloading audio chunks to:', localFilePath);
+            
+            // Download all chunks first to temporary files
+            const tempFiles = [];
+            for (let i = 0; i < chunkUrls.length; i++) {
+                const chunkUrl = chunkUrls[i];
+                const tempPath = `${RNFS.CachesDirectoryPath}/temp_chunk_${audioId}_${i}.mp3`;
+                
+                console.log(`Downloading chunk ${i+1}/${chunkUrls.length}: ${chunkUrl}`);
+                
+                try {
+                    const downloadResult = await RNFS.downloadFile({
+                        fromUrl: chunkUrl,
+                        toFile: tempPath,
+                        background: true,
+                        discretionary: true,
+                        cacheable: true,
+                        progressInterval: 1000,
+                        progress: (res) => {
+                            const progress = res.bytesWritten / res.contentLength;
+                            console.log(`Download progress for chunk ${i+1}: ${Math.round(progress * 100)}%`);
+                        }
+                    }).promise;
+                    
+                    if (downloadResult.statusCode === 200) {
+                        tempFiles.push(tempPath);
+                        console.log(`Successfully downloaded chunk ${i+1}`);
+                    } else {
+                        console.error(`Failed to download chunk ${i+1}, status: ${downloadResult.statusCode}`);
+                    }
+                } catch (downloadError) {
+                    console.error(`Error downloading chunk ${i+1}:`, downloadError);
+                    // Continue with other chunks even if one fails
+                }
+            }
+            
+            if (tempFiles.length === 0) {
+                console.error('Failed to download any audio chunks');
+                return {
+                    type: 'direct',
+                    url: chunkUrls[0] // Fallback to direct URL of first chunk
+                };
+            }
+            
+            // Combine all downloaded chunks
+            console.log('Combining audio chunks...');
+            try {
+                // Create the output file with the first chunk
+                await RNFS.copyFile(tempFiles[0], localFilePath);
+                
+                // Append the rest of the chunks
+                for (let i = 1; i < tempFiles.length; i++) {
+                    const chunkData = await RNFS.readFile(tempFiles[i], 'base64');
+                    await RNFS.appendFile(localFilePath, chunkData, 'base64');
+                    console.log(`Appended chunk ${i+1}`);
+                }
+                
+                // Clean up temp files
+                for (const tempFile of tempFiles) {
+                    await RNFS.unlink(tempFile).catch(e => console.log('Cleanup error:', e));
+                }
+                
+                console.log('Successfully combined all chunks to:', localFilePath);
+                
+                // Save the file path to AsyncStorage for future use
+                try {
+                    const audioData = await AsyncStorage.getItem(`audioData-${audioid}`);
+                    if (audioData) {
+                        const parsedData = JSON.parse(audioData);
+                        parsedData.localAudioPath = `file://${localFilePath}`;
+                        await AsyncStorage.setItem(`audioData-${audioid}`, JSON.stringify(parsedData));
+                    }
+                } catch (storageError) {
+                    console.error('Error updating AsyncStorage:', storageError);
+                }
+                
+                return {
+                    type: 'file',
+                    url: `file://${localFilePath}`
+                };
+            } catch (combineError) {
+                console.error('Error combining audio chunks:', combineError);
+                
+                // If combining fails, try to use the first chunk directly
+                if (tempFiles.length > 0) {
+                    return {
+                        type: 'file',
+                        url: `file://${tempFiles[0]}`
+                    };
+                } else {
             return {
                 type: 'direct',
                 url: chunkUrls[0]
             };
-
+                }
+            }
         } catch (error) {
-            console.error('Error handling audio:', error);
-            return null;
+            console.error('Error in downloadAndCombineAudio:', error);
+            return {
+                type: 'direct',
+                url: chunkUrls[0] // Fallback to direct URL
+            };
         } finally {
             if (isMounted.current) {
                 setIsAudioLoading(false);
@@ -434,14 +471,16 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             sound.release();
         }
 
-        // Enable streaming for better performance on Android
+        // Enable streaming for better performance
         Sound.setCategory('Playback');
         
         const loadWithRetry = (attempt = 0) => {
             const maxAttempts = 3;
             
-            // Create new sound instance with streaming enabled
-            const newSound = new Sound(audioUrl, Sound.MAIN_BUNDLE, (error) => {
+            console.log(`Attempting to load audio (attempt ${attempt + 1}): ${audioUrl}`);
+            
+            // Create new sound instance with error handling
+            const newSound = new Sound(audioUrl, '', (error) => {
                 if (error) {
                     console.warn(`Failed to load sound (attempt ${attempt + 1}):`, error);
                     
@@ -461,6 +500,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     return;
                 }
                 
+                console.log('Audio loaded successfully');
+                
                 // Configure sound instance
                 newSound.setVolume(1.0);
                 newSound.setNumberOfLoops(0);
@@ -471,25 +512,26 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     if (duration && duration > 0) {
                         setAudioDuration(duration);
                         setSound(newSound);
+                        console.log(`Audio duration: ${duration} seconds`);
                     } else {
-                        // If duration is invalid, try streaming mode
+                        console.warn('Invalid duration, checking current time');
+                        // If duration is invalid, try an alternative approach
+                        newSound.getCurrentTime((seconds) => {
+                            if (seconds >= 0) {
+                                // If we can get current time, the audio is probably valid
+                                setAudioDuration(seconds > 0 ? seconds : 0);
+                                setSound(newSound);
+                            } else {
                         newSound.release();
-                        const streamingSound = new Sound(audioUrl, null, (error2) => {
-                            if (error2) {
-                                console.error('Streaming mode failed:', error2);
                                 Alert.alert(
                                     'Audio Error',
-                                    'Failed to load audio in streaming mode.',
+                                    'Could not determine audio duration.',
                                     [{ text: 'OK' }]
                                 );
-                                return;
                             }
-                            setAudioDuration(streamingSound.getDuration());
-                            setSound(streamingSound);
                         });
-                        streamingSound.setNumberOfLoops(0);
                     }
-                }, 100);
+                }, 300);
             });
         };
         
@@ -554,29 +596,144 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         Sound.setCategory('Playback');
         
         if (audioUrl) {
-            // Simple direct initialization for Android
-            const newSound = new Sound(audioUrl, Sound.MAIN_BUNDLE, (error) => {
+            console.log('Initializing audio with URL:', audioUrl);
+            
+            // Release previous sound if it exists
+            if (sound) {
+                sound.release();
+                setSound(null);
+            }
+            
+            // Determine if this is a local file
+            const isLocalFile = audioUrl.startsWith('file://');
+            
+            // Function to load audio with retry logic
+            const loadAudioWithRetry = (attempt = 0) => {
+                const maxAttempts = 3;
+                
+                console.log(`Loading audio attempt ${attempt + 1}/${maxAttempts}`);
+                
+                // For local files, use empty string as the base path
+                // For remote URLs, use null to indicate it's a remote URL
+                const basePath = isLocalFile ? '' : null;
+                
+                try {
+                    const newSound = new Sound(audioUrl, basePath, (error) => {
                 if (error) {
-                    console.error('Failed to load sound:', error);
+                            console.error(`Audio loading error (attempt ${attempt + 1}):`, error);
+                            
+                            if (attempt < maxAttempts - 1) {
+                                // Wait a bit longer between retries
+                                setTimeout(() => {
+                                    loadAudioWithRetry(attempt + 1);
+                                }, (attempt + 1) * 1000);
+                            } else {
+                                // All attempts failed, try one last approach for remote URLs
+                                if (!isLocalFile) {
+                                    console.log('Trying alternative loading method...');
+                                    
+                                    // Try downloading the file locally first
+                                    const tempFilePath = `${RNFS.CachesDirectoryPath}/temp_audio_${Date.now()}.mp3`;
+                                    
+                                    RNFS.downloadFile({
+                                        fromUrl: audioUrl,
+                                        toFile: tempFilePath,
+                                        background: true
+                                    }).promise.then(result => {
+                                        if (result.statusCode === 200) {
+                                            console.log('Downloaded audio to temp file:', tempFilePath);
+                                            
+                                            // Now try to load from the local file
+                                            const localSound = new Sound(`file://${tempFilePath}`, '', (localError) => {
+                                                if (localError) {
+                                                    console.error('Failed to load downloaded audio:', localError);
                     Alert.alert(
                         'Audio Error',
-                        'Failed to load audio. Please try again later.',
+                                                        'Could not load audio after multiple attempts.',
                         [{ text: 'OK' }]
                     );
+                                                } else {
+                                                    console.log('Successfully loaded audio from downloaded file');
+                                                    localSound.setVolume(1.0);
+                                                    
+                                                    // Use the duration from the API if available
+                                                    if (duration && duration > 0) {
+                                                        setAudioDuration(duration);
+                                                    } else {
+                                                        const soundDuration = localSound.getDuration();
+                                                        setAudioDuration(soundDuration > 0 ? soundDuration : 30);
+                                                    }
+                                                    setSound(localSound);
+                                                }
+                                            });
+                                        } else {
+                                            console.error('Failed to download audio file:', result);
+                                            Alert.alert(
+                                                'Audio Error',
+                                                'Could not download audio file.',
+                                                [{ text: 'OK' }]
+                                            );
+                                        }
+                                    }).catch(downloadError => {
+                                        console.error('Error downloading audio:', downloadError);
+                                        Alert.alert(
+                                            'Audio Error',
+                                            'Failed to download audio file.',
+                                            [{ text: 'OK' }]
+                                        );
+                                    });
+                                } else {
+                                    Alert.alert(
+                                        'Audio Error',
+                                        'Could not load audio after multiple attempts.',
+                                        [{ text: 'OK' }]
+                                    );
+                                }
+                            }
                     return;
                 }
                 
-                // Configure sound instance
+                        // Audio loaded successfully
+                        console.log('Audio loaded successfully');
                 newSound.setVolume(1.0);
-                newSound.setNumberOfLoops(0);
                 
-                // Get duration and set state
+                        // Get duration with a delay to ensure it's properly loaded
+                        setTimeout(() => {
                 const duration = newSound.getDuration();
-                if (duration > 0) {
+                            console.log('Audio duration:', duration);
+                            
+                            if (duration && duration > 0) {
                     setAudioDuration(duration);
                     setSound(newSound);
+                            } else {
+                                // Try to get current time as fallback
+                                newSound.getCurrentTime((seconds) => {
+                                    console.log('Current time fallback:', seconds);
+                                    setAudioDuration(seconds > 0 ? seconds : 30);
+                                    setSound(newSound);
+                                });
+                            }
+                        }, 500);
+                    });
+                } catch (e) {
+                    console.error('Exception during audio loading:', e);
+                    
+                    if (attempt < maxAttempts - 1) {
+                        setTimeout(() => {
+                            loadAudioWithRetry(attempt + 1);
+                        }, (attempt + 1) * 1000);
+                    } else {
+                        Alert.alert(
+                            'Audio Error',
+                            'An unexpected error occurred while loading audio.',
+                            [{ text: 'OK' }]
+                        );
+                    }
                 }
-            });
+            };
+            
+            // Start loading the audio
+            loadAudioWithRetry();
         }
         
         return () => {
@@ -584,7 +741,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 sound.release();
             }
         };
-    }, [audioUrl]);
+    }, [audioUrl, duration]);
 
     useEffect(() => {
         let interval;
@@ -730,6 +887,230 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     const toggleTranscriptionVisibility = () => {
         setTranscriptionVisible(!isTranscriptionVisible);
     };
+
+    const fetchAudioMetadata = async (uid, audioid) => {
+        try {
+            setIsLoading(true);
+            
+            // Show audio player container with loading state
+            setAudioDuration(100); // Temporary duration to show the player
+            setAudioPosition(0);
+            
+            const response = await fetch('https://matrix-server.vercel.app/getAudioFile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ uid, audioid }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                // Set state with fetched data
+                setTranscription(data.transcription || '');
+                setFileName(data.audio_name || 'Untitled');
+                setFileContent(data.file_path || '');
+                setDuration(data.duration || 0);
+
+                // Handle transcription
+                let paragraphs = [];
+                let wordTimings = [];
+                if (data.transcription) {
+                    const { paragraphs: para, words } = splitTranscription(data.transcription);
+                    paragraphs = para;
+                    setParagraphs(para);
+                    if (data.duration) {
+                        wordTimings = calculateParagraphTimings(words, data.duration);
+                        setWordTimings(wordTimings);
+                    }
+                }
+
+                // Handle audio chunks with enhanced playback options
+                let audioUrl = data.audio_url;
+                
+                if (data.chunk_urls && Array.isArray(data.chunk_urls) && data.chunk_urls.length > 0) {
+                    console.log(`Processing ${data.chunk_urls.length} audio chunks`);
+                    
+                    // Use our improved function to handle the chunks
+                    const processedAudio = await processAudioChunks(data.chunk_urls);
+                    if (processedAudio) {
+                        audioUrl = processedAudio;
+                        console.log('Setting processed audio URL:', audioUrl);
+                    }
+                }
+                
+                setAudioUrl(audioUrl);
+
+                // Set key points and XML data
+                setKeypoints(data.key_points || '');
+                setXMLData(data.xml_data || '');
+            } else {
+                console.error('Error fetching audio metadata:', data.error);
+                Alert.alert('Error', 'Failed to load audio data');
+            }
+        } catch (error) {
+            console.error('Error in fetchAudioMetadata:', error);
+            Alert.alert('Error', 'An unexpected error occurred while loading audio data');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fix the processAudioChunks function to handle errors better and ensure proper file paths
+    const processAudioChunks = async (chunkUrls) => {
+        if (!chunkUrls || !Array.isArray(chunkUrls) || chunkUrls.length === 0) {
+            console.error('Invalid chunk URLs');
+            return null;
+        }
+
+        try {
+            setIsAudioLoading(true);
+            
+            // For single chunk, return it directly
+            if (chunkUrls.length === 1) {
+                console.log('Single chunk detected, using direct URL');
+                return chunkUrls[0];
+            }
+            
+            // For multiple chunks, download and combine them
+            console.log(`Processing ${chunkUrls.length} chunks`);
+            
+            // Create a unique timestamp for this operation to avoid conflicts
+            const timestamp = Date.now();
+            const tempFilePath = `${RNFS.CachesDirectoryPath}/combined_audio_${timestamp}.mp3`;
+            
+            // Download and combine chunks
+            let combinedSuccessfully = false;
+            
+            // First, try to download the first chunk
+            try {
+                const firstChunkResult = await RNFS.downloadFile({
+                    fromUrl: chunkUrls[0],
+                    toFile: tempFilePath,
+                    background: true
+                }).promise;
+                
+                if (firstChunkResult.statusCode === 200) {
+                    console.log('First chunk downloaded successfully');
+                    combinedSuccessfully = true;
+                    
+                    // Now download and append the rest of the chunks
+                    for (let i = 1; i < chunkUrls.length; i++) {
+                        try {
+                            // Use unique path for each chunk to avoid conflicts
+                            const chunkTempPath = `${RNFS.CachesDirectoryPath}/temp_chunk_${timestamp}_${i}.mp3`;
+                            
+                            console.log(`Downloading chunk ${i+1} to ${chunkTempPath}`);
+                            
+                            const chunkResult = await RNFS.downloadFile({
+                                fromUrl: chunkUrls[i],
+                                toFile: chunkTempPath,
+                                background: true
+                            }).promise;
+                            
+                            if (chunkResult.statusCode === 200) {
+                                // Verify file exists before trying to read it
+                                const fileExists = await RNFS.exists(chunkTempPath);
+                                if (!fileExists) {
+                                    console.error(`Chunk file ${i+1} doesn't exist after download`);
+                                    continue;
+                                }
+                                
+                                // Get file size to verify it's not empty
+                                const fileInfo = await RNFS.stat(chunkTempPath);
+                                if (fileInfo.size === 0) {
+                                    console.error(`Chunk file ${i+1} is empty`);
+                                    continue;
+                                }
+                                
+                                console.log(`Chunk ${i+1} downloaded (${fileInfo.size} bytes), appending...`);
+                                
+                                // Read the chunk data and append it to the combined file
+                                const chunkData = await RNFS.readFile(chunkTempPath, 'base64');
+                                await RNFS.appendFile(tempFilePath, chunkData, 'base64');
+                                console.log(`Appended chunk ${i+1}`);
+                                
+                                // Clean up the temporary chunk file
+                                await RNFS.unlink(chunkTempPath).catch((e) => {
+                                    console.log(`Error deleting temp file: ${e}`);
+                                });
+                            } else {
+                                console.error(`Failed to download chunk ${i+1}, status: ${chunkResult.statusCode}`);
+                            }
+                        } catch (chunkError) {
+                            console.error(`Error processing chunk ${i+1}:`, chunkError);
+                        }
+                    }
+                    
+                    // Verify the combined file
+                    const combinedFileExists = await RNFS.exists(tempFilePath);
+                    const combinedFileInfo = await RNFS.stat(tempFilePath);
+                    console.log(`Combined file size: ${combinedFileInfo.size} bytes`);
+                    
+                    if (combinedFileExists && combinedFileInfo.size > 0) {
+                        console.log('Audio chunks combined successfully');
+                        return `file://${tempFilePath}`;
+                    } else {
+                        console.error('Combined file is invalid or empty');
+                        combinedSuccessfully = false;
+                    }
+                } else {
+                    console.error(`Failed to download first chunk, status: ${firstChunkResult.statusCode}`);
+                    combinedSuccessfully = false;
+                }
+            } catch (downloadError) {
+                console.error('Error downloading first chunk:', downloadError);
+                combinedSuccessfully = false;
+            }
+            
+            if (combinedSuccessfully) {
+                return `file://${tempFilePath}`;
+            } else {
+                console.log('Falling back to first chunk URL');
+                return chunkUrls[0];
+            }
+        } catch (error) {
+            console.error('Error in processAudioChunks:', error);
+            return chunkUrls[0]; // Fallback to first chunk
+        } finally {
+            setIsAudioLoading(false);
+        }
+    };
+
+    // Update the useEffect for component lifecycle
+    useEffect(() => {
+        // Set isMounted to true when component mounts
+        isMounted.current = true;
+        
+        // Fetch data on mount
+        fetchAudioMetadata(uid, audioid);
+        
+        // Clean up function
+        return () => {
+            isMounted.current = false;
+            
+            // Release sound resources
+            if (sound) {
+                sound.release();
+            }
+            
+            // Clean up any temporary files
+            const cleanupTempFiles = async () => {
+                try {
+                    const files = await RNFS.readDir(RNFS.CachesDirectoryPath);
+                    for (const file of files) {
+                        if (file.name.startsWith('temp_chunk_') || file.name.startsWith('combined_audio_')) {
+                            await RNFS.unlink(file.path).catch(() => {});
+                        }
+                    }
+                } catch (error) {
+                    console.log('Error cleaning up temp files:', error);
+                }
+            };
+            
+            cleanupTempFiles();
+        };
+    }, [uid, audioid]);
 
     return (
         <View style={styles.container}>
