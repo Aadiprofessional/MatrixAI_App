@@ -42,6 +42,13 @@ const LiveTranslateScreen = () => {
   const [editingLanguage, setEditingLanguage] = useState('source'); // 'source' or 'target'
   const navigation = useNavigation();
 
+  // Add a ref to store Voice event handlers
+  const [voiceHandlers, setVoiceHandlers] = useState({
+    onSpeechStart: null,
+    onSpeechEnd: null,
+    onSpeechResults: null,
+    onSpeechError: null
+  });
 
   const languageCodes = {
     Afrikaans: 'af',
@@ -118,60 +125,95 @@ const LiveTranslateScreen = () => {
   const [isVoiceInitialized, setIsVoiceInitialized] = useState(false);
 
   const initializeVoice = useCallback(async (retryCount = 0) => {
-    if (isVoiceInitialized) return;
+    if (isVoiceInitialized) return true;
 
     try {
-      // Check if Voice module is available
-      if (!Voice) {
-        throw new Error('Voice module not available - Ensure react-native-voice is installed and linked');
+      // First check if Voice is available
+      if (typeof Voice === 'undefined' || !Voice) {
+        console.error('Voice module is undefined or null');
+        throw new Error('Voice module not available - Please reinstall @react-native-voice/voice');
       }
 
-      // Verify Voice methods exist
-      if (!Voice.destroy || !Voice.removeAllListeners || !Voice.onSpeechStart) {
-        throw new Error('Voice module methods not available - Please ensure proper linking of native modules');
+      // Create handlers first
+      const handlers = {
+        onSpeechStart: () => {
+          console.log('Speech started');
+          setIsListening(true);
+          startCircleAnimation();
+        },
+        onSpeechEnd: () => {
+          console.log('Speech ended');
+          setIsListening(false);
+          stopCircleAnimation();
+        },
+        onSpeechResults: (e) => {
+          if (e && e.value && e.value.length > 0) {
+            console.log('Speech results:', e.value[0]);
+            setTranscription(e.value[0] || 'Press Mic to start listening');
+            translateText(e.value[0] || 'Press Mic to start listening');
+          }
+        },
+        onSpeechError: (e) => {
+          console.error('Speech recognition error:', e);
+          setIsListening(false);
+          Alert.alert('Speech Error', e.error?.message || 'Speech recognition failed');
+        }
+      };
+
+      // Store handlers in state
+      setVoiceHandlers(handlers);
+
+      // Clean up any existing listeners
+      try {
+        if (Voice.destroy) {
+          await Voice.destroy();
+        }
+        if (Voice.removeAllListeners) {
+          await Voice.removeAllListeners();
+        }
+      } catch (cleanupError) {
+        console.warn('Error during Voice cleanup:', cleanupError);
+        // Continue despite cleanup errors
       }
 
-      // Initialize Voice with retry logic
-      await Voice.destroy().catch(() => {});
-      await Voice.removeAllListeners().catch(() => {});
-      
-      // Set up event listeners
-      Voice.onSpeechStart = () => {
-        setIsListening(true);
-        startCircleAnimation();
-      };
-      Voice.onSpeechEnd = () => {
-        setIsListening(false);
-        stopCircleAnimation();
-      };
-      Voice.onSpeechResults = (e) => {
-        setTranscription(e.value[0] || 'Press Mic to start listening');
-        translateText(e.value[0] || 'Press Mic to start listening');
-      };
-      Voice.onSpeechError = (e) => {
-        console.error('Speech recognition error:', e);
-        setIsListening(false);
-        Alert.alert('Speech Error', e.error?.message || 'Speech recognition failed');
-      };
+      // Set up event listeners using the proper method
+      if (Voice.onSpeechStart) {
+        // Direct property assignment (older versions)
+        Voice.onSpeechStart = handlers.onSpeechStart;
+        Voice.onSpeechEnd = handlers.onSpeechEnd;
+        Voice.onSpeechResults = handlers.onSpeechResults;
+        Voice.onSpeechError = handlers.onSpeechError;
+      } else if (Voice.addEventListener) {
+        // Event listener approach (newer versions)
+        Voice.addEventListener('onSpeechStart', handlers.onSpeechStart);
+        Voice.addEventListener('onSpeechEnd', handlers.onSpeechEnd);
+        Voice.addEventListener('onSpeechResults', handlers.onSpeechResults);
+        Voice.addEventListener('onSpeechError', handlers.onSpeechError);
+      } else {
+        throw new Error('Voice module methods not available - Cannot add event listeners');
+      }
 
       setIsVoiceInitialized(true);
+      console.log('Voice module successfully initialized');
       return true;
     } catch (error) {
-      console.error('Error initializing Voice (attempt ${retryCount}):', error);
+      console.error(`Error initializing Voice (attempt ${retryCount}):`, error);
       
       if (retryCount < 3) {
         // Retry with exponential backoff
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        const delay = 1000 * Math.pow(2, retryCount);
+        console.log(`Retrying Voice initialization in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
         return initializeVoice(retryCount + 1);
       }
 
       Alert.alert(
-        'Voice Error', 
-        `Failed to initialize voice recognition after ${retryCount + 1} attempts: ${error.message}`
+        'Voice Recognition Error', 
+        `Failed to initialize voice recognition: ${error.message}\n\nPlease restart the app or check permissions.`
       );
       return false;
     }
-  }, [isVoiceInitialized]);
+  }, [isVoiceInitialized, startCircleAnimation, stopCircleAnimation, translateText]);
 
   useEffect(() => {
     const initializeAnimation = () => {
@@ -184,25 +226,51 @@ const LiveTranslateScreen = () => {
 
     const requestPermissions = async () => {
       if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          {
-            title: 'Audio Recording Permission',
-            message: 'This app needs access to your microphone to perform voice recognition.',
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: 'Audio Recording Permission',
+              message: 'This app needs access to your microphone to perform voice recognition.',
+              buttonPositive: 'Grant Permission',
+            }
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.error('Microphone permission denied');
+            Alert.alert(
+              'Permission Required',
+              'Microphone permission is required for voice recognition. Please enable it in app settings.'
+            );
           }
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.error('Microphone permission denied');
+        } catch (err) {
+          console.error('Error requesting audio permission:', err);
         }
       }
     };
 
     initializeAnimation();
     requestPermissions();
-    initializeVoice();
+    
+    // Initialize voice with a slight delay to ensure app is fully loaded
+    const timer = setTimeout(() => {
+      initializeVoice();
+    }, 500);
 
     return () => {
-      Voice.destroy().then(() => Voice.removeAllListeners());
+      clearTimeout(timer);
+      // Clean up Voice on unmount
+      if (Voice) {
+        try {
+          if (Voice.removeAllListeners) {
+            Voice.removeAllListeners();
+          }
+          if (Voice.destroy) {
+            Voice.destroy();
+          }
+        } catch (err) {
+          console.error('Error cleaning up Voice:', err);
+        }
+      }
       setIsVoiceInitialized(false);
     };
   }, [initializeVoice]);
@@ -521,12 +589,12 @@ const handleStartListening = async () => {
   }
 
   try {
+    // Make sure Voice is initialized
     if (!isVoiceInitialized) {
-      await initializeVoice();
-    }
-
-    if (!isVoiceInitialized) {
-      throw new Error('Voice recognition not initialized');
+      const initialized = await initializeVoice();
+      if (!initialized) {
+        throw new Error('Failed to initialize voice recognition');
+      }
     }
 
     // Initialize AudioRecord
@@ -552,7 +620,11 @@ const handleStartListening = async () => {
     await AudioRecord.start();
     
     console.log('Starting Voice recognition with language code:', languageCode);
-    await Voice.start(languageCode);
+    if (Voice && Voice.start) {
+      await Voice.start(languageCode);
+    } else {
+      throw new Error('Voice.start method is not available');
+    }
     
     setTranscription('Listening...');
     setRecordingStartTime(Date.now());
@@ -564,7 +636,9 @@ const handleStartListening = async () => {
     
     // Cleanup on error
     try {
-      await Voice.destroy();
+      if (Voice && Voice.destroy) {
+        await Voice.destroy();
+      }
       await AudioRecord.stop();
     } catch (cleanupError) {
       console.error('Error during cleanup:', cleanupError);

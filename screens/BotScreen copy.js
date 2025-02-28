@@ -80,7 +80,7 @@ const BotScreen2 = ({ navigation, route }) => {
           setShowSummaryPrompt(false);
 
           if (preference === 'yes' && transcription) {
-            await fetchDeepSeekResponse(`Please summarize this text in a structured format: ${transcription}`);
+            await fetchDeepSeekResponse(`Please summarize this text in a structured format in the same language as the input transcription: ${transcription}`);
           }
         } else {
           // Show the prompt only if no preference exists and chat history is empty

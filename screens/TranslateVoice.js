@@ -34,71 +34,165 @@ const VoiceTranslateScreen = () => {
   const [audioFilePath, setAudioFilePath] = useState('');
   const [audioFile, setAudioFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [isVoiceInitialized, setIsVoiceInitialized] = useState(false);
 
   const navigation = useNavigation();
+
+  // Initialize Voice module
+  const initializeVoice = async () => {
+    if (isVoiceInitialized) return true;
+    
+    try {
+      // Check if Voice is available
+      if (typeof Voice === 'undefined' || !Voice) {
+        console.error('Voice module is undefined or null');
+        throw new Error('Voice module not available');
+      }
+      
+      // Clean up any existing listeners
+      try {
+        if (Voice.destroy) {
+          await Voice.destroy();
+        }
+        if (Voice.removeAllListeners) {
+          await Voice.removeAllListeners();
+        }
+      } catch (cleanupError) {
+        console.warn('Error during Voice cleanup:', cleanupError);
+        // Continue despite cleanup errors
+      }
+      
+      // Set up event listeners using the proper method
+      if (Voice.addEventListener) {
+        // Event listener approach (newer versions)
+        Voice.addEventListener('onSpeechStart', () => {
+          console.log('Speech started');
+          setTranscription('Listening...');
+        });
+        
+        Voice.addEventListener('onSpeechEnd', () => {
+          console.log('Speech ended');
+          if (!isPaused) {
+            setTranscription(prev => prev + ' [Ended]');
+          }
+        });
+        
+        Voice.addEventListener('onSpeechPartialResults', (e) => {
+          if (e.value && e.value.length > 0 && !isPaused) {
+            setTranscription(e.value[0]);
+          }
+        });
+        
+        Voice.addEventListener('onSpeechResults', (e) => {
+          if (e.value && e.value.length > 0 && !isPaused) {
+            setTranscription(e.value[0]);
+          }
+        });
+        
+        Voice.addEventListener('onSpeechError', (e) => {
+          console.error('Speech recognition error:', e);
+          setIsListening(false);
+        });
+      } else if (Voice.onSpeechStart) {
+        // Direct property assignment (older versions)
+        Voice.onSpeechStart = () => {
+          console.log('Speech started');
+          setTranscription('Listening...');
+        };
+        
+        Voice.onSpeechEnd = () => {
+          console.log('Speech ended');
+          if (!isPaused) {
+            setTranscription(prev => prev + ' [Ended]');
+          }
+        };
+        
+        Voice.onSpeechPartialResults = (e) => {
+          if (e.value && e.value.length > 0 && !isPaused) {
+            setTranscription(e.value[0]);
+          }
+        };
+        
+        Voice.onSpeechResults = (e) => {
+          if (e.value && e.value.length > 0 && !isPaused) {
+            setTranscription(e.value[0]);
+          }
+        };
+        
+        Voice.onSpeechError = (e) => {
+          console.error('Speech recognition error:', e);
+          setIsListening(false);
+        };
+      } else {
+        throw new Error('Voice module methods not available - Cannot add event listeners');
+      }
+      
+      setIsVoiceInitialized(true);
+      console.log('Voice module successfully initialized');
+      return true;
+    } catch (error) {
+      console.error('Error initializing Voice:', error);
+      Alert.alert(
+        'Voice Recognition Error', 
+        `Failed to initialize voice recognition: ${error.message}\n\nPlease restart the app or check permissions.`
+      );
+      return false;
+    }
+  };
 
   useEffect(() => {
     const requestPermissions = async () => {
       if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          {
-            title: 'Audio Recording Permission',
-            message: 'This app needs access to your microphone to perform voice recognition.',
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: 'Audio Recording Permission',
+              message: 'This app needs access to your microphone to perform voice recognition.',
+              buttonPositive: 'Grant Permission',
+            }
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.error('Microphone permission denied');
+            Alert.alert(
+              'Permission Required',
+              'Microphone permission is required for voice recognition. Please enable it in app settings.'
+            );
           }
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.error('Microphone permission denied');
+        } catch (err) {
+          console.error('Error requesting audio permission:', err);
         }
       }
     };
+    
     requestPermissions();
-
-    // Initialize Voice recognition
-    Voice.onSpeechStart = () => {
-      console.log('Speech started');
-      setTranscription('Listening...');
-    };
-    Voice.onSpeechEnd = () => {
-      console.log('Speech ended');
-      if (!isPaused) {
-        setTranscription(prev => prev + ' [Ended]');
-      }
-    };
-    Voice.onSpeechPartialResults = (e) => {
-      if (e.value && e.value.length > 0) {
-        setTranscription(prev => {
-          // Only update if we're not paused
-          if (!isPaused) {
-            return e.value[0];
-          }
-          return prev;
-        });
-      }
-    };
-    Voice.onSpeechResults = (e) => {
-      if (e.value && e.value.length > 0) {
-        setTranscription(prev => {
-          // Only update if we're not paused
-          if (!isPaused) {
-            return e.value[0];
-          }
-          return prev;
-        });
-      }
-    };
-    Voice.onSpeechError = (e) => {
-      console.error('Speech recognition error:', e);
-      setIsListening(false);
-    };
+    
+    // Initialize voice with a slight delay to ensure app is fully loaded
+    const timer = setTimeout(() => {
+      initializeVoice();
+    }, 500);
 
     AudioRecord.on('data', data => {
-     
+      // Handle audio data if needed
     });
 
     return () => {
-      AudioRecord.stop();
-      Voice.destroy().then(Voice.removeAllListeners);
+      clearTimeout(timer);
+      // Clean up on unmount
+      try {
+        AudioRecord.stop();
+        if (Voice) {
+          if (Voice.removeAllListeners) {
+            Voice.removeAllListeners();
+          }
+          if (Voice.destroy) {
+            Voice.destroy();
+          }
+        }
+      } catch (err) {
+        console.error('Error cleaning up:', err);
+      }
+      setIsVoiceInitialized(false);
     };
   }, []);
 
@@ -114,6 +208,14 @@ const VoiceTranslateScreen = () => {
     setIsPaused(false);
 
     try {
+      // Make sure Voice is initialized
+      if (!isVoiceInitialized) {
+        const initialized = await initializeVoice();
+        if (!initialized) {
+          throw new Error('Failed to initialize voice recognition');
+        }
+      }
+
       // Start audio recording
       AudioRecord.init({
         sampleRate: 16000,
@@ -125,14 +227,33 @@ const VoiceTranslateScreen = () => {
       AudioRecord.start();
 
       // Start voice recognition
-      await Voice.start(selectedLanguage);
+      const languageValue = languages.find(lang => lang.label === selectedLanguage)?.value || 'en-US';
+      console.log('Starting Voice recognition with language:', languageValue);
+      
+      if (Voice && Voice.start) {
+        await Voice.start(languageValue);
+      } else {
+        throw new Error('Voice.start method is not available');
+      }
       
       setTranscription('Listening...');
       setRecordingStartTime(Date.now());
+      setIsLoading(false);
     } catch (error) {
       console.error('Error starting voice recognition:', error);
       setIsListening(false);
       setIsLoading(false);
+      Alert.alert('Error', `Failed to start listening: ${error.message}`);
+      
+      // Cleanup on error
+      try {
+        if (Voice && Voice.destroy) {
+          await Voice.destroy();
+        }
+        await AudioRecord.stop();
+      } catch (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+      }
     }
   };
 
@@ -143,7 +264,9 @@ const VoiceTranslateScreen = () => {
       const result = await AudioRecord.stop();
       
       // Stop speech recognition
-      await Voice.stop();
+      if (Voice && Voice.stop) {
+        await Voice.stop();
+      }
       
       // Save current state
       setAudioFilePath(result);
@@ -166,7 +289,10 @@ const VoiceTranslateScreen = () => {
       await AudioRecord.start();
       
       // Restart speech recognition
-      await Voice.start(selectedLanguage);
+      const languageValue = languages.find(lang => lang.label === selectedLanguage)?.value || 'en-US';
+      if (Voice && Voice.start) {
+        await Voice.start(languageValue);
+      }
       setTranscription(prev => prev.replace(' [Paused]', ''));
     } catch (error) {
       console.error('Error resuming recording:', error);
@@ -181,7 +307,9 @@ const VoiceTranslateScreen = () => {
     try {
       // Stop both audio recording and speech recognition
       const result = await AudioRecord.stop();
-      await Voice.stop();
+      if (Voice && Voice.stop) {
+        await Voice.stop();
+      }
       
       setAudioFilePath(result);
       setAudioFile({ 

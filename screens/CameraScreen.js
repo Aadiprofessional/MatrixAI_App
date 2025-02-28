@@ -922,7 +922,7 @@ Please answer based on what you can see in the image. If the answer isn't visibl
 
       <View style={styles.animationContainer}>
         <LottieView 
-          source={require('../assets/Ai_animation.json')} 
+          source={require('../assets/Animation - 1740689806927.json')} 
           autoPlay 
           loop 
           style={styles.animation}
@@ -1123,8 +1123,8 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   animationContainer: {
-    width: 130,
-    height: 130,
+    width: 160,
+    height: 160,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
