@@ -262,19 +262,26 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     <SafeAreaView style={styles.container}>
       {/* Back Button */}
       <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
+        style={[styles.backButton, { marginLeft: isSidebarOpen ? 300 : 0 }]}
+        onPress={() => {
+          if (isSidebarOpen) {
+            setIsSidebarOpen(false);
+          } else {
+            setIsSidebarOpen(true);
+          }
+        }}
       >
-        <Image 
-          source={require('../assets/back.png')} 
-          style={styles.backIcon}
-        />
+        {isSidebarOpen ? (
+          <MaterialIcons name="arrow-back-ios" size={24} color="#000" style={styles.headerIcon2} />
+        ) : (
+          <MaterialIcons name="arrow-forward-ios" size={24} color="#000" style={styles.headerIcon} />
+        )}
       </TouchableOpacity>
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setIsSidebarOpen(true)}>
-          <Ionicons name="menu" size={30} color="#000" style={styles.headerIcon} />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back-ios" size={24} color="#000" style={styles.headerIcon} />
         </TouchableOpacity>
         <Image source={require('../assets/Avatar/Cat.png')} style={styles.botIcon} />
         <View style={styles.headerTextContainer}>
