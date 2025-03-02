@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -49,6 +49,9 @@ const LiveTranslateScreen = () => {
     onSpeechResults: null,
     onSpeechError: null
   });
+
+  // Add Voice instance ref
+  const voiceInstance = useRef(null);
 
   const languageCodes = {
     Afrikaans: 'af',
@@ -129,10 +132,13 @@ const LiveTranslateScreen = () => {
 
     try {
       // First check if Voice is available
-      if (typeof Voice === 'undefined' || !Voice) {
-        console.error('Voice module is undefined or null');
+      if (!Voice) {
+        console.error('Voice module is undefined');
         throw new Error('Voice module not available - Please reinstall @react-native-voice/voice');
       }
+
+      // Store Voice instance in ref
+      voiceInstance.current = Voice;
 
       // Create handlers first
       const handlers = {
@@ -165,32 +171,29 @@ const LiveTranslateScreen = () => {
 
       // Clean up any existing listeners
       try {
-        if (Voice.destroy) {
-          await Voice.destroy();
-        }
-        if (Voice.removeAllListeners) {
-          await Voice.removeAllListeners();
+        if (voiceInstance.current) {
+          if (voiceInstance.current.destroy) {
+            await voiceInstance.current.destroy();
+          }
+          if (voiceInstance.current.removeAllListeners) {
+            await voiceInstance.current.removeAllListeners();
+          }
         }
       } catch (cleanupError) {
         console.warn('Error during Voice cleanup:', cleanupError);
-        // Continue despite cleanup errors
       }
 
       // Set up event listeners using the proper method
-      if (Voice.onSpeechStart) {
-        // Direct property assignment (older versions)
-        Voice.onSpeechStart = handlers.onSpeechStart;
-        Voice.onSpeechEnd = handlers.onSpeechEnd;
-        Voice.onSpeechResults = handlers.onSpeechResults;
-        Voice.onSpeechError = handlers.onSpeechError;
-      } else if (Voice.addEventListener) {
-        // Event listener approach (newer versions)
-        Voice.addEventListener('onSpeechStart', handlers.onSpeechStart);
-        Voice.addEventListener('onSpeechEnd', handlers.onSpeechEnd);
-        Voice.addEventListener('onSpeechResults', handlers.onSpeechResults);
-        Voice.addEventListener('onSpeechError', handlers.onSpeechError);
-      } else {
-        throw new Error('Voice module methods not available - Cannot add event listeners');
+      if (voiceInstance.current) {
+        if (voiceInstance.current.addEventListener) {
+          Object.entries(handlers).forEach(([event, handler]) => {
+            voiceInstance.current.addEventListener(event, handler);
+          });
+        } else {
+          Object.entries(handlers).forEach(([event, handler]) => {
+            voiceInstance.current[event] = handler;
+          });
+        }
       }
 
       setIsVoiceInitialized(true);
@@ -200,7 +203,6 @@ const LiveTranslateScreen = () => {
       console.error(`Error initializing Voice (attempt ${retryCount}):`, error);
       
       if (retryCount < 3) {
-        // Retry with exponential backoff
         const delay = 1000 * Math.pow(2, retryCount);
         console.log(`Retrying Voice initialization in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -258,20 +260,37 @@ const LiveTranslateScreen = () => {
 
     return () => {
       clearTimeout(timer);
-      // Clean up Voice on unmount
-      if (Voice) {
+      // Cleanup function
+      const cleanup = async () => {
         try {
-          if (Voice.removeAllListeners) {
-            Voice.removeAllListeners();
+          if (voiceInstance.current) {
+            // First remove all listeners
+            if (voiceInstance.current.removeAllListeners) {
+              const events = ['onSpeechStart', 'onSpeechEnd', 'onSpeechResults', 'onSpeechError'];
+              events.forEach(event => {
+                try {
+                  voiceInstance.current.removeAllListeners(event);
+                } catch (e) {
+                  console.warn(`Error removing listener for ${event}:`, e);
+                }
+              });
+            }
+
+            // Then destroy the instance
+            if (voiceInstance.current.destroy) {
+              await voiceInstance.current.destroy();
+            }
+
+            // Clear the instance
+            voiceInstance.current = null;
           }
-          if (Voice.destroy) {
-            Voice.destroy();
-          }
-        } catch (err) {
-          console.error('Error cleaning up Voice:', err);
+        } catch (error) {
+          console.warn('Error during Voice cleanup:', error);
         }
-      }
-      setIsVoiceInitialized(false);
+        setIsVoiceInitialized(false);
+      };
+
+      cleanup();
     };
   }, [initializeVoice]);
 
@@ -590,7 +609,7 @@ const handleStartListening = async () => {
 
   try {
     // Make sure Voice is initialized
-    if (!isVoiceInitialized) {
+    if (!isVoiceInitialized || !voiceInstance.current) {
       const initialized = await initializeVoice();
       if (!initialized) {
         throw new Error('Failed to initialize voice recognition');
@@ -620,8 +639,8 @@ const handleStartListening = async () => {
     await AudioRecord.start();
     
     console.log('Starting Voice recognition with language code:', languageCode);
-    if (Voice && Voice.start) {
-      await Voice.start(languageCode);
+    if (voiceInstance.current && voiceInstance.current.start) {
+      await voiceInstance.current.start(languageCode);
     } else {
       throw new Error('Voice.start method is not available');
     }
@@ -636,8 +655,8 @@ const handleStartListening = async () => {
     
     // Cleanup on error
     try {
-      if (Voice && Voice.destroy) {
-        await Voice.destroy();
+      if (voiceInstance.current && voiceInstance.current.destroy) {
+        await voiceInstance.current.destroy();
       }
       await AudioRecord.stop();
     } catch (cleanupError) {

@@ -288,6 +288,9 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
           <Text style={styles.botName}>{currentChat ? currentChat.name : chatName}</Text>
           <Text style={styles.botDescription}>{currentChat ? currentChat.description : chatDescription}</Text>
         </View>
+        <TouchableOpacity onPress={() => navigation.navigate('CallScreen')}>
+          <MaterialIcons name="call" size={24} color="#4C8EF7" marginHorizontal={1} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('CameraScreen')}>
           <Ionicons name="video-outline" size={28} color="#4C8EF7" marginHorizontal={10} />
         </TouchableOpacity>
