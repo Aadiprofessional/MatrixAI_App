@@ -354,7 +354,7 @@ const CameraScreen = ({ navigation }) => {
       console.log('Reading image file for analysis...');
       const imageBinary = await RNFS.readFile(imagePath, 'base64'); // Read image as base64
       const imageBuffer = Buffer.from(imageBinary, 'base64'); // Convert base64 to binary buffer
-    
+  
       let azureDescription = 'No description available';
       let detectedObjects = [];
   
@@ -397,25 +397,51 @@ const CameraScreen = ({ navigation }) => {
         );
   
         console.log('Azure Description Response:', azureResponse.status);
+        console.log('Azure Description:', azureResponse.data);
         azureDescription = azureResponse.data.description?.captions?.[0]?.text || 'No description available';
   
       } catch (error) {
         console.error('Azure Description Analysis Error:', error.response?.data || error.message);
       }
   
-      // Combine results into a single response
-      const objectDetails = detectedObjects.map(obj => `${obj.object} (${obj.confidence})`).join(', ');
-      const finalDescription = `${azureDescription}. Detected objects: ${objectDetails || 'None'}`;
+      // Send data to DeepSeek API for user-friendly explanation
+      try {
+        console.log('Sending data to DeepSeek for explanation...');
+        const deepSeekResponse = await axios.post(
+          'https://api.deepseek.com/v1/chat/completions',
+          {
+            model: "deepseek-chat", // Ensure this is the correct model name
+            messages: [ 
+              { role: "system", content: "Understand the image and describe it in a way that is easy to understand in less than 100 words.and at the end ask did question that dud you want more infomation about the image" },
+              { role: "user", content: `Description: ${azureDescription}. Detected objects: ${detectedObjects.map(obj => `${obj.object} (${obj.confidence})`).join(', ')}` }
+            ]
+          },
+          {
+            headers: {
+              'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
+              'Content-Type': 'application/json'
+            }
+          }
+        );
   
-      setAiResponse(finalDescription);
+        console.log('DeepSeek Response:', deepSeekResponse.status);
+        const deepSeekExplanation = deepSeekResponse.data.choices[0].message.content || 'No explanation available';
   
-      // Speak the description if TTS is initialized
-      if (ttsInitialized) {
-        Tts.speak(finalDescription);
+        // Update AI response with DeepSeek explanation
+        setAiResponse(deepSeekExplanation);
+  
+        // Speak the explanation if TTS is initialized
+        if (ttsInitialized) {
+          Tts.speak(deepSeekExplanation);
+        }
+  
+        return { description: deepSeekExplanation };
+  
+      } catch (error) {
+        console.error('DeepSeek API Error:', error.response?.data || error.message);
+        setAiResponse('Error generating explanation. Please try again.');
+        return { description: 'Error generating explanation.' };
       }
-  
-      return { description: finalDescription };
-  
     } catch (error) {
       console.error('General Image Analysis Error:', error);
       setAiResponse('Error analyzing the image. Please try again.');
@@ -423,7 +449,7 @@ const CameraScreen = ({ navigation }) => {
     }
   };
   
-      // Try Azure Vision API first
+   
   
     
 
