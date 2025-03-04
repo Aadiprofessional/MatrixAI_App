@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking ,Image} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking ,Image, Modal, TextInput, KeyboardAvoidingView} from 'react-native';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { PermissionsAndroid } from 'react-native';
 import RNFS from 'react-native-fs';
@@ -7,6 +7,7 @@ import axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
 import Tts from 'react-native-tts'; 
+import Voice from '@react-native-voice/voice';
 import { Buffer } from 'buffer';
 
 const CameraScreen = ({ navigation }) => {
@@ -20,6 +21,12 @@ const CameraScreen = ({ navigation }) => {
   const cameraRef = useRef(null);
   const [ttsInitialized, setTtsInitialized] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
+  const [inputModalVisible, setInputModalVisible] = useState(false);
+  const [textInputValue, setTextInputValue] = useState('');
 
   // Helper function to check if a device is usable
   const isDeviceUsable = (device) => {
@@ -62,6 +69,95 @@ const CameraScreen = ({ navigation }) => {
         errorListener.remove();
       }
       Tts.stop();
+    };
+  }, []);
+
+  // Initialize Voice recognition
+  useEffect(() => {
+    let voiceListener = null;
+    
+    const setupVoiceRecognition = async () => {
+      try {
+        // Check if Voice is available
+        try {
+          if (typeof Voice.isAvailable === 'function') {
+            const isVoiceAvailable = await Voice.isAvailable();
+            if (!isVoiceAvailable) {
+              console.log('Voice recognition is not available on this device');
+              return;
+            }
+            console.log('Voice recognition is available');
+          }
+        } catch (availabilityError) {
+          console.log('Error checking Voice availability:', availabilityError);
+          // Continue anyway, as the availability check might not be supported
+        }
+        
+        // Set up Voice event listeners directly
+        Voice.onSpeechStart = () => {
+          console.log('Speech recognition started');
+          setIsListening(true);
+        };
+
+        Voice.onSpeechEnd = () => {
+          console.log('Speech recognition ended');
+          setIsListening(false);
+        };
+
+        Voice.onSpeechResults = (event) => {
+          if (event.value && event.value.length > 0) {
+            const recognizedText = event.value[0];
+            console.log('Speech recognized:', recognizedText);
+            setRecognizedText(recognizedText);
+            // Process the recognized text
+            if (recognizedText.trim().length > 0) {
+              processVoiceInput(recognizedText);
+            }
+          }
+        };
+
+        Voice.onSpeechError = (error) => {
+          console.error('Speech recognition error:', error);
+          setIsListening(false);
+          // Show text input as fallback
+          showTextInputDialog();
+        };
+
+        // Request microphone permission if needed
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: "Microphone Permission",
+              message: "App needs microphone permission for voice recognition",
+              buttonNeutral: "Ask Me Later",
+              buttonNegative: "Cancel",
+              buttonPositive: "OK"
+            }
+          );
+          
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Microphone permission denied');
+          }
+        }
+      } catch (error) {
+        console.error('Error setting up voice recognition:', error);
+      }
+    };
+
+    setupVoiceRecognition();
+
+    // Cleanup
+    return () => {
+      try {
+        Voice.destroy().then(() => {
+          console.log('Voice recognition destroyed');
+        }).catch(e => {
+          console.error('Error destroying Voice instance:', e);
+        });
+      } catch (error) {
+        console.error('Error during Voice cleanup:', error);
+      }
     };
   }, []);
 
@@ -449,9 +545,287 @@ const CameraScreen = ({ navigation }) => {
     }
   };
   
-   
+  // Check if Voice module is properly initialized
+  const isVoiceModuleAvailable = () => {
+    try {
+      // On Android, always return false to use our custom implementation
+      if (Platform.OS === 'android') {
+        return false;
+      }
+      
+      return (
+        Voice !== null && 
+        Voice !== undefined && 
+        typeof Voice.start === 'function' &&
+        typeof Voice.stop === 'function'
+      );
+    } catch (error) {
+      console.error('Error checking Voice module availability:', error);
+      return false;
+    }
+  };
+
+  // Helper function to safely call native module methods
+  const safeNativeCall = async (moduleMethod, fallbackFn, ...args) => {
+    try {
+      // On Android, always use the fallback
+      if (Platform.OS === 'android') {
+        if (typeof fallbackFn === 'function') {
+          return fallbackFn();
+        }
+        return null;
+      }
+      
+      if (typeof moduleMethod === 'function') {
+        return await moduleMethod(...args);
+      } else {
+        throw new Error('Method is not a function');
+      }
+    } catch (error) {
+      console.error(`Error calling native method:`, error);
+      if (typeof fallbackFn === 'function') {
+        return fallbackFn();
+      }
+      return null;
+    }
+  };
+
+  // Start voice recognition with fallback to text input
+  const startVoiceRecognition = async () => {
+    try {
+      // Stop any ongoing TTS
+      if (ttsInitialized) {
+        Tts.stop();
+      }
+      
+      // Clear previous recognized text
+      setRecognizedText('');
+      
+      // For Android, simulate voice recognition with text input
+      if (Platform.OS === 'android') {
+        // Set listening state to true to show the UI indicator
+        setIsListening(true);
+        // Show text input dialog after a short delay to simulate voice recognition starting
+        setTimeout(() => {
+          showTextInputDialog();
+        }, 500);
+        return;
+      }
+      
+      // iOS Voice recognition code
+      if (!isVoiceModuleAvailable()) {
+        console.log('Voice module is not properly initialized');
+        showTextInputDialog();
+        return;
+      }
+      
+      // Try to use voice recognition (iOS only)
+      console.log('Attempting to start voice recognition...');
+      
+      const success = await safeNativeCall(
+        Voice.start.bind(Voice),
+        () => {
+          console.log('Falling back to text input due to Voice.start failure');
+          showTextInputDialog();
+          return false;
+        },
+        'en-US'
+      );
+      
+      if (success !== false) {
+        console.log('Voice recognition started successfully');
+      }
+    } catch (error) {
+      console.error('Error in voice recognition process:', error);
+      // Use fallback method
+      showTextInputDialog();
+    }
+  };
   
+  // Custom text input dialog
+  const showTextInputDialog = () => {
+    // If we're in "listening" mode on Android, stop it
+    if (Platform.OS === 'android' && isListening) {
+      setIsListening(false);
+    }
     
+    setTextInputValue('');
+    setInputModalVisible(true);
+  };
+  
+  // Handle text input submission
+  const handleTextInputSubmit = () => {
+    if (textInputValue.trim().length > 0) {
+      setRecognizedText(textInputValue);
+      processVoiceInput(textInputValue);
+    }
+    setInputModalVisible(false);
+  };
+  
+  // Fallback method for iOS
+  const showManualInputAlert = () => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Enter your message',
+        'Voice recognition is not available. Please type your message:',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Send',
+            onPress: (text) => {
+              if (text && text.trim().length > 0) {
+                setRecognizedText(text);
+                processVoiceInput(text);
+              }
+            }
+          }
+        ],
+        'plain-text'
+      );
+    } else {
+      // For Android, use our custom dialog
+      showTextInputDialog();
+    }
+  };
+  
+  // Stop voice recognition
+  const stopVoiceRecognition = async () => {
+    try {
+      // For Android, just update the UI state
+      if (Platform.OS === 'android') {
+        setIsListening(false);
+        return;
+      }
+      
+      // iOS Voice recognition code
+      if (!isVoiceModuleAvailable()) {
+        console.log('Voice module is not properly initialized');
+        setIsListening(false);
+        return;
+      }
+      
+      // Check if Voice is available and active
+      if (!isListening) {
+        console.log('Voice recognition is not active');
+        return;
+      }
+      
+      await safeNativeCall(
+        Voice.stop.bind(Voice),
+        () => {
+          console.log('Error stopping voice recognition, but continuing');
+          return null;
+        }
+      );
+      
+      console.log('Voice recognition stopped successfully');
+    } catch (error) {
+      console.error('Error stopping voice recognition:', error);
+    } finally {
+      // Ensure the UI reflects that we're not listening anymore
+      setIsListening(false);
+    }
+  };
+  
+  // Process voice input and send to DeepSeek
+  const processVoiceInput = async (text) => {
+    try {
+      setIsVoiceProcessing(true);
+      
+      // Special handling for "Hello Matrix" greeting
+      if (text.toLowerCase().includes('hello matrix')) {
+        const greeting = "Hello! I'm Matrix AI, your visual and conversational assistant. How can I help you today?";
+        
+        // Add user message and AI response to conversation history
+        const updatedHistory = [
+          ...conversationHistory,
+          { role: 'user', content: text },
+          { role: 'assistant', content: greeting }
+        ];
+        setConversationHistory(updatedHistory);
+        
+        // Update AI response
+        setAiResponse(greeting);
+        
+        // Speak the greeting if TTS is initialized
+        if (ttsInitialized) {
+          Tts.speak(greeting);
+        }
+        
+        setIsVoiceProcessing(false);
+        return;
+      }
+      
+      // Add user message to conversation history
+      const updatedHistory = [
+        ...conversationHistory,
+        { role: 'user', content: text }
+      ];
+      
+      // Keep only the last 10 messages to avoid token limits
+      const limitedHistory = updatedHistory.slice(-10);
+      setConversationHistory(limitedHistory);
+      
+      // Prepare messages for DeepSeek API
+      const messages = [
+        { role: "system", content: "You are a helpful assistant that responds to user queries in a conversational manner. Keep responses concise and under 100 words." },
+        ...limitedHistory
+      ];
+      
+      console.log('Sending text input to DeepSeek:', text);
+      console.log('Conversation history:', messages);
+      
+      // Send to DeepSeek API
+      const deepSeekResponse = await axios.post(
+        'https://api.deepseek.com/v1/chat/completions',
+        {
+          model: "deepseek-chat",
+          messages: messages
+        },
+        {
+          headers: {
+            'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('DeepSeek Response:', deepSeekResponse.status);
+      const deepSeekReply = deepSeekResponse.data.choices[0].message.content || 'No response available';
+      
+      // Add AI response to conversation history
+      const finalHistory = [
+        ...limitedHistory,
+        { role: 'assistant', content: deepSeekReply }
+      ];
+      setConversationHistory(finalHistory);
+      
+      // Update AI response
+      setAiResponse(deepSeekReply);
+      
+      // Speak the response if TTS is initialized
+      if (ttsInitialized) {
+        Tts.speak(deepSeekReply);
+      }
+      
+    } catch (error) {
+      console.error('DeepSeek API Error:', error.response?.data || error.message);
+      setAiResponse('Error processing your request. Please try again.');
+      
+      // Add error message to conversation history
+      setConversationHistory([
+        ...conversationHistory,
+        { role: 'user', content: text },
+        { role: 'assistant', content: 'Error processing your request. Please try again.' }
+      ]);
+      
+    } finally {
+      setIsVoiceProcessing(false);
+    }
+  };
 
   // Render loading state
   if (isLoading) {
@@ -546,6 +920,88 @@ const CameraScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Text Input Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={inputModalVisible}
+        onRequestClose={() => {
+          setInputModalVisible(false);
+          if (Platform.OS === 'android' && isListening) {
+            setIsListening(false);
+          }
+        }}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => {
+            setInputModalVisible(false);
+            if (Platform.OS === 'android' && isListening) {
+              setIsListening(false);
+            }
+          }}
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalContainer}
+          >
+            <TouchableOpacity 
+              activeOpacity={1} 
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  {Platform.OS === 'android' && isListening 
+                    ? 'Voice Recognition' 
+                    : 'Talk to Matrix AI'}
+                </Text>
+                {Platform.OS === 'android' && isListening && (
+                  <View style={styles.androidVoiceSimulation}>
+                    <ActivityIndicator size="large" color="#2196F3" />
+                    <Text style={styles.androidVoiceText}>
+                      Listening... (Type your message below)
+                    </Text>
+                  </View>
+                )}
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={Platform.OS === 'android' && isListening 
+                    ? "What you want to say..." 
+                    : "Type your message here..."}
+                  value={textInputValue}
+                  onChangeText={setTextInputValue}
+                  autoFocus={true}
+                  multiline={true}
+                  maxLength={200}
+                  returnKeyType="send"
+                  onSubmitEditing={handleTextInputSubmit}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]} 
+                    onPress={() => {
+                      setInputModalVisible(false);
+                      if (Platform.OS === 'android' && isListening) {
+                        setIsListening(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.sendButton]} 
+                    onPress={handleTextInputSubmit}
+                  >
+                    <Text style={styles.buttonText}>Send</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </Modal>
+
       <View style={styles.animationContainer}>
         <LottieView
           source={require('../assets/Animation - 1740689806927.json')}
@@ -578,28 +1034,90 @@ const CameraScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.responseContainer}>
-        <Text style={styles.responseText} numberOfLines={3}>
-          {aiResponse || 'Tap the camera button to analyze what you see'}
+        <Text style={styles.responseText} numberOfLines={4}>
+          {aiResponse || 'Tap the camera button to analyze what you see, or use the mic/chat buttons to start a conversation'}
         </Text>
+        {recognizedText ? (
+          <Text style={styles.userQueryText} numberOfLines={2}>
+            You: {recognizedText}
+          </Text>
+        ) : null}
+        {isListening && (
+          <View style={styles.listeningIndicator}>
+            <Text style={styles.listeningText}>Listening...</Text>
+            <ActivityIndicator size="small" color="#ffffff" />
+          </View>
+        )}
+        {isVoiceProcessing && (
+          <View style={styles.listeningIndicator}>
+            <Text style={styles.listeningText}>Processing...</Text>
+            <ActivityIndicator size="small" color="#ffffff" />
+          </View>
+        )}
+        {conversationHistory.length > 0 && (
+          <TouchableOpacity 
+            style={styles.historyButton}
+            onPress={() => {
+              if (conversationHistory.length > 0) {
+                const historyText = conversationHistory
+                  .map(msg => `${msg.role === 'user' ? 'You' : 'Matrix AI'}: ${msg.content}`)
+                  .join('\n\n');
+                Alert.alert('Conversation History', historyText);
+              }
+            }}
+          >
+            <Text style={styles.historyButtonText}>View Conversation History</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.iconRow}>
-        <TouchableOpacity 
-          style={styles.iconCircle} 
-          onPress={() => aiResponse && ttsInitialized && Tts.speak(aiResponse)}
-        >
-          <Icon name="mic" size={28} color="black" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.iconCircle, styles.captureButton]} 
-          onPress={capturePhoto}
-          disabled={isProcessing}
-        >
-          <Icon name="camera" size={28} color="black" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.goBack()}>
-          <Icon name="close" size={28} color="black" />
-        </TouchableOpacity>
+        <View style={styles.iconContainer}>
+          <TouchableOpacity 
+            style={styles.iconCircle} 
+            onPress={() => showTextInputDialog()}
+            disabled={isProcessing || isVoiceProcessing || isListening}
+          >
+            <Icon name="chat" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.iconLabel}>Text</Text>
+        </View>
+        
+        <View style={styles.iconContainer}>
+          <TouchableOpacity 
+            style={[styles.iconCircle, isListening ? styles.activeIconCircle : null]} 
+            onPress={() => {
+              if (isListening) {
+                stopVoiceRecognition();
+              } else {
+                startVoiceRecognition();
+              }
+            }}
+            disabled={isProcessing || isVoiceProcessing}
+          >
+            <Icon name={isListening ? "stop" : "mic"} size={28} color="black" />
+            {isListening && <View style={styles.pulseDot} />}
+          </TouchableOpacity>
+          <Text style={styles.iconLabel}>Voice</Text>
+        </View>
+        
+        <View style={styles.iconContainer}>
+          <TouchableOpacity 
+            style={[styles.iconCircle, styles.captureButton]} 
+            onPress={capturePhoto}
+            disabled={isProcessing || isListening || isVoiceProcessing}
+          >
+            <Icon name="camera" size={28} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.iconLabel}>Camera</Text>
+        </View>
+        
+        <View style={styles.iconContainer}>
+          <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.goBack()}>
+            <Icon name="close" size={28} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.iconLabel}>Close</Text>
+        </View>
       </View>
     </View>
   );
@@ -663,29 +1181,66 @@ const styles = StyleSheet.create({
   },
   responseContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 10,
+    padding: 15,
     margin: 10,
-    borderRadius: 10,
+    borderRadius: 15,
+    maxHeight: 150,
   },
   responseText: {
     color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  userQueryText: {
+    color: '#a0e1ff',
     fontSize: 14,
     textAlign: 'center',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  listeningIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  listeningText: {
+    color: '#ff9f7f',
+    fontSize: 14,
+    marginRight: 10,
+    fontWeight: 'bold',
   },
   iconRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    padding: 10,
+    padding: 15,
+    marginBottom: 10,
+  },
+  iconContainer: {
+    alignItems: 'center',
+  },
+  iconLabel: {
+    fontSize: 10,
+    marginTop: 4,
+    color: '#333',
   },
   iconCircle: {
     backgroundColor: 'lightgray',
     borderRadius: 50,
-    padding: 10,
+    padding: 15,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  activeIconCircle: {
+    backgroundColor: '#ff4757',
   },
   captureButton: {
     backgroundColor: '#ff4757',
-    padding: 15,
+    padding: 20,
   },
   loadingText: {
     marginTop: 10,
@@ -718,6 +1273,90 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontSize: 16,
+  },
+  pulseDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ff0000',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+  },
+  textInput: {
+    width: '100%',
+    height: 100,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 20,
+    padding: 10,
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    padding: 12,
+    borderRadius: 8,
+    width: '48%',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#ff4757',
+  },
+  sendButton: {
+    backgroundColor: '#2196F3',
+  },
+  historyButton: {
+    marginTop: 10,
+    padding: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 5,
+    alignSelf: 'center',
+  },
+  historyButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+  },
+  androidVoiceSimulation: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  androidVoiceText: {
+    marginTop: 10,
+    color: '#2196F3',
+    fontWeight: 'bold',
   },
 });
 
