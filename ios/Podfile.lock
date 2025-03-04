@@ -1557,6 +1557,27 @@ PODS:
     - Yoga
   - react-native-voice (3.2.4):
     - React-Core
+  - react-native-vosk (0.3.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - react-native-webview (13.13.2):
     - DoubleConversion
     - glog
@@ -1871,7 +1892,7 @@ PODS:
     - React
   - RNAudioRecorderPlayer (3.6.12):
     - React-Core
-  - RNCAsyncStorage (2.1.1):
+  - RNCAsyncStorage (1.24.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2246,6 +2267,7 @@ DEPENDENCIES:
   - react-native-video (from `../node_modules/react-native-video`)
   - react-native-view-shot (from `../node_modules/react-native-view-shot`)
   - "react-native-voice (from `../node_modules/@react-native-voice/voice`)"
+  - react-native-vosk (from `../node_modules/react-native-vosk`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2406,6 +2428,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-view-shot"
   react-native-voice:
     :path: "../node_modules/@react-native-voice/voice"
+  react-native-vosk:
+    :path: "../node_modules/react-native-vosk"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   React-nativeconfig:
@@ -2556,6 +2580,7 @@ SPEC CHECKSUMS:
   react-native-video: 7122a2b9397bf722709321eac0630e8f59a404e7
   react-native-view-shot: a38d952d5c7103b79a67c8aa82da95f98be6e5c2
   react-native-voice: 908a0eba96c8c3d643e4f98b7232c6557d0a6f9c
+  react-native-vosk: fd049c0f741e9b958b79df191c2c80b48ace13fd
   react-native-webview: 449c3f27cdb926086a5eff7993421fd096cc5ae3
   React-nativeconfig: cd0fbb40987a9658c24dab5812c14e5522a64929
   React-NativeModulesApple: 4a9c304aa4fb086af32e8758ba892386d895b4d3
@@ -2588,7 +2613,7 @@ SPEC CHECKSUMS:
   ReactCommon: 1bd2dc684d7992acbf0dfee887b89a57a1ead86d
   RNAudioRecord: b253d15d8141c5ef6bc614fc9d9f06577870bfc3
   RNAudioRecorderPlayer: 11df0c7b614e9767ef24d896465c3a758c592de7
-  RNCAsyncStorage: a025c661a88f7db9d59d451d495decb375bb1b53
+  RNCAsyncStorage: dc5ca6aeca46e73f963ea4f79e222838c2d186cb
   RNCPicker: cfb51a08c6e10357d9a65832e791825b0747b483
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
   RNGestureHandler: 0ea07666b2252aa48b192764eb21a25c60e6b6db
@@ -2604,6 +2629,6 @@ SPEC CHECKSUMS:
   VisionCamera: f56eaedde0d3fa095143b78374d29e89e71735f9
   Yoga: 78d74e245ed67bb94275a1316cdc170b9b7fe884
 
-PODFILE CHECKSUM: 46d819c77ab312177cb6523d225c5dbbd5538226
+PODFILE CHECKSUM: a917fe7ff9814e9cbedadf3eef172a3d8b7b72f4
 
 COCOAPODS: 1.15.2

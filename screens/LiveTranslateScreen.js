@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+
 import {
   View,
   Text,
@@ -18,7 +19,7 @@ import {
 } from 'react-native';
 import AudioRecord from 'react-native-audio-record';
 import { v4 as uuidv4 } from 'uuid';
-import Voice from '@react-native-voice/voice';
+import Vosk from 'react-native-vosk';
 import Tts from 'react-native-tts'; // Importing TTS library
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/core';
@@ -41,17 +42,6 @@ const LiveTranslateScreen = () => {
   const [recordingStartTime, setRecordingStartTime] = useState(0);
   const [editingLanguage, setEditingLanguage] = useState('source'); // 'source' or 'target'
   const navigation = useNavigation();
-
-  // Add a ref to store Voice event handlers
-  const [voiceHandlers, setVoiceHandlers] = useState({
-    onSpeechStart: null,
-    onSpeechEnd: null,
-    onSpeechResults: null,
-    onSpeechError: null
-  });
-
-  // Add Voice instance ref
-  const voiceInstance = useRef(null);
 
   const languageCodes = {
     Afrikaans: 'af',
@@ -125,88 +115,45 @@ const LiveTranslateScreen = () => {
   const languages = Object.keys(languageCodes);
   const region = 'eastus';
 
-  const [isVoiceInitialized, setIsVoiceInitialized] = useState(false);
+  const [isVoskInitialized, setIsVoskInitialized] = useState(false);
+  const [voskInstance, setVoskInstance] = useState(null);
+  const [resultEventListener, setResultEventListener] = useState(null);
 
-  const initializeVoice = useCallback(async (retryCount = 0) => {
-    if (isVoiceInitialized) return true;
+  const initializeVosk = useCallback(async (retryCount = 0) => {
+    if (isVoskInitialized && voskInstance) return true;
 
     try {
-      // First check if Voice is available
-      if (!Voice) {
-        console.error('Voice module is undefined');
-        throw new Error('Voice module not available - Please reinstall @react-native-voice/voice');
-      }
-
-      // Store Voice instance in ref
-      voiceInstance.current = Voice;
-
-      // Create handlers first
-      const handlers = {
-        onSpeechStart: () => {
-          console.log('Speech started');
-          setIsListening(true);
-          startCircleAnimation();
-        },
-        onSpeechEnd: () => {
-          console.log('Speech ended');
-          setIsListening(false);
-          stopCircleAnimation();
-        },
-        onSpeechResults: (e) => {
-          if (e && e.value && e.value.length > 0) {
-            console.log('Speech results:', e.value[0]);
-            setTranscription(e.value[0] || 'Press Mic to start listening');
-            translateText(e.value[0] || 'Press Mic to start listening');
-          }
-        },
-        onSpeechError: (e) => {
-          console.error('Speech recognition error:', e);
-          setIsListening(false);
-          Alert.alert('Speech Error', e.error?.message || 'Speech recognition failed');
-        }
-      };
-
-      // Store handlers in state
-      setVoiceHandlers(handlers);
-
-      // Clean up any existing listeners
-      try {
-        if (voiceInstance.current) {
-          if (voiceInstance.current.destroy) {
-            await voiceInstance.current.destroy();
-          }
-          if (voiceInstance.current.removeAllListeners) {
-            await voiceInstance.current.removeAllListeners();
-          }
-        }
-      } catch (cleanupError) {
-        console.warn('Error during Voice cleanup:', cleanupError);
-      }
-
-      // Set up event listeners using the proper method
-      if (voiceInstance.current) {
-        if (voiceInstance.current.addEventListener) {
-          Object.entries(handlers).forEach(([event, handler]) => {
-            voiceInstance.current.addEventListener(event, handler);
-          });
-        } else {
-          Object.entries(handlers).forEach(([event, handler]) => {
-            voiceInstance.current[event] = handler;
-          });
+      // Clean up any existing instance
+      if (voskInstance) {
+        try {
+          voskInstance.stop();
+          voskInstance.unload();
+        } catch (cleanupError) {
+          console.warn('Error during Vosk cleanup:', cleanupError);
+          // Continue despite cleanup errors
         }
       }
 
-      setIsVoiceInitialized(true);
-      console.log('Voice module successfully initialized');
+      // Create a new Vosk instance
+      const vosk = new Vosk();
+      setVoskInstance(vosk);
+
+      // Load the model - using English as default
+      await vosk.loadModel('model-en-en');
+      
+      setIsVoskInitialized(true);
+      console.log('Vosk module successfully initialized');
       return true;
     } catch (error) {
-      console.error(`Error initializing Voice (attempt ${retryCount}):`, error);
+      console.error(`Error initializing Vosk (attempt ${retryCount}):`, error);
+      
+      setIsVoskInitialized(false);
       
       if (retryCount < 3) {
         const delay = 1000 * Math.pow(2, retryCount);
-        console.log(`Retrying Voice initialization in ${delay}ms...`);
+        console.log(`Retrying Vosk initialization in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        return initializeVoice(retryCount + 1);
+        return initializeVosk(retryCount + 1);
       }
 
       Alert.alert(
@@ -215,7 +162,34 @@ const LiveTranslateScreen = () => {
       );
       return false;
     }
-  }, [isVoiceInitialized, startCircleAnimation, stopCircleAnimation, translateText]);
+  }, [isVoskInitialized, voskInstance]);
+
+  // Define the speech recognition event handlers
+  const onSpeechStart = useCallback(() => {
+    console.log('Speech started');
+    setIsListening(true);
+    startCircleAnimation();
+  }, [startCircleAnimation]);
+
+  const onSpeechEnd = useCallback(() => {
+    console.log('Speech ended');
+    setIsListening(false);
+    stopCircleAnimation();
+  }, [stopCircleAnimation]);
+
+  const onSpeechResults = useCallback((result) => {
+    if (result) {
+      console.log('Speech results:', result);
+      setTranscription(result || 'Press Mic to start listening');
+      translateText(result || 'Press Mic to start listening');
+    }
+  }, [translateText]);
+
+  const onSpeechError = useCallback((e) => {
+    console.error('Speech recognition error:', e);
+    setIsListening(false);
+    Alert.alert('Speech Error', e || 'Speech recognition failed');
+  }, []);
 
   useEffect(() => {
     const initializeAnimation = () => {
@@ -229,24 +203,33 @@ const LiveTranslateScreen = () => {
     const requestPermissions = async () => {
       if (Platform.OS === 'android') {
         try {
-          const granted = await PermissionsAndroid.request(
+          const grants = await PermissionsAndroid.requestMultiple([
             PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-            {
-              title: 'Audio Recording Permission',
-              message: 'This app needs access to your microphone to perform voice recognition.',
-              buttonPositive: 'Grant Permission',
-            }
-          );
-          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            console.error('Microphone permission denied');
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          ]);
+
+          if (
+            grants['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED &&
+            grants['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+            grants['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            console.log('All permissions granted');
+            await initializeVosk();
+          } else {
+            console.log('Some permissions denied');
             Alert.alert(
-              'Permission Required',
-              'Microphone permission is required for voice recognition. Please enable it in app settings.'
+              'Permissions Required',
+              'This app needs microphone and storage permissions to function properly.',
+              [{ text: 'OK' }]
             );
           }
         } catch (err) {
-          console.error('Error requesting audio permission:', err);
+          console.warn(err);
         }
+      } else {
+        // For iOS
+        await initializeVosk();
       }
     };
 
@@ -257,36 +240,29 @@ const LiveTranslateScreen = () => {
       // Cleanup function
       const cleanup = async () => {
         try {
-          if (voiceInstance.current) {
-            // First remove all listeners
-            if (voiceInstance.current.removeAllListeners) {
-              const events = ['onSpeechStart', 'onSpeechEnd', 'onSpeechResults', 'onSpeechError'];
-              events.forEach(event => {
-                try {
-                  voiceInstance.current.removeAllListeners(event);
-                } catch (e) {
-                  console.warn(`Error removing listener for ${event}:`, e);
-                }
-              });
+          if (voskInstance) {
+            // Remove the result event listener
+            if (resultEventListener) {
+              resultEventListener.remove();
             }
-
-            // Then destroy the instance
-            if (voiceInstance.current.destroy) {
-              await voiceInstance.current.destroy();
+            
+            // Stop and unload Vosk
+            try {
+              voskInstance.stop();
+              voskInstance.unload();
+            } catch (e) {
+              console.warn('Error cleaning up Vosk:', e);
             }
-
-            // Clear the instance
-            voiceInstance.current = null;
           }
         } catch (error) {
-          console.warn('Error during Voice cleanup:', error);
+          console.warn('Error during Vosk cleanup:', error);
         }
-        setIsVoiceInitialized(false);
+        setIsVoskInitialized(false);
       };
 
       cleanup();
     };
-  }, []);
+  }, [initializeVosk, resultEventListener, voskInstance]);
 
 
 
@@ -442,8 +418,36 @@ const LiveTranslateScreen = () => {
     // If currently listening, restart with new source language
     if (isListening) {
       try {
-        await Voice.stop();
-        await Voice.start(selectedLanguage2); // Use the new source language
+        // Stop current recognition
+        if (voskInstance) {
+          await voskInstance.stop();
+          
+          // Remove the result event listener
+          if (resultEventListener) {
+            resultEventListener.remove();
+            setResultEventListener(null);
+          }
+        }
+        
+        // Configure Vosk options
+        const options = {
+          grammar: [], // Empty array means no grammar restrictions
+        };
+        
+        // Start Vosk with new language
+        await voskInstance.start(options);
+        
+        // Set up result listener
+        const resultEvent = voskInstance.onResult((result) => {
+          console.log('Vosk result:', result);
+          if (result) {
+            setTranscription(result);
+            translateText(result);
+          }
+        });
+        
+        // Store the event listener for cleanup
+        setResultEventListener(resultEvent);
       } catch (error) {
         console.error('Error restarting voice recognition:', error);
       }
@@ -478,7 +482,15 @@ const LiveTranslateScreen = () => {
     if (isSourceLanguage) {
       // Stop any ongoing recognition
       try {
-        await Voice.stop();
+        if (voskInstance) {
+          await voskInstance.stop();
+          
+          // Remove the result event listener
+          if (resultEventListener) {
+            resultEventListener.remove();
+            setResultEventListener(null);
+          }
+        }
       } catch (error) {
         console.error('Error stopping voice recognition:', error);
       }
@@ -493,7 +505,27 @@ const LiveTranslateScreen = () => {
           if (!languageCode) {
             throw new Error(`Invalid language code for: ${language}`);
           }
-          await Voice.start(languageCode);
+          
+          // Configure Vosk options
+          const options = {
+            grammar: [], // Empty array means no grammar restrictions
+          };
+          
+          // Start Vosk with new language
+          await voskInstance.start(options);
+          
+          // Set up result listener
+          const resultEvent = voskInstance.onResult((result) => {
+            console.log('Vosk result:', result);
+            if (result) {
+              setTranscription(result);
+              translateText(result);
+            }
+          });
+          
+          // Store the event listener for cleanup
+          setResultEventListener(resultEvent);
+          
           console.log('Restarted voice recognition with language:', languageCode);
         } catch (error) {
           console.error('Error restarting voice recognition:', error);
@@ -525,7 +557,7 @@ const LiveTranslateScreen = () => {
       
       if (isListening) {
         const result = await AudioRecord.stop();
-        await Voice.stop();
+        await voskInstance.stop();
         
         fileToUpload = { 
           uri: result, 
@@ -602,22 +634,13 @@ const handleStartListening = async () => {
   }
 
   try {
-    // Initialize Voice module if not already initialized
-    if (!isVoiceInitialized) {
-      const initialized = await initializeVoice();
+    // Initialize Vosk module if not already initialized
+    if (!isVoskInitialized) {
+      const initialized = await initializeVosk();
       if (!initialized) {
         throw new Error('Failed to initialize voice recognition');
       }
     }
-
-    // Initialize AudioRecord
-    await AudioRecord.init({
-      sampleRate: 16000,
-      channels: 1,
-      bitsPerSample: 16,
-      audioSource: 6,
-      wavFile: `${uuidv4()}.wav`,
-    });
 
     // Get language code and validate
     const languageCode = languageCodes[selectedLanguage];
@@ -628,13 +651,42 @@ const handleStartListening = async () => {
     // Start recording and voice recognition
     setIsListening(true);
     setIsPaused(false);
-    await AudioRecord.start();
-    
-    // Start voice recognition
-    await voiceInstance.current.start(languageCode);
-    
     setTranscription('Listening...');
     setRecordingStartTime(Date.now());
+    
+    // Start Vosk recognition
+    console.log('Starting Vosk recognition with language:', languageCode);
+    
+    // Configure Vosk options
+    const options = {
+      grammar: [], // Empty array means no grammar restrictions
+    };
+    
+    // Start Vosk
+    await voskInstance.start(options);
+    
+    // Set up result listener
+    const resultEvent = voskInstance.onResult((result) => {
+      console.log('Vosk result:', result);
+      if (result) {
+        setTranscription(result);
+        translateText(result);
+      }
+    });
+    
+    // Store the event listener for cleanup
+    setResultEventListener(resultEvent);
+    
+    // Set up error listener
+    voskInstance.onError((error) => {
+      console.error('Vosk error:', error);
+      setIsListening(false);
+      Alert.alert('Speech Error', error || 'Speech recognition failed');
+    });
+    
+    // Start animation
+    startCircleAnimation();
+    
   } catch (error) {
     console.error('Error starting voice recognition:', error);
     setIsListening(false);
@@ -643,10 +695,11 @@ const handleStartListening = async () => {
     
     // Cleanup on error
     try {
-      if (voiceInstance.current && voiceInstance.current.destroy) {
-        await voiceInstance.current.destroy();
+      if (voskInstance) {
+        voskInstance.stop();
       }
-      await AudioRecord.stop();
+      // Reinitialize for next attempt
+      await initializeVosk();
     } catch (cleanupError) {
       console.error('Error during cleanup:', cleanupError);
     }
@@ -656,17 +709,19 @@ const handleStartListening = async () => {
   const handlePauseListening = async () => {
     setIsPaused(true);
     try {
-      const result = await AudioRecord.stop();
-      await Voice.stop();
+      // Stop Vosk recognition
+      if (voskInstance) {
+        await voskInstance.stop();
+      }
       
-      setAudioFilePath(result);
-      setAudioFile({ 
-        uri: result, 
-        type: 'audio/wav', 
-        name: `${uuidv4()}.wav`
-      });
+      // Remove the result event listener
+      if (resultEventListener) {
+        resultEventListener.remove();
+        setResultEventListener(null);
+      }
       
       setTranscription(prev => prev + ' [Paused]');
+      stopCircleAnimation();
     } catch (error) {
       console.error('Error pausing recording:', error);
     }
@@ -675,11 +730,47 @@ const handleStartListening = async () => {
   const handleResumeListening = async () => {
     setIsPaused(false);
     try {
-      await AudioRecord.start();
-      await Voice.start(selectedLanguage); // Always use selectedLanguage for speech recognition
+      // Get language code
+      const languageCode = languageCodes[selectedLanguage];
+      if (!languageCode) {
+        throw new Error(`Language code not found for: ${selectedLanguage}`);
+      }
+      
+      // Configure Vosk options
+      const options = {
+        grammar: [], // Empty array means no grammar restrictions
+      };
+      
+      // Start Vosk
+      await voskInstance.start(options);
+      
+      // Set up result listener
+      const resultEvent = voskInstance.onResult((result) => {
+        console.log('Vosk result:', result);
+        if (result) {
+          setTranscription(result);
+          translateText(result);
+        }
+      });
+      
+      // Store the event listener for cleanup
+      setResultEventListener(resultEvent);
+      
       setTranscription(prev => prev.replace(' [Paused]', ''));
+      startCircleAnimation();
     } catch (error) {
       console.error('Error resuming recording:', error);
+      Alert.alert('Error', `Failed to resume listening: ${error.message}`);
+      
+      // Try to reinitialize on error
+      try {
+        if (voskInstance) {
+          voskInstance.stop();
+        }
+        await initializeVosk();
+      } catch (cleanupError) {
+        console.error('Error during reinitialize:', cleanupError);
+      }
     }
   };
 
