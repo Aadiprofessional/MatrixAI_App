@@ -252,14 +252,8 @@ const LiveTranslateScreen = () => {
 
     initializeAnimation();
     requestPermissions();
-    
-    // Initialize voice with a slight delay to ensure app is fully loaded
-    const timer = setTimeout(() => {
-      initializeVoice();
-    }, 500);
 
     return () => {
-      clearTimeout(timer);
       // Cleanup function
       const cleanup = async () => {
         try {
@@ -292,7 +286,7 @@ const LiveTranslateScreen = () => {
 
       cleanup();
     };
-  }, [initializeVoice]);
+  }, []);
 
 
 
@@ -608,8 +602,8 @@ const handleStartListening = async () => {
   }
 
   try {
-    // Make sure Voice is initialized
-    if (!isVoiceInitialized || !voiceInstance.current) {
+    // Initialize Voice module if not already initialized
+    if (!isVoiceInitialized) {
       const initialized = await initializeVoice();
       if (!initialized) {
         throw new Error('Failed to initialize voice recognition');
@@ -617,7 +611,6 @@ const handleStartListening = async () => {
     }
 
     // Initialize AudioRecord
-    console.log('Initializing AudioRecord...');
     await AudioRecord.init({
       sampleRate: 16000,
       channels: 1,
@@ -635,15 +628,10 @@ const handleStartListening = async () => {
     // Start recording and voice recognition
     setIsListening(true);
     setIsPaused(false);
-    console.log('Starting AudioRecord...');
     await AudioRecord.start();
     
-    console.log('Starting Voice recognition with language code:', languageCode);
-    if (voiceInstance.current && voiceInstance.current.start) {
-      await voiceInstance.current.start(languageCode);
-    } else {
-      throw new Error('Voice.start method is not available');
-    }
+    // Start voice recognition
+    await voiceInstance.current.start(languageCode);
     
     setTranscription('Listening...');
     setRecordingStartTime(Date.now());

@@ -105,6 +105,12 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    
+    // Add this block to exclude problematic native modules
+    packagingOptions {
+        exclude '**/libreact_codegen_rnsvg.so'
+        pickFirst '**/*.so'
+    }
 }
 
 dependencies {
@@ -146,6 +152,11 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-vector-drawable'
         exclude group: 'com.android.support', module: 'customtabs'
         exclude group: 'com.android.support', module: 'support-annotations'
+    }
+    
+    // Exclude problematic native modules
+    implementation(project(':react-native-svg')) {
+        exclude group: 'com.facebook.react', module: 'react-native-svg'
     }
 }
 
