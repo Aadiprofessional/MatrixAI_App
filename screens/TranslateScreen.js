@@ -74,6 +74,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       const [showMindMap, setShowMindMap] = useState(false);
       const scrollViewRef = useRef(null);
       const [isSeeking, setIsSeeking] = useState(false);
+      const userScrollTimeoutRef = useRef(null);
 
       const isTranscriptionEmpty = transcription  === '';
       const coin = require('../assets/coin.png');
@@ -305,29 +306,291 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         setWaveformHeights(heights);
     }, []);
 
+    // Add a state to track if user is manually scrolling
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
 
+    // Add a state to track the last auto-scrolled paragraph
+    const [lastScrolledPara, setLastScrolledPara] = useState(0);
+
+    // Update the onAudioProgress function to improve scrolling behavior
     const onAudioProgress = (progress) => {
-        if (!progress || !progress.currentTime || !progress.duration || !paragraphs.length || !wordTimings.length) return;
+        if (!progress || !progress.currentTime || !progress.duration || !wordTimings.length) return;
         
         const currentTime = Number(progress.currentTime.toFixed(2));
         
-        // Find the current paragraph based on timing
-        const currentParaIndex = wordTimings.findIndex(timing => 
-            currentTime >= timing.start && currentTime < timing.end
-        );
+        // STEP 1: Find the most appropriate paragraph
+        let currentParaIndex = -1;
+        let bestParaDistance = Infinity;
         
-        if (currentParaIndex !== -1 && currentParaIndex !== currentWordIndex.paraIndex) {
-            setCurrentWordIndex({
-                paraIndex: currentParaIndex
-            });
+        // Try to find the paragraph containing the current time
+        for (let i = 0; i < wordTimings.length; i++) {
+            const para = wordTimings[i];
             
-            // Auto-scroll to the current paragraph
-            if (scrollViewRef.current) {
-                const yOffset = currentParaIndex * 200; // Approximate height per paragraph
-                scrollViewRef.current.scrollTo({
-                    y: yOffset,
-                    animated: true
-                });
+            // Check if time is within paragraph bounds
+            if (currentTime >= para.start && currentTime < para.end) {
+                currentParaIndex = i;
+                break;
+            }
+            
+            // If not in bounds, calculate distance to this paragraph
+            const distanceToStart = Math.abs(para.start - currentTime);
+            const distanceToEnd = Math.abs(para.end - currentTime);
+            const minDistance = Math.min(distanceToStart, distanceToEnd);
+            
+            if (minDistance < bestParaDistance) {
+                bestParaDistance = minDistance;
+                currentParaIndex = i;
+            }
+        }
+        
+        // Default to first paragraph if no match found
+        if (currentParaIndex === -1 && wordTimings.length > 0) {
+            currentParaIndex = 0;
+        }
+        
+        // STEP 2: Find the appropriate word to highlight
+        if (currentParaIndex !== -1) {
+            const currentParagraphWords = wordTimings[currentParaIndex].words || [];
+            
+            // Initialize variables for word selection
+            let selectedWordIdx = -1;
+            let lastWordBeforeTime = -1;
+            let firstWordAfterTime = -1;
+            let bestWordDistance = Infinity;
+            let bestWordIdx = -1;
+            
+            // First pass: collect information about words relative to current time
+            for (let i = 0; i < currentParagraphWords.length; i++) {
+                const word = currentParagraphWords[i];
+                if (!word || word.start === undefined) continue;
+                
+                // Check for exact match (current time falls within word's time range)
+                if (word.end !== undefined && currentTime >= word.start && currentTime < word.end) {
+                    selectedWordIdx = i;
+                    break; // Found exact match, no need to continue
+                }
+                
+                // Track the last word that started before current time
+                if (word.start <= currentTime) {
+                    lastWordBeforeTime = i;
+                }
+                
+                // Track the first word that starts after current time
+                if (word.start > currentTime && (firstWordAfterTime === -1 || word.start < currentParagraphWords[firstWordAfterTime].start)) {
+                    firstWordAfterTime = i;
+                }
+                
+                // Calculate distance to this word for best approximation
+                const distanceToWord = Math.min(
+                    Math.abs(word.start - currentTime),
+                    word.end !== undefined ? Math.abs(word.end - currentTime) : Infinity
+                );
+                
+                if (distanceToWord < bestWordDistance) {
+                    bestWordDistance = distanceToWord;
+                    bestWordIdx = i;
+                }
+            }
+            
+            // STEP 3: Decision logic for word selection with improved fallback
+            
+            // If we found an exact match, use it
+            if (selectedWordIdx === -1) {
+                // No exact match found, use best alternative
+                
+                // Case 1: We have a word that started before current time
+                if (lastWordBeforeTime !== -1) {
+                    const lastWord = currentParagraphWords[lastWordBeforeTime];
+                    
+                    // Check if we should advance to next word
+                    if (lastWord.end !== undefined && currentTime > lastWord.end) {
+                        // We're past the end of the last word
+                        
+                        // Case 1A: We have a next word to potentially jump to
+                        if (firstWordAfterTime !== -1) {
+                            const nextWord = currentParagraphWords[firstWordAfterTime];
+                            const timeSinceLastWordEnded = currentTime - lastWord.end;
+                            const timeUntilNextWordStarts = nextWord.start - currentTime;
+                            
+                            // More aggressive forward-looking: advance to next word if:
+                            // 1. We're closer to next word than to end of last word, OR
+                            // 2. It's been more than 0.1 seconds since last word ended (reduced from 0.2)
+                            if (timeUntilNextWordStarts < timeSinceLastWordEnded || timeSinceLastWordEnded > 0.1) {
+                                // Verify next word timing data is valid
+                                if (nextWord.start !== undefined && nextWord.end !== undefined) {
+                                    selectedWordIdx = firstWordAfterTime;
+                                } else {
+                                    // Skip invalid word and look for next valid one
+                                    let foundValidWord = false;
+                                    for (let i = firstWordAfterTime + 1; i < currentParagraphWords.length; i++) {
+                                        const word = currentParagraphWords[i];
+                                        if (word.start !== undefined && word.end !== undefined) {
+                                            selectedWordIdx = i;
+                                            foundValidWord = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    // If we couldn't find a valid word ahead, use the best word by distance
+                                    if (!foundValidWord && bestWordIdx !== -1) {
+                                        selectedWordIdx = bestWordIdx;
+                                    }
+                                }
+                            } else {
+                                selectedWordIdx = lastWordBeforeTime;
+                            }
+                        } else {
+                            // Case 1B: No next word in this paragraph, look ahead to next paragraph
+                            if (currentParaIndex < wordTimings.length - 1) {
+                                const nextParaWords = wordTimings[currentParaIndex + 1].words || [];
+                                if (nextParaWords.length > 0 && nextParaWords[0].start !== undefined) {
+                                    const firstWordNextPara = nextParaWords[0];
+                                    const timeSinceLastWordEnded = currentTime - lastWord.end;
+                                    const timeUntilNextParaStarts = firstWordNextPara.start - currentTime;
+                                    
+                                    // If we're very close to the next paragraph's first word, jump to next paragraph
+                                    // More aggressive jumping to next paragraph
+                                    if (timeUntilNextParaStarts < 1.5 && timeSinceLastWordEnded > 0.3) {
+                                        // We're close enough to next paragraph, update state to move there
+                                        setCurrentWordIndex({
+                                            paraIndex: currentParaIndex + 1,
+                                            wordIndex: 0,
+                                            word: firstWordNextPara.punctuated_word || firstWordNextPara.word || ''
+                                        });
+                                        
+                                        // Auto-scroll if needed
+                                        if (scrollViewRef.current && 
+                                            (currentParaIndex + 1) !== lastScrolledPara && 
+                                            !isUserScrolling) {
+                                            setLastScrolledPara(currentParaIndex + 1);
+                                            scrollViewRef.current.scrollTo({
+                                                y: (currentParaIndex + 1) * 200,
+                                                animated: true
+                                            });
+                                        }
+                                        
+                                        // Return early since we've handled this case
+                                        return;
+                                    }
+                                }
+                            }
+                            
+                            // If we can't jump to next paragraph, use best word by distance
+                            selectedWordIdx = bestWordIdx !== -1 ? bestWordIdx : lastWordBeforeTime;
+                        }
+                    } else {
+                        // We're still within the last word's time range
+                        selectedWordIdx = lastWordBeforeTime;
+                    }
+                } 
+                // Case 2: No word has started yet, but we have upcoming words
+                else if (firstWordAfterTime !== -1) {
+                    selectedWordIdx = firstWordAfterTime;
+                } 
+                // Case 3: No timing data available, use best word by distance
+                else if (bestWordIdx !== -1) {
+                    selectedWordIdx = bestWordIdx;
+                }
+                // Case 4: Absolute fallback - use first word if available
+                else if (currentParagraphWords.length > 0) {
+                    selectedWordIdx = 0;
+                }
+            }
+            
+            // STEP 4: If we still don't have a word, implement aggressive forward-looking
+            if (selectedWordIdx === -1) {
+                // Look ahead across multiple paragraphs if necessary
+                let foundWord = false;
+                
+                // Check next few paragraphs
+                for (let paraOffset = 1; paraOffset <= 3; paraOffset++) {
+                    if (currentParaIndex + paraOffset < wordTimings.length) {
+                        const aheadParaWords = wordTimings[currentParaIndex + paraOffset].words || [];
+                        
+                        if (aheadParaWords.length > 0) {
+                            // Found a paragraph with words, use its first word
+                            setCurrentWordIndex({
+                                paraIndex: currentParaIndex + paraOffset,
+                                wordIndex: 0,
+                                word: aheadParaWords[0].punctuated_word || aheadParaWords[0].word || ''
+                            });
+                            
+                            // Auto-scroll if needed
+                            if (scrollViewRef.current && 
+                                (currentParaIndex + paraOffset) !== lastScrolledPara && 
+                                !isUserScrolling) {
+                                setLastScrolledPara(currentParaIndex + paraOffset);
+                                scrollViewRef.current.scrollTo({
+                                    y: (currentParaIndex + paraOffset) * 200,
+                                    animated: true
+                                });
+                            }
+                            
+                            foundWord = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // If we still haven't found a word, default to first word of current paragraph
+                if (!foundWord && currentParagraphWords.length > 0) {
+                    selectedWordIdx = 0;
+                } else if (!foundWord) {
+                    // Absolute fallback: stay on current paragraph but don't get stuck
+                    // Find any word with valid timing data in the current paragraph
+                    for (let i = 0; i < currentParagraphWords.length; i++) {
+                        if (currentParagraphWords[i] && 
+                            currentParagraphWords[i].start !== undefined && 
+                            currentParagraphWords[i].end !== undefined) {
+                            selectedWordIdx = i;
+                            break;
+                        }
+                    }
+                    
+                    // If still no valid word, just use the first word
+                    if (selectedWordIdx === -1 && currentParagraphWords.length > 0) {
+                        selectedWordIdx = 0;
+                    }
+                    
+                    // If absolutely nothing works, just return without updating
+                    if (selectedWordIdx === -1) return;
+                }
+            }
+            
+            // STEP 5: Update the UI with our selected word
+            if (selectedWordIdx !== -1) {
+                // Get the current word index state
+                const prevWordIndex = currentWordIndex;
+                
+                // Only update if we're changing words to avoid unnecessary re-renders
+                if (prevWordIndex.paraIndex !== currentParaIndex || 
+                    prevWordIndex.wordIndex !== selectedWordIdx) {
+                    
+                    setCurrentWordIndex({
+                        paraIndex: currentParaIndex,
+                        wordIndex: selectedWordIdx,
+                        word: currentParagraphWords[selectedWordIdx]?.punctuated_word || 
+                              currentParagraphWords[selectedWordIdx]?.word || ''
+                    });
+                    
+                    // Auto-scroll to the current paragraph only if:
+                    // 1. Paragraph changed from the last scrolled paragraph
+                    // 2. User is not manually scrolling
+                    if (scrollViewRef.current && 
+                        currentParaIndex !== lastScrolledPara && 
+                        !isUserScrolling) {
+                        
+                        // Update the last scrolled paragraph
+                        setLastScrolledPara(currentParaIndex);
+                        
+                        // Scroll to the paragraph
+                        const yOffset = currentParaIndex * 200; // Approximate height per paragraph
+                        scrollViewRef.current.scrollTo({
+                            y: yOffset,
+                            animated: true
+                        });
+                    }
+                }
             }
         }
     };
@@ -615,20 +878,23 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         let interval;
         if (isAudioPlaying) {
             interval = setInterval(() => {
-                if (sound) {
+                if (sound && !isSeeking) { // Only update if not seeking
                     sound.getCurrentTime((seconds) => {
-                        setAudioPosition(seconds);
-                        onAudioProgress({
-                            currentTime: seconds,
-                            duration: audioDuration
-                        });
+                        // Only update if not seeking to prevent jumps
+                        if (!isSeeking) {
+                            setAudioPosition(seconds);
+                            onAudioProgress({
+                                currentTime: seconds,
+                                duration: audioDuration
+                            });
+                        }
                     });
                 }
             }, 100);
         }
         
         return () => clearInterval(interval);
-    }, [isAudioPlaying, sound]);
+    }, [isAudioPlaying, sound, isSeeking, audioDuration]);
 
     const handleShare = async () => {
         try {
@@ -674,22 +940,45 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     };
     
     const handleValueChange = (value) => {
+        if (!sound) return;
+        
+        // Set seeking state to true to prevent position updates from the interval
+        setIsSeeking(true);
+        
+        // Update position without triggering progress update during dragging
         setAudioPosition(value);
-        // Trigger audio progress update when slider value changes
-        onAudioProgress({
-            currentTime: value,
-            duration: audioDuration
-        });
-      };
-    
-      const handleLayout = (event) => {
+    };
+
+    const handleSlidingComplete = (value) => {
+        if (!sound) return;
+        
+        // Set the audio to the new position
+        sound.setCurrentTime(value);
+        
+        // Update position
+        setAudioPosition(value);
+        
+        // Use a small delay before triggering the progress update to prevent UI jumping
+        setTimeout(() => {
+            // Trigger progress update after a small delay
+            onAudioProgress({
+                currentTime: value,
+                duration: audioDuration
+            });
+            
+            // End seeking state
+            setIsSeeking(false);
+        }, 100);
+    };
+
+    const handleLayout = (event) => {
         const { width } = event.nativeEvent.layout;
         setSliderWidth(width);
-      };
-    
-      // Calculate the position of the custom thumb
-      const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
-    
+    };
+
+    // Calculate the position of the custom thumb
+    const thumbPosition = (audioPosition / audioDuration) * sliderWidth;
+
     const handleTranslateParagraph = async (index) => {
         if (!paragraphs[index]) return;
     
@@ -734,27 +1023,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             alert('No transcription to translate.');
         }
     };
-    useEffect(() => {
-        let interval;
-        if (isAudioPlaying) {
-            interval = setInterval(() => {
-                if (sound && !isSeeking) { // Only update if not seeking
-                    sound.getCurrentTime((seconds) => {
-                        setAudioPosition(seconds);
-                        onAudioProgress({
-                            currentTime: seconds,
-                            duration: audioDuration
-                        });
-                    });
-                }
-            }, 100);
-        }
-        return () => clearInterval(interval);
-    }, [isAudioPlaying, sound, isSeeking]);
-    
-    const toggleTranscriptionVisibility = () => {
-        setTranscriptionVisible(!isTranscriptionVisible);
-    };
 
     const fetchAudioMetadata = async (uid, audioid) => {
         try {
@@ -772,7 +1040,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 body: JSON.stringify({ uid, audioid }),
             });
             const data = await response.json();
-
+            console.log(data);
             if (response.ok) {
                 // Set state with fetched data
                 setTranscription(data.transcription || '');
@@ -780,34 +1048,31 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 setFileContent(data.file_path || '');
                 setDuration(data.duration || 0);
 
-                // Handle transcription
-                let paragraphs = [];
-                let wordTimings = [];
-                if (data.transcription) {
-                    const { paragraphs: para, words } = splitTranscription(data.transcription);
-                    paragraphs = para;
-                    setParagraphs(para);
-                    if (data.duration) {
-                        wordTimings = calculateParagraphTimings(words, data.duration);
-                        setWordTimings(wordTimings);
-                    }
-                }
+                // Directly use the audio_url from the response
+                setAudioUrl(data.audio_url || '');
 
-                // Handle audio chunks with enhanced playback options
-                let audioUrl = data.audio_url;
-                
-                if (data.chunk_urls && Array.isArray(data.chunk_urls) && data.chunk_urls.length > 0) {
-                    console.log(`Processing ${data.chunk_urls.length} audio chunks`);
+                // Process words_data if available
+                if (data.words_data && Array.isArray(data.words_data) && data.words_data.length > 0) {
+                    // Store the words data for highlighting
+                    setWordTimings(processWordTimings(data.words_data));
                     
-                    // Use our improved function to handle the chunks
-                    const processedAudio = await processAudioChunks(data.chunk_urls);
-                    if (processedAudio) {
-                        audioUrl = processedAudio;
-                        console.log('Setting processed audio URL:', audioUrl);
+                    // Create paragraphs from words_data (100 words per paragraph)
+                    const { paragraphs, words } = createParagraphsFromWordsData(data.words_data);
+                    setParagraphs(paragraphs);
+                } else {
+                    // Fallback to the old method if words_data is not available
+                    let paragraphs = [];
+                    let wordTimings = [];
+                    if (data.transcription) {
+                        const { paragraphs: para, words } = splitTranscription(data.transcription);
+                        paragraphs = para;
+                        setParagraphs(para);
+                        if (data.duration) {
+                            wordTimings = calculateParagraphTimings(words, data.duration);
+                            setWordTimings(wordTimings);
+                        }
                     }
                 }
-                
-                setAudioUrl(audioUrl);
 
                 // Set key points and XML data
                 setKeypoints(data.key_points || '');
@@ -824,125 +1089,96 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         }
     };
 
-    // Fix the processAudioChunks function to handle errors better and ensure proper file paths
-    const processAudioChunks = async (chunkUrls) => {
-        if (!chunkUrls || !Array.isArray(chunkUrls) || chunkUrls.length === 0) {
-            console.error('Invalid chunk URLs');
-            return null;
-        }
-
-        try {
-            setIsAudioLoading(true);
+    // New function to process words_data into a format suitable for highlighting
+    const processWordTimings = (wordsData) => {
+        if (!wordsData || !Array.isArray(wordsData)) return [];
+        
+        // Filter out words with invalid timing data
+        const validWordsData = wordsData.filter(word => 
+            word && 
+            typeof word.start === 'number' && 
+            typeof word.end === 'number' && 
+            !isNaN(word.start) && 
+            !isNaN(word.end) && 
+            word.start >= 0 && 
+            word.end >= word.start
+        );
+        
+        // If no valid words, return empty array
+        if (validWordsData.length === 0) return [];
+        
+        // Group words into paragraphs (100 words per paragraph)
+        const wordsPerParagraph = 100;
+        const paragraphCount = Math.ceil(validWordsData.length / wordsPerParagraph);
+        
+        return Array(paragraphCount).fill(0).map((_, index) => {
+            const startIdx = index * wordsPerParagraph;
+            const endIdx = Math.min((index + 1) * wordsPerParagraph, validWordsData.length);
+            const paragraphWords = validWordsData.slice(startIdx, endIdx);
             
-            // For single chunk, return it directly
-            if (chunkUrls.length === 1) {
-                console.log('Single chunk detected, using direct URL');
-                return chunkUrls[0];
-            }
-            
-            // For multiple chunks, download and combine them
-            console.log(`Processing ${chunkUrls.length} chunks`);
-            
-            // Create a unique timestamp for this operation to avoid conflicts
-            const timestamp = Date.now();
-            const tempFilePath = `${RNFS.CachesDirectoryPath}/combined_audio_${timestamp}.mp3`;
-            
-            // Download and combine chunks
-            let combinedSuccessfully = false;
-            
-            // First, try to download the first chunk
-            try {
-                const firstChunkResult = await RNFS.downloadFile({
-                    fromUrl: chunkUrls[0],
-                    toFile: tempFilePath,
-                    background: true
-                }).promise;
+            // Ensure all words in the paragraph have valid timing data
+            const validParagraphWords = paragraphWords.map(word => {
+                // Create a copy to avoid modifying the original
+                const wordCopy = {...word};
                 
-                if (firstChunkResult.statusCode === 200) {
-                    console.log('First chunk downloaded successfully');
-                    combinedSuccessfully = true;
-                    
-                    // Now download and append the rest of the chunks
-                    for (let i = 1; i < chunkUrls.length; i++) {
-                        try {
-                            // Use unique path for each chunk to avoid conflicts
-                            const chunkTempPath = `${RNFS.CachesDirectoryPath}/temp_chunk_${timestamp}_${i}.mp3`;
-                            
-                            console.log(`Downloading chunk ${i+1} to ${chunkTempPath}`);
-                            
-                            const chunkResult = await RNFS.downloadFile({
-                                fromUrl: chunkUrls[i],
-                                toFile: chunkTempPath,
-                                background: true
-                            }).promise;
-                            
-                            if (chunkResult.statusCode === 200) {
-                                // Verify file exists before trying to read it
-                                const fileExists = await RNFS.exists(chunkTempPath);
-                                if (!fileExists) {
-                                    console.error(`Chunk file ${i+1} doesn't exist after download`);
-                                    continue;
-                                }
-                                
-                                // Get file size to verify it's not empty
-                                const fileInfo = await RNFS.stat(chunkTempPath);
-                                if (fileInfo.size === 0) {
-                                    console.error(`Chunk file ${i+1} is empty`);
-                                    continue;
-                                }
-                                
-                                console.log(`Chunk ${i+1} downloaded (${fileInfo.size} bytes), appending...`);
-                                
-                                // Read the chunk data and append it to the combined file
-                                const chunkData = await RNFS.readFile(chunkTempPath, 'base64');
-                                await RNFS.appendFile(tempFilePath, chunkData, 'base64');
-                                console.log(`Appended chunk ${i+1}`);
-                                
-                                // Clean up the temporary chunk file
-                                await RNFS.unlink(chunkTempPath).catch((e) => {
-                                    console.log(`Error deleting temp file: ${e}`);
-                                });
-                            } else {
-                                console.error(`Failed to download chunk ${i+1}, status: ${chunkResult.statusCode}`);
-                            }
-                        } catch (chunkError) {
-                            console.error(`Error processing chunk ${i+1}:`, chunkError);
-                        }
-                    }
-                    
-                    // Verify the combined file
-                    const combinedFileExists = await RNFS.exists(tempFilePath);
-                    const combinedFileInfo = await RNFS.stat(tempFilePath);
-                    console.log(`Combined file size: ${combinedFileInfo.size} bytes`);
-                    
-                    if (combinedFileExists && combinedFileInfo.size > 0) {
-                        console.log('Audio chunks combined successfully');
-                        return `file://${tempFilePath}`;
-                    } else {
-                        console.error('Combined file is invalid or empty');
-                        combinedSuccessfully = false;
-                    }
-                } else {
-                    console.error(`Failed to download first chunk, status: ${firstChunkResult.statusCode}`);
-                    combinedSuccessfully = false;
+                // Ensure start and end are valid numbers
+                if (typeof wordCopy.start !== 'number' || isNaN(wordCopy.start) || wordCopy.start < 0) {
+                    // If invalid start, use previous word's end or 0
+                    const prevWordIdx = paragraphWords.indexOf(word) - 1;
+                    wordCopy.start = prevWordIdx >= 0 ? paragraphWords[prevWordIdx].end : 0;
                 }
-            } catch (downloadError) {
-                console.error('Error downloading first chunk:', downloadError);
-                combinedSuccessfully = false;
-            }
+                
+                if (typeof wordCopy.end !== 'number' || isNaN(wordCopy.end) || wordCopy.end < wordCopy.start) {
+                    // If invalid end, estimate based on average word duration or add small offset
+                    wordCopy.end = wordCopy.start + 0.3; // Default 300ms per word if no better estimate
+                }
+                
+                return wordCopy;
+            });
             
-            if (combinedSuccessfully) {
-                return `file://${tempFilePath}`;
-            } else {
-                console.log('Falling back to first chunk URL');
-                return chunkUrls[0];
-            }
-        } catch (error) {
-            console.error('Error in processAudioChunks:', error);
-            return chunkUrls[0]; // Fallback to first chunk
-        } finally {
-            setIsAudioLoading(false);
+            // Calculate paragraph start and end times
+            const paraStart = validParagraphWords.length > 0 ? validParagraphWords[0].start : 0;
+            const paraEnd = validParagraphWords.length > 0 ? 
+                validParagraphWords[validParagraphWords.length - 1].end : 0;
+            
+            return {
+                start: paraStart,
+                end: paraEnd,
+                words: validParagraphWords
+            };
+        });
+    };
+
+    // New function to create paragraphs from words_data
+    const createParagraphsFromWordsData = (wordsData) => {
+        if (!wordsData || !Array.isArray(wordsData)) {
+            return { paragraphs: [], words: [] };
         }
+        
+        // Filter out invalid word data and ensure we have text for each word
+        const validWordsData = wordsData.filter(wordData => 
+            wordData && (wordData.punctuated_word || wordData.word)
+        );
+        
+        // Extract all words, using punctuated_word if available, falling back to word
+        const words = validWordsData.map(wordData => {
+            // Use punctuated_word if available, otherwise use word
+            // If neither is available (shouldn't happen due to filter), use empty string
+            return wordData.punctuated_word || wordData.word || '';
+        });
+        
+        // Group into paragraphs (100 words per paragraph)
+        const wordsPerParagraph = 100;
+        const paragraphs = [];
+        
+        for (let i = 0; i < words.length; i += wordsPerParagraph) {
+            const paragraphWords = words.slice(i, i + wordsPerParagraph);
+            // Join words with space, trim any extra spaces
+            const paragraphText = paragraphWords.join(' ').replace(/\s+/g, ' ').trim();
+            paragraphs.push(paragraphText);
+        }
+        
+        return { paragraphs, words };
     };
 
     // Update the useEffect for component lifecycle
@@ -962,23 +1198,21 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 sound.release();
             }
             
-            // Clean up any temporary files
-            const cleanupTempFiles = async () => {
-                try {
-                    const files = await RNFS.readDir(RNFS.CachesDirectoryPath);
-                    for (const file of files) {
-                        if (file.name.startsWith('temp_chunk_') || file.name.startsWith('combined_audio_')) {
-                            await RNFS.unlink(file.path).catch(() => {});
-                        }
-                    }
-                } catch (error) {
-                    console.log('Error cleaning up temp files:', error);
-                }
-            };
-            
-            cleanupTempFiles();
+            // Clear any pending timeouts
+            if (userScrollTimeoutRef.current) {
+                clearTimeout(userScrollTimeoutRef.current);
+            }
         };
     }, [uid, audioid]);
+
+    const toggleTranscriptionVisibility = () => {
+        setTranscriptionVisible(!isTranscriptionVisible);
+        
+        // If turning on translations, translate all paragraphs
+        if (!isTranscriptionVisible) {
+            paragraphs.forEach((_, index) => handleTranslateParagraph(index));
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -1080,6 +1314,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
+                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
                   thumbTintColor="orange" // Hide the default thumb
@@ -1153,6 +1388,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                   maximumValue={audioDuration}
                   value={audioPosition}
                   onValueChange={handleValueChange}
+                  onSlidingComplete={handleSlidingComplete}
                   minimumTrackTintColor="transparent"
                   maximumTrackTintColor="transparent"
                   thumbTintColor="transparent" // Hide the default thumb
@@ -1276,6 +1512,27 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         const offsetY = event.nativeEvent.contentOffset.y;
                         scrollY.setValue(offsetY);
                     }}
+                    onScrollBeginDrag={() => {
+                        setIsUserScrolling(true);
+                        // Cancel any pending reset of user scrolling state
+                        if (userScrollTimeoutRef.current) {
+                            clearTimeout(userScrollTimeoutRef.current);
+                        }
+                    }}
+                    onScrollEndDrag={() => {
+                        // Set a timeout to reset the user scrolling state
+                        if (userScrollTimeoutRef.current) {
+                            clearTimeout(userScrollTimeoutRef.current);
+                        }
+                        userScrollTimeoutRef.current = setTimeout(() => setIsUserScrolling(false), 3000);
+                    }}
+                    onMomentumScrollEnd={() => {
+                        // Set a timeout to reset the user scrolling state
+                        if (userScrollTimeoutRef.current) {
+                            clearTimeout(userScrollTimeoutRef.current);
+                        }
+                        userScrollTimeoutRef.current = setTimeout(() => setIsUserScrolling(false), 3000);
+                    }}
                     showsVerticalScrollIndicator={false}
                     bounces={false}
                     scrollEventThrottle={16}
@@ -1285,7 +1542,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         <View key={index} style={[
                             styles.paragraphContainer,
                             styles.paragraphWrapper,
-                            index === currentWordIndex && styles.highlightedParagraph
+                            index === currentWordIndex.paraIndex && styles.highlightedParagraph
                         ]}>
                             {isSpeechToTextEnabled && (
                                 <Text style={[styles.timestamp, {color: 'orange'}]}>
@@ -1309,12 +1566,28 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                                         multiline
                                     />
                                 ) : (
-                                    <Text style={[
-                                        styles.paragraphText,
-                                        index === currentWordIndex.paraIndex && styles.highlightedParagraph
-                                    ]}>
-                                        {para}
-                                    </Text>
+                                    index === currentWordIndex.paraIndex && wordTimings[index]?.words ? (
+                                        <Text style={styles.paragraphText}>
+                                            {wordTimings[index].words.map((wordData, wordIdx) => {
+                                                const word = wordData.punctuated_word || wordData.word;
+                                                return (
+                                                    <Text 
+                                                        key={wordIdx} 
+                                                        style={wordIdx === currentWordIndex.wordIndex ? styles.highlightedWord : styles.word}
+                                                    >
+                                                        {word}{' '}
+                                                    </Text>
+                                                );
+                                            })}
+                                        </Text>
+                                    ) : (
+                                        <Text style={[
+                                            styles.paragraphText,
+                                            index === currentWordIndex.paraIndex && styles.highlightedParagraph
+                                        ]}>
+                                            {para}
+                                        </Text>
+                                    )
                                 )}
                               
                             </View>
@@ -1543,12 +1816,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             </View>
               <Switch
                     value={isTranscriptionVisible}
-                    onValueChange={() => {
-                        setTranscriptionVisible(!isTranscriptionVisible);
-                        if (!isTranscriptionVisible) {
-                            paragraphs.forEach((_, index) => handleTranslateParagraph(index));
-                        }
-                    }}
+                    onValueChange={toggleTranscriptionVisibility}
                 />
             </View>
 
@@ -1811,7 +2079,9 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     word: {
-        color: '#000',
+        color: '#333',
+        fontSize: 16,
+        lineHeight: 24,
     },
     paragraphRow:{
 flexDirection:'row',
@@ -1824,14 +2094,17 @@ flexDirection:'row',
         borderRadius:50,
     },
     highlightedWord: {
-        backgroundColor: '#007bff20',
-        color: '#007bff',
+        backgroundColor: '#007bff',
+        color: '#ffffff',
         borderRadius: 4,
         paddingHorizontal: 2,
+        fontSize: 16,
+        lineHeight: 24,
+        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
       },
