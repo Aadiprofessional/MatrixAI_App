@@ -65,6 +65,25 @@ const AudioVideoUploadScreen = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [uploadData, setUploadData] = useState(null);
     const { uid, loading } = useAuth();
+    const [languages, setLanguages] = useState([
+        { label: 'English (US)', value: 'en-US' },
+        { label: 'English (UK)', value: 'en-GB' },
+        { label: 'Hindi', value: 'hi' },
+        { label: 'Spanish', value: 'es' },
+        { label: 'French', value: 'fr' },
+        { label: 'German', value: 'de' },
+        { label: 'Japanese', value: 'ja' },
+        { label: 'Chinese', value: 'zh' },
+    ]);
+
+    // Function to generate a secure random audio ID
+    const generateAudioID = () => {
+        const randomBytes = new Uint8Array(16);
+        crypto.getRandomValues(randomBytes);
+        return Array.from(randomBytes)
+            .map(byte => byte.toString(16).padStart(2, '0'))
+            .join('');
+    };
 
     useFocusEffect(
         React.useCallback(() => {
@@ -128,6 +147,37 @@ const AudioVideoUploadScreen = () => {
         });
     };
 
+    const getAudioDuration = async (uri) => {
+        return new Promise((resolve, reject) => {
+            try {
+                // For Android, try to get duration from file metadata if possible
+                if (Platform.OS === 'android') {
+                    // For now, use a default duration that's more reasonable for typical audio files
+                    // In a production app, you might want to implement a native module to get actual duration
+                    resolve(60); // Default 60 seconds for Android
+                    return;
+                }
+                
+                // For iOS, continue using Sound
+                const sound = new Sound(uri, '', (error) => {
+                    if (error) {
+                        console.error('Error loading audio:', error);
+                        // Default to a reasonable duration if there's an error
+                        resolve(60);
+                    } else {
+                        const durationInSeconds = sound.getDuration();
+                        sound.release();
+                        resolve(Math.round(durationInSeconds));
+                    }
+                });
+            } catch (err) {
+                console.error('Error in getAudioDuration:', err);
+                // Default to a reasonable duration if there's an exception
+                resolve(60);
+            }
+        });
+    };
+
     const handleFileSelect = async () => {
         try {
             const res = await DocumentPicker.pick({
@@ -137,18 +187,38 @@ const AudioVideoUploadScreen = () => {
             if (res && res[0]) {
                 setAudioFile(res[0]);
     
-                // Calculate audio duration
-                const uri = res[0].uri;
-                const durationInSeconds = await getAudioDuration(uri);
-                setDuration(durationInSeconds);
+                // For Android, try to get file size to estimate duration
+                // Assuming average bitrate of 128kbps for MP3 files
+                if (Platform.OS === 'android' && res[0].size) {
+                    // Estimate duration based on file size (very rough estimate)
+                    // Formula: size (bytes) / (bitrate (bits/s) / 8) = duration (s)
+                    const estimatedDuration = Math.round(res[0].size / (128 * 1024 / 8));
+                    // Cap at reasonable values
+                    const cappedDuration = Math.min(Math.max(estimatedDuration, 30), 600);
+                    setDuration(cappedDuration);
+                    console.log('Estimated duration from file size:', cappedDuration);
+                    setPopupVisible(true);
+                    return;
+                }
     
-                setPopupVisible(true); // 👈 Show popup after file selection
+                // Calculate audio duration using Sound for iOS
+                const uri = res[0].uri;
+                try {
+                    const durationInSeconds = await getAudioDuration(uri);
+                    setDuration(durationInSeconds);
+                    setPopupVisible(true); // Show popup after file selection
+                } catch (durationError) {
+                    console.error('Error getting duration:', durationError);
+                    // Set a default duration if we can't determine it
+                    setDuration(60);
+                    setPopupVisible(true);
+                }
             }
         } catch (err) {
             if (DocumentPicker.isCancel(err)) {
                 console.log('User cancelled file picker.');
             } else {
-                console.error('Error picking file:', err.message);
+                console.error('Error picking file:', err);
                 Alert.alert('Error', 'An error occurred while picking the file.');
             }
         }
@@ -219,75 +289,87 @@ const AudioVideoUploadScreen = () => {
         setUploading(true);
 
         try {
-            // Create a new FormData instance
-            const formData = new FormData();
+            // Generate a secure unique ID for the audio file
+            const audioID = generateAudioID();
+            const audioName = file.name || `audio_${Date.now()}.mp3`;
+            const fileExtension = audioName.split('.').pop();
             
-            // Append the file exactly like the curl request
-            formData.append('audio', {
-                uri: file.uri,
-                type: 'audio/mpeg',  // Force audio/mpeg type as in curl
-                name: file.name,
-            }, file.name);  // Add filename as third parameter
+            // Create file path for Supabase storage
+            const filePath = `users/${uid}/audioFile/${audioID}.${fileExtension}`;
             
-            // Append other fields exactly as in curl
-            formData.append('uid', uid);
-            formData.append('duration', String(duration));
-
-            console.log('Starting upload with:', {
-                fileUri: file.uri,
-                fileName: file.name,
-                uid: uid,
-                duration: duration
-            });
-
-            const response = await fetch('https://ddtgdhehxhgarkonvpfq.functions.supabase.co/uploadAudio', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    // Remove Content-Type header to let the browser set it with boundary
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-            console.log('Upload response:', data);
-
-            if (response.ok) {
-                setUploadData(data);
-                loadFiles();
-                
-                Toast.show({
-                    type: 'success',
-                    text1: 'Upload Complete',
-                    text2: 'Your file has been uploaded successfully.'
+            // Read the file as base64
+            const fileContent = await RNFS.readFile(file.uri, 'base64');
+            
+            // Upload to Supabase storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('user-uploads')
+                .upload(filePath, decode(fileContent), {
+                    contentType: file.type || 'audio/mpeg',
+                    upsert: false
                 });
-
-                setUploading(false);
-                setPopupVisible(false);
                 
-                Toast.show({
-                    type: 'info',
-                    text1: 'Conversion Started',
-                    text2: 'Your file is being processed.'
-                });
-
-                if (data.audioID) {
-                    handlePress({ audioid: data.audioID });
-                } else {
-                    Alert.alert('Error', 'Upload completed, but audioID is missing.');
-                }
-            } else {
-                throw new Error(data.message || 'Upload failed');
+            if (uploadError) {
+                throw new Error(`Upload error: ${uploadError.message}`);
             }
+            
+            // Get the public URL for the uploaded file
+            const { data: { publicUrl } } = supabase.storage
+                .from('user-uploads')
+                .getPublicUrl(filePath);
+                
+            // Save metadata to database - provide the audioid since the database requires it
+            const { data: metadataData, error: metadataError } = await supabase
+                .from('audio_metadata')
+                .insert([
+                    {
+                        uid,
+                        audioid: audioID, // Use the secure generated audioID
+                        audio_name: audioName,
+                        language: selectedLanguage,
+                        audio_url: publicUrl,
+                        file_path: filePath,
+                        duration: parseInt(duration, 10),
+                        uploaded_at: new Date().toISOString(),
+                    }
+                ]);
+                
+            if (metadataError) {
+                throw new Error(`Metadata error: ${metadataError.message}`);
+            }
+            
+            // Success handling
+            setUploadData({
+                audioID,
+                publicUrl,
+                audioName
+            });
+            
+            await loadFiles();
+            
+            Toast.show({
+                type: 'success',
+                text1: 'Upload Complete',
+                text2: 'Your file has been uploaded successfully.'
+            });
+
+            setUploading(false);
+            setPopupVisible(false);
+            
+            // Add a longer delay before navigating to ensure database has time to update
+            setTimeout(() => {
+                // Navigate to translation screen with the generated audioid
+                handlePress({ audioid: audioID });
+            }, 2000);
+            
         } catch (error) {
             console.error('Upload error details:', {
                 message: error.message,
-                file: {
+                file: file ? {
                     name: file.name,
                     type: file.type,
                     size: file.size,
                     uri: file.uri
-                }
+                } : 'No file'
             });
             
             Alert.alert(
@@ -305,63 +387,58 @@ const AudioVideoUploadScreen = () => {
             console.log('audioid:', audioid, 'uid:', uid);
             console.log('Types:', typeof audioid, typeof uid);
     
-            const formData = new FormData();
-            formData.append('uid', String(uid));
-            formData.append('audioid', String(audioid));
-    
+            // Create a proper JSON object for the request body
+            const requestBody = JSON.stringify({
+                uid: String(uid),
+                audioid: String(audioid)
+            });
+
+            console.log('Request body:', requestBody);
+
             const response = await fetch('https://ddtgdhehxhgarkonvpfq.supabase.co/functions/v1/convertAudio', {
                 method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                body: formData,
+                headers: { 
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: requestBody
             });
-    
-            const data = await response.json();
-    
+
+            // Log the raw response for debugging
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+
+            // Parse the response text as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Error parsing response:', parseError);
+                Alert.alert('Error', 'Invalid response from server. Please try again later.');
+                return;
+            }
+
             if (response.ok && data.message === "Transcription completed and saved") {
                 navigation.navigate('TranslateScreen2', {
                     uid,
                     audioid,
                     transcription: data.transcription,
-                    chunkUrls: data.chunkUrls,
+                    audio_url: data.audio_url
                 });
             } else {
                 console.error('API Error:', data);
-                Alert('Failed to process audio. Please try again.');
+                Alert.alert('Error', `Failed to process audio: ${data.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Network Error:', error);
-            Alert('Network error occurred. Please check your connection.');
+            Alert.alert('Error', 'Network error occurred. Please check your connection.');
         }
     };
     
-    const getAudioDuration = async (uri) => {
-        return new Promise((resolve, reject) => {
-            const sound = new Sound(uri, '', (error) => {
-                if (error) {
-                    console.error('Error loading audio:', error);
-                    reject('Error loading audio');
-                } else {
-                    const durationInSeconds = sound.getDuration();
-                    sound.release();
-                    resolve(Math.round(durationInSeconds));
-                }
-            });
-        });
-    };
-
-  
-    
-    
-    
-
     const handleClosePopup = () => {
         setPopupVisible(false); // Close popup
     };
 
-
-   
-    
-    
     const handlePress2 = async (item) => {
        
             navigation.navigate('TranslateScreen2', {
@@ -696,7 +773,10 @@ const AudioVideoUploadScreen = () => {
         // }
     };
 
-
+    // Helper function to decode base64
+    const decode = (base64) => {
+        return Buffer.from(base64, 'base64');
+    };
 
     return (
         <View style={styles.container}>
@@ -795,6 +875,19 @@ const AudioVideoUploadScreen = () => {
     <View style={styles.popupContainer}>
         <View style={styles.popupContent}>
             <Text style={styles.popupText}>Upload Audio</Text>
+            
+            <View style={styles.languageSelector}>
+                <Text style={styles.languageLabel}>Select Language:</Text>
+                <Picker
+                    selectedValue={selectedLanguage}
+                    style={styles.picker}
+                    onValueChange={(itemValue) => setSelectedLanguage(itemValue)}
+                >
+                    {languages.map((lang) => (
+                        <Picker.Item key={lang.value} label={lang.label} value={lang.value} />
+                    ))}
+                </Picker>
+            </View>
 
             <View style={styles.popupButtons}>
                 <TouchableOpacity onPress={handleClosePopup} style={styles.popupButton}>
@@ -887,7 +980,7 @@ const styles = StyleSheet.create({
   
       popupContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
       popupContent: { backgroundColor: 'white', padding: 20, borderRadius: 10, width: '80%' },
-      popupText: { fontSize: 18, textAlign: 'center' },
+      popupText: { fontSize: 18, textAlign: 'center', fontWeight: 'bold', marginBottom: 10 },
       popupButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
       popupButton: { padding: 10, backgroundColor: '#0066FE', borderRadius: 5 },
       popupButtonText: { color: 'white' },
@@ -1333,6 +1426,19 @@ color:'#000',
     modalButtonText: {
         color: '#fff',
         fontSize: 16,
+    },
+    languageSelector: {
+        marginVertical: 15,
+    },
+    languageLabel: {
+        fontSize: 16,
+        marginBottom: 5,
+        fontWeight: '500',
+    },
+    picker: {
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        marginTop: 5,
     },
 });
 
