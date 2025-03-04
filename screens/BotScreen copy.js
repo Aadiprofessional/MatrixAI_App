@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
+
   TextInput,
   TouchableOpacity,
   Image,
@@ -14,7 +14,7 @@ import {
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
 import { launchImageLibrary } from 'react-native-image-picker';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { GestureHandlerRootView, Swipeable, TouchableWithoutFeedback } from 'react-native-gesture-handler';
 import OpenAI from 'openai';
@@ -405,7 +405,7 @@ const BotScreen2 = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* Header */}  
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image source={require('../assets/back.png')} style={styles.headerIcon} />

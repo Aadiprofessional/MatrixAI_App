@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, Button, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const SettingsScreen = () => {
     const [language, setLanguage] = useState('en');
     const [region, setRegion] = useState('US');
@@ -17,7 +17,7 @@ const SettingsScreen = () => {
     };
     
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.settingItem}>
                 <Text style={styles.label}>Language</Text>
                 <Picker
@@ -66,7 +66,7 @@ const SettingsScreen = () => {
             <View style={styles.settingItem}>
                 <Text style={styles.versionInfo}>Version: 1.0.0</Text>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 

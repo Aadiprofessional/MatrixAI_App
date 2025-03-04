@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, ToastAndroid, Clipboard, Image, Share } from 'react-native';
 import axios from 'axios';
 import Toast from 'react-native-toast-message';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const TranslatorScreen = ({ route, navigation }) => {
     const { transcription } = route.params || {};
     const [inputText, setInputText] = useState('');
@@ -96,6 +96,7 @@ const TranslatorScreen = ({ route, navigation }) => {
     };
 
     return (
+        <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.container}>
             {/* Header */}
             <View style={styles.header}>
@@ -160,6 +161,7 @@ const TranslatorScreen = ({ route, navigation }) => {
                 </View>
             </View>
         </ScrollView>
+        </SafeAreaView>
     );
 };
 

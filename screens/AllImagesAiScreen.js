@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import ImageDealsSection from '../components/AIShop/ImageDealsSection';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Banner from '../components/AIShop/Banner';
 
 const AllImagesAiScreen = ({ navigation }) => {
@@ -60,7 +60,8 @@ fetchHighlight();
   }, []);
 
   return (
-        <ScrollView style={styles.container}>
+        <SafeAreaView style={styles.container}>
+          <ScrollView style={styles.container} showsVerticalScrollIndicator={false} bounces={false}>
         <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} >
                 <Image source={require('../assets/back.png')} style={styles.backButtonIcon} />
@@ -93,7 +94,8 @@ fetchHighlight();
         imageError={imageHighlightError}
       />
       <Banner />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

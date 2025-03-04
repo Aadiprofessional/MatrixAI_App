@@ -8,7 +8,7 @@ import FloatingButton from '../components/FloatingButton';
 import FeatureCardWithDetails from '../components/FeatureCardWithDetails';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createStackNavigator } from '@react-navigation/stack';
 import Banner2 from '../components/AIShop/Banner copy';
 
@@ -51,7 +51,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+  <SafeAreaView style={styles.container}>
+ 
       <StatusBar barStyle="light-content" />
 
       <ScrollView 
@@ -141,7 +142,7 @@ const HomeScreen = ({ navigation }) => {
   <Banner2 style={styles.banner}/>
       </ScrollView>
       <FloatingButton />
-    </View>
+    </SafeAreaView>
   );
 };
 

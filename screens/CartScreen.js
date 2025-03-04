@@ -4,7 +4,7 @@ import { useCart } from '../components/CartContext.js';
 import { View, Text, Image, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const CartScreen = ({ navigation }) => {
   const { cart, loading, removeFromCart, uid, fetchCart } = useCart();
   const isFocused = useIsFocused();
@@ -103,7 +103,7 @@ const CartScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Back Button */}
       <View style={styles.container2}>
         <TouchableOpacity
@@ -165,7 +165,7 @@ const CartScreen = ({ navigation }) => {
           </TouchableOpacity>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

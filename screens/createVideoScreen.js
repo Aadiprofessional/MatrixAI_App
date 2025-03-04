@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import axios from "axios";
 import Video from "react-native-video"; // Add the video player component
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get("window");
 
 const CreateVideoScreen = ({ route, navigation }) => {
@@ -122,7 +122,7 @@ const fetchVideoUrl = async (videoId, retries = 0) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {loading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="medium" color="#88888874" />
@@ -206,7 +206,7 @@ const fetchVideoUrl = async (videoId, retries = 0) => {
       >
         <Text style={styles.cancelText}>X</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

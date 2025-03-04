@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image } from 'react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const { width, height } = Dimensions.get('window');
 
 const OnboardingScreen = ({ navigation,onFinish }) => {
@@ -47,7 +47,7 @@ const OnboardingScreen = ({ navigation,onFinish }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <ScrollView
                 horizontal
                 pagingEnabled
@@ -84,7 +84,7 @@ const OnboardingScreen = ({ navigation,onFinish }) => {
                     {currentIndex === slides.length - 1 ? "Enjoy" : "Next"}
                 </Text>
             </TouchableOpacity>
-        </View>
+        </SafeAreaView>
     );
 };
 

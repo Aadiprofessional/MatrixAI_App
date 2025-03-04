@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Alert } fro
 import Header from '../components/Header';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../hooks/useAuth';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const EditProfile = ({ navigation }) => {
     const { uid} = useAuth();
     const [originalData, setOriginalData] = useState(null);
@@ -108,7 +108,7 @@ const EditProfile = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
                <View style={styles.header}>
                           <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
                                               <Image
@@ -184,7 +184,7 @@ const EditProfile = ({ navigation }) => {
                     </TouchableOpacity>
                 )}
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 

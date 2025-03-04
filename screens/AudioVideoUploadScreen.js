@@ -11,6 +11,7 @@ import {
     Modal,
     Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DocumentPicker from 'react-native-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -779,7 +780,7 @@ const AudioVideoUploadScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Header Section */}
             {uploading && (
                 <View style={styles.uploadingOverlay}>
@@ -957,7 +958,7 @@ const AudioVideoUploadScreen = () => {
             </Modal>
 
 
-        </View>
+        </SafeAreaView>
     );
 };
 

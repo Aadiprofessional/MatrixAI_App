@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import VideoDealsSection from '../components/AIShop/VideoDealsSection';
 import Banner from '../components/AIShop/Banner';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const AllVideoAIScreen = ({ navigation }) => {
   const [bestDeals, setBestDeals] = useState([]);
   const[highlight,setHighlight]=useState([]);
@@ -62,7 +62,8 @@ const AllVideoAIScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false} bounces={false}>
         <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} >
                 <Image source={require('../assets/back.png')} style={styles.backButtonIcon} />
@@ -98,6 +99,7 @@ const AllVideoAIScreen = ({ navigation }) => {
 
 <Banner />
     </ScrollView>
+    </SafeAreaView>
   );
 };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 import { supabase } from '../supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -53,7 +53,7 @@ const LoginScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -77,7 +77,7 @@ const LoginScreen = ({ navigation }) => {
                     {loading ? 'Logging in...' : 'Login'}
                 </Text>
             </TouchableOpacity>
-        </View>
+        </SafeAreaView>
     );
 };
 

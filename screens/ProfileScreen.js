@@ -6,7 +6,7 @@ import { useCoinsSubscription } from '../hooks/useCoinsSubscription';
 import { useAuth } from '../hooks/useAuth';
 import RNRestart from 'react-native-restart';
 import { supabase } from '../supabaseClient';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import FeatureCardWithDetails2 from '../components/FeatureCardWithDetails copy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -128,6 +128,7 @@ const ProfileScreen = ({ navigation }) => {
     const storagePath = `users/${uid}/`;
 
     return (
+        <SafeAreaView style={styles.container}>
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
             <Header navigation={navigation} uid={uid} />
             
@@ -206,6 +207,7 @@ const ProfileScreen = ({ navigation }) => {
                 onPress={handleLogout} 
             />
         </ScrollView>
+        </SafeAreaView>
     );
 };
 

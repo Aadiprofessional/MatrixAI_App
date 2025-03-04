@@ -13,7 +13,7 @@ import {
     Alert,
 } from 'react-native';
 import { supabase } from '../supabaseClient';
-
+import { SafeAreaView } from 'react-native-safe-area-context';  
 const { width } = Dimensions.get('window');
 
 const OTPCodeScreen = ({ navigation, route }) => {
@@ -145,6 +145,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
     };
 
     return (
+        <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -218,6 +219,7 @@ const OTPCodeScreen = ({ navigation, route }) => {
                 <Text style={styles.verifyButtonText}>Verify</Text>
             </TouchableOpacity>
         </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 };
 

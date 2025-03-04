@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const PPTGenerateScreen = () => {
   const [userText, setUserText] = useState('');
   const [isFinished, setIsFinished] = useState(false);

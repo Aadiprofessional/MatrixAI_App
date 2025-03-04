@@ -4,6 +4,7 @@ import { WishlistContext } from '../context/WishlistContext';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import MusicCard from '../components/AIShop/MusicCard';
 import VideoCard from '../components/AIShop/VideoCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WishlistScreen = ({ navigation }) => {
   const { wishlistItems, removeFromWishlist } = useContext(WishlistContext);
@@ -66,7 +67,7 @@ const WishlistScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image source={require('../assets/back.png')} style={styles.backButton} />
@@ -82,7 +83,7 @@ const WishlistScreen = ({ navigation }) => {
       ) : (
         <Text style={styles.emptyText}>Your wishlist is empty</Text>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

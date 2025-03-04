@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ImageBackground, ActivityIndicator, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const BoostModal = ({ visible, onClose, onBoost, selectedDays, setSelectedDays }) => {
   return (
     <Modal
@@ -257,7 +257,8 @@ const ManageProductsScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -298,7 +299,8 @@ const ManageProductsScreen = () => {
         selectedDays={selectedDays}
         setSelectedDays={setSelectedDays}
       />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

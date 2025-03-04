@@ -12,7 +12,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const images = [
   { src: require('../assets/VideoImages/image1.png'), name: 'Cinematic' },
   { src: require('../assets/VideoImages/image2.png'), name: 'Vlog' },
@@ -66,7 +66,7 @@ const ImageSelectScreen = ({ route }) => {
 
   return (
     <TouchableWithoutFeedback onPress={closeDropdowns}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
@@ -187,7 +187,7 @@ const ImageSelectScreen = ({ route }) => {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </SafeAreaView>
     </TouchableWithoutFeedback>
   );
 };

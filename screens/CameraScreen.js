@@ -9,7 +9,7 @@ import LottieView from 'lottie-react-native';
 import Tts from 'react-native-tts'; 
 import Voice from '@react-native-voice/voice';
 import { Buffer } from 'buffer';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const CameraScreen = ({ navigation }) => {
   const [hasPermission, setHasPermission] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -910,7 +910,7 @@ const CameraScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="black" />
@@ -1119,7 +1119,7 @@ const CameraScreen = ({ navigation }) => {
           <Text style={styles.iconLabel}>Close</Text>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

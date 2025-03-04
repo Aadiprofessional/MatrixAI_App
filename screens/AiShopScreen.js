@@ -10,6 +10,7 @@ import {
   FlatList,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CategoryTabs from '../components/AIShop/CategoryTabs';
 
@@ -47,7 +48,7 @@ const AiShop = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Fixed Search Header */}
       <SearchHeader scrollY={scrollY} navigation={navigation} style={{ position: 'absolute', top: 0, width: '100%', zIndex: 100 }} />
 
@@ -75,7 +76,7 @@ const AiShop = ({ navigation }) => {
           <Text style={styles.AppYard3}>World's best AI tools</Text>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

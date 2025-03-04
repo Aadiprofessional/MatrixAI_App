@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRoute } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const SignUpDetailsScreen = ({ navigation }) => {
     const route = useRoute();
     const { userInfo = {}, phone = '', disableEmailInput = false } = route.params || {};
@@ -72,7 +72,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Back Button */}
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <View style={styles.backButtonCircle}>
@@ -170,7 +170,7 @@ const SignUpDetailsScreen = ({ navigation }) => {
                 <Text style={styles.footerText}>Privacy Policy</Text>
                 <Text style={styles.footerText}>Term of Service</Text>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 

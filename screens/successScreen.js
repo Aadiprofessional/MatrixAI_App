@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Lottie from 'lottie-react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const SuccessScreen = ({ navigation }) => {
   const animationRef = useRef(null);
 
@@ -13,7 +13,7 @@ const SuccessScreen = ({ navigation }) => {
     };
   }, []);
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.iconContainer}>
         <Lottie
           ref={animationRef}
@@ -35,7 +35,7 @@ const SuccessScreen = ({ navigation }) => {
       >
         <Text style={styles.buttonText}>Done</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

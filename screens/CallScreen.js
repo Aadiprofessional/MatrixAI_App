@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import Voice from '@react-native-voice/voice'; // Import for voice recognition
 import Tts from 'react-native-tts'; // Import for text-to-speech
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const CallScreen = () => {
   const [transcribedText, setTranscribedText] = useState('');
   const [responseText, setResponseText] = useState('');
@@ -44,7 +44,7 @@ const CallScreen = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Image 
         source={{ uri: 'https://example.com/your-image.png' }} // Replace with your image URL
         style={styles.image}
@@ -54,7 +54,7 @@ const CallScreen = () => {
       </TouchableOpacity>
       <Text>{transcribedText}</Text>
       <Text>{responseText}</Text>
-    </View>
+    </SafeAreaView>
   );
 };
 

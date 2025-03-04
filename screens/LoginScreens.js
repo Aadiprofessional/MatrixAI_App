@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicat
 import { supabase } from '../supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Generate a nonce at app startup
 const generateNonce = (length = 32) => {
@@ -205,7 +206,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Logo Image */}
       <Image
         source={require('../assets/logo.png')} // Replace with your logo path
@@ -267,7 +268,7 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.footerLink}>Privacy Policy </Text>
         <Text style={styles.footerLink}> Term of Service</Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

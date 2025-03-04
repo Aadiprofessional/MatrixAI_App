@@ -22,6 +22,7 @@ const formatTime = (seconds) => {
       NativeModules,
       Dimensions,
   } from 'react-native';
+  import { SafeAreaView } from 'react-native-safe-area-context';
 import { PDFDocument, rgb, PNGImage } from 'react-native-pdf-lib';
 import LottieView from 'lottie-react-native';
 
@@ -1215,7 +1216,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
                  <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
                     <Image
@@ -1851,7 +1852,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     
                 
             )}
-        </View>
+        </SafeAreaView>
     );
 };
 

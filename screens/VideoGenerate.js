@@ -13,7 +13,7 @@ import {
 import DocumentPicker from 'react-native-document-picker';
 import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const audioIcon = require('../assets/mic3.png');
 const videoIcon = require('../assets/cliper.png');
 const backIcon = require('../assets/back.png');
@@ -212,7 +212,7 @@ const fetchImages = async (UID) => {
       
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
           <Image
@@ -303,7 +303,7 @@ const fetchImages = async (UID) => {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -7,7 +7,7 @@ import * as Animatable from 'react-native-animatable';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import Voice from '@react-native-voice/voice';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const VoiceTranslateScreen = () => {
   const [isListening, setIsListening] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -432,7 +432,7 @@ const VoiceTranslateScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
           <Image source={require('../assets/back.png')} style={styles.headerIcon} />
@@ -543,7 +543,7 @@ const VoiceTranslateScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

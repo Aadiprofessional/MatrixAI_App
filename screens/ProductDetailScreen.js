@@ -12,7 +12,7 @@ import Banner from '../components/AIShop/Banner';
 import ImageCategory2 from '../components/AIShop/ImageCategory copy';
 import MusicCategory2 from '../components/AIShop/MusicCategory copy';
 import VideoCategory2 from '../components/AIShop/VideoCategory copy';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCart, cart } = useCart();
   const { uid } = useAuth();
@@ -144,7 +144,7 @@ try {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
         <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -381,7 +381,7 @@ try {
         </>
       )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

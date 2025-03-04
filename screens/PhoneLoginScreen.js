@@ -5,7 +5,7 @@ import {
 import flagUS from '../assets/flags/usa.jpeg'; // Example for US flag
 import flagIN from '../assets/flags/india.jpeg'; // Example for India flag
 import flagOTHER from '../assets/flags/china.jpeg'; // Example for other flags
-
+import { SafeAreaView } from 'react-native-safe-area-context';  
 const { width } = Dimensions.get('window');
 
 const PhoneLoginScreen = ({ navigation }) => {
@@ -78,7 +78,7 @@ const PhoneLoginScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Back Button */}
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <View style={styles.backButtonCircle}>
@@ -176,7 +176,7 @@ const PhoneLoginScreen = ({ navigation }) => {
                 <Text style={styles.footerText}>Privacy Policy  </Text>
                 <Text style={styles.footerText}>  Term of Service</Text>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react
 import Card from '../components/AIShop/Card';
 import VideoCard from '../components/AIShop/VideoCard';
 import MusicCard from '../components/AIShop/MusicCard';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const SeeAllScreen = ({ navigation, route }) => {
   const [bestDeals, setBestDeals] = useState([]);
   const [highlight, setHighlight] = useState([]);
@@ -178,7 +178,7 @@ const SeeAllScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={getData()}
         numColumns={2}
@@ -192,7 +192,7 @@ const SeeAllScreen = ({ navigation, route }) => {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={<Text style={styles.emptyText}>No Data Found</Text>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

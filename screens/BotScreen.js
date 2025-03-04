@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
+
   TextInput,
   TouchableOpacity,
   Image,
@@ -15,7 +15,7 @@ import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
 import Ionicons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 
 import OpenAI from 'openai';

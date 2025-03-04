@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MusicDealsSection from '../components/AIShop/MusicDealsSection';
 import Banner from '../components/AIShop/Banner';
 
@@ -63,8 +63,9 @@ const AllMusicAiScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <ScrollView style={styles.container}>
-        <View style={styles.header}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} bounces={false}>
+        <View style={styles.header}>    
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} >
                 <Image source={require('../assets/back.png')} style={styles.backButtonIcon} />
             </TouchableOpacity>
@@ -96,7 +97,8 @@ const AllMusicAiScreen = ({ navigation }) => {
         navigation={navigation}
       />
          <Banner />
-    </ScrollView>
+         </ScrollView>
+    </SafeAreaView>
   );
 };
 

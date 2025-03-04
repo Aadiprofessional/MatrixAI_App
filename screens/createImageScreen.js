@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get("window");
 
 const CreateImagesScreen = ({ route, navigation }) => {
@@ -86,7 +86,7 @@ const CreateImagesScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {loading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="medium" color="#88888874" />
@@ -185,7 +185,7 @@ const CreateImagesScreen = ({ route, navigation }) => {
       >
         <Text style={styles.cancelText}>X</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

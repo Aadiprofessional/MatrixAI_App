@@ -23,7 +23,7 @@ import Vosk from 'react-native-vosk';
 import Tts from 'react-native-tts'; // Importing TTS library
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/core';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LiveTranslateScreen = () => {
   const slideAnimation = new Animated.Value(300);
@@ -518,7 +518,7 @@ const LiveTranslateScreen = () => {
           const resultEvent = voskInstance.onResult((result) => {
             console.log('Vosk result:', result);
             if (result) {
-              setTranscription(result);
+                setTranscription(result);
               translateText(result);
             }
           });
@@ -775,7 +775,7 @@ const handleStartListening = async () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header with Back, Copy, Share */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
@@ -930,7 +930,7 @@ const handleStartListening = async () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

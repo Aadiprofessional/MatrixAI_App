@@ -12,7 +12,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Linking } from "react-native";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get("window");
 
 const CreateImagesScreen2 = ({ route, navigation }) => {
@@ -73,7 +73,7 @@ const CreateImagesScreen2 = ({ route, navigation }) => {
   }, [shimmerTranslateX]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {loading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="medium" color="#88888874" />
@@ -130,7 +130,7 @@ const CreateImagesScreen2 = ({ route, navigation }) => {
       >
         <Text style={styles.cancelText}>X</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

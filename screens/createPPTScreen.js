@@ -13,7 +13,7 @@ import {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import PDFView from 'react-native-pdf';
 import PPTViewer from "../components/PPTViewer";
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get("window");
 
 const CreatePPTScreen = ({ route, navigation }) => {
@@ -89,7 +89,7 @@ const CreatePPTScreen = ({ route, navigation }) => {
   }, []); // Empty dependency array ensures this runs only once
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {loading && (
         <View style={styles.uploadingOverlay}>
           <ActivityIndicator size="medium" color="#88888874" />
@@ -148,7 +148,7 @@ const CreatePPTScreen = ({ route, navigation }) => {
       >
         <Text style={styles.cancelText}>X</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
