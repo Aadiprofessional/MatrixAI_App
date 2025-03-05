@@ -545,14 +545,9 @@ const CameraScreen = ({ navigation }) => {
     }
   };
   
-  // Check if Voice module is properly initialized
+  // Check if Voice module is available
   const isVoiceModuleAvailable = () => {
     try {
-      // On Android, always return false to use our custom implementation
-      if (Platform.OS === 'android') {
-        return false;
-      }
-      
       return (
         Voice !== null && 
         Voice !== undefined && 
@@ -565,32 +560,7 @@ const CameraScreen = ({ navigation }) => {
     }
   };
 
-  // Helper function to safely call native module methods
-  const safeNativeCall = async (moduleMethod, fallbackFn, ...args) => {
-    try {
-      // On Android, always use the fallback
-      if (Platform.OS === 'android') {
-        if (typeof fallbackFn === 'function') {
-          return fallbackFn();
-        }
-        return null;
-      }
-      
-      if (typeof moduleMethod === 'function') {
-        return await moduleMethod(...args);
-      } else {
-        throw new Error('Method is not a function');
-      }
-    } catch (error) {
-      console.error(`Error calling native method:`, error);
-      if (typeof fallbackFn === 'function') {
-        return fallbackFn();
-      }
-      return null;
-    }
-  };
-
-  // Start voice recognition with fallback to text input
+  // Start voice recognition
   const startVoiceRecognition = async () => {
     try {
       // Stop any ongoing TTS
@@ -601,43 +571,37 @@ const CameraScreen = ({ navigation }) => {
       // Clear previous recognized text
       setRecognizedText('');
       
-      // For Android, simulate voice recognition with text input
-      if (Platform.OS === 'android') {
-        // Set listening state to true to show the UI indicator
-        setIsListening(true);
-        // Show text input dialog after a short delay to simulate voice recognition starting
-        setTimeout(() => {
-          showTextInputDialog();
-        }, 500);
+      // Check if already listening
+      if (isListening) {
+        console.log('Already listening!');
         return;
       }
       
-      // iOS Voice recognition code
+      // Check if Voice module is available
       if (!isVoiceModuleAvailable()) {
         console.log('Voice module is not properly initialized');
         showTextInputDialog();
         return;
       }
       
-      // Try to use voice recognition (iOS only)
-      console.log('Attempting to start voice recognition...');
+      // Start voice recognition
+      console.log('Starting voice recognition...');
+      setIsListening(true);
+      setIsVoiceProcessing(true);
       
-      const success = await safeNativeCall(
-        Voice.start.bind(Voice),
-        () => {
-          console.log('Falling back to text input due to Voice.start failure');
-          showTextInputDialog();
-          return false;
-        },
-        'en-US'
-      );
-      
-      if (success !== false) {
+      try {
+        await Voice.start('en-US');
         console.log('Voice recognition started successfully');
+      } catch (error) {
+        console.error('Error starting voice recognition:', error);
+        setIsListening(false);
+        setIsVoiceProcessing(false);
+        showTextInputDialog();
       }
     } catch (error) {
       console.error('Error in voice recognition process:', error);
-      // Use fallback method
+      setIsListening(false);
+      setIsVoiceProcessing(false);
       showTextInputDialog();
     }
   };
@@ -662,70 +626,26 @@ const CameraScreen = ({ navigation }) => {
     setInputModalVisible(false);
   };
   
-  // Fallback method for iOS
-  const showManualInputAlert = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Enter your message',
-        'Voice recognition is not available. Please type your message:',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Send',
-            onPress: (text) => {
-              if (text && text.trim().length > 0) {
-                setRecognizedText(text);
-                processVoiceInput(text);
-              }
-            }
-          }
-        ],
-        'plain-text'
-      );
-    } else {
-      // For Android, use our custom dialog
-      showTextInputDialog();
-    }
-  };
-  
   // Stop voice recognition
   const stopVoiceRecognition = async () => {
     try {
-      // For Android, just update the UI state
-      if (Platform.OS === 'android') {
-        setIsListening(false);
-        return;
-      }
-      
-      // iOS Voice recognition code
-      if (!isVoiceModuleAvailable()) {
-        console.log('Voice module is not properly initialized');
-        setIsListening(false);
-        return;
-      }
-      
-      // Check if Voice is available and active
       if (!isListening) {
-        console.log('Voice recognition is not active');
+        console.log('Not currently listening');
         return;
       }
       
-      await safeNativeCall(
-        Voice.stop.bind(Voice),
-        () => {
-          console.log('Error stopping voice recognition, but continuing');
-          return null;
-        }
-      );
+      console.log('Stopping voice recognition...');
       
-      console.log('Voice recognition stopped successfully');
+      try {
+        await Voice.stop();
+        console.log('Voice recognition stopped successfully');
+      } catch (error) {
+        console.error('Error stopping voice recognition:', error);
+      }
+      
+      setIsListening(false);
     } catch (error) {
-      console.error('Error stopping voice recognition:', error);
-    } finally {
-      // Ensure the UI reflects that we're not listening anymore
+      console.error('Error in stop voice recognition process:', error);
       setIsListening(false);
     }
   };

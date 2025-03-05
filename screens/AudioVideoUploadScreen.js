@@ -501,7 +501,7 @@ const AudioVideoUploadScreen = () => {
     };
     const handleFloatingButtonPress = () => {
     
-        navigation.navigate('LiveTranslateScreen');
+        navigation.navigate('VoskTranscriptionScreen');
 
 };
     

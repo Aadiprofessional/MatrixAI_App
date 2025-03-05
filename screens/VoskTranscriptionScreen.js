@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Button, PermissionsAndroid, Platform, StyleSheet } from 'react-native';
 import Voice from '@react-native-voice/voice';
+import Vosk from 'react-native-vosk';
 
-// Request microphone permissions (needed for Android, optional for iOS)
+// Request microphone permission (Android only)
 const requestPermissions = async () => {
     if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
@@ -23,35 +24,61 @@ const VoskTranscriptionScreen = () => {
     const [text, setText] = useState('');
 
     useEffect(() => {
-        // Attach listeners to handle speech events
-        Voice.onSpeechStart = () => setIsRecording(true);
-        Voice.onSpeechEnd = () => setIsRecording(false);
-        Voice.onSpeechResults = (event) => setText(event.value[0]); // Get first result
-
+        if (Platform.OS === 'ios') {
+            Voice.onSpeechStart = () => setIsRecording(true);
+            Voice.onSpeechEnd = () => setIsRecording(false);
+            Voice.onSpeechResults = (event) => setText(event.value[0]); // Get first result
+        }
         return () => {
-            Voice.destroy().then(Voice.removeAllListeners);
+            if (Platform.OS === 'ios') {
+                Voice.destroy().then(Voice.removeAllListeners);
+            }
         };
     }, []);
 
-    // Start voice recognition
-    const startListening = async () => {
+    // Initialize Vosk for Android
+    const startListeningAndroid = async () => {
+        console.log("Button Clicked: Requesting Permissions...");
         const permissionGranted = await requestPermissions();
+        
         if (permissionGranted) {
-            try {
-                await Voice.start('en-US'); // Start listening for speech
-            } catch (error) {
-                console.error(error);
-            }
+            console.log("Permission Granted: Initializing Vosk...");
+            Vosk.start()
+                .then(() => {
+                    console.log("Vosk Started Successfully!");
+                    setIsRecording(true);
+                    Vosk.onResult((result) => {
+                        console.log("Vosk Result:", result.text);
+                        setText(result.text);
+                    });
+                })
+                .catch((error) => console.error("Vosk Error:", error));
+        } else {
+            console.log("Permission Denied!");
+        }
+    };
+    
+
+    const stopListeningAndroid = async () => {
+        Vosk.stop();
+        setIsRecording(false);
+    };
+
+    // Start listening (iOS or Android)
+    const startListening = () => {
+        if (Platform.OS === 'ios') {
+            Voice.start('en-US');
+        } else {
+            startListeningAndroid();
         }
     };
 
-    // Stop voice recognition
-    const stopListening = async () => {
-        try {
-            await Voice.stop();
-            setIsRecording(false);
-        } catch (error) {
-            console.error(error);
+    // Stop listening (iOS or Android)
+    const stopListening = () => {
+        if (Platform.OS === 'ios') {
+            Voice.stop();
+        } else {
+            stopListeningAndroid();
         }
     };
 

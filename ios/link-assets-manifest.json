@@ -1,0 +1,69 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "android/app/src/main/assets/model/README",
+      "sha1": "bf4fdf71546aabaafb22b916593fc3456d466323"
+    },
+    {
+      "path": "android/app/src/main/assets/model/am/final.mdl",
+      "sha1": "dcaaf4c73b37973eb53aca0f123671b00702c766"
+    },
+    {
+      "path": "android/app/src/main/assets/model/conf/mfcc.conf",
+      "sha1": "a4e74fb5611bf90d9da658790c55970cb859a5ab"
+    },
+    {
+      "path": "android/app/src/main/assets/model/conf/model.conf",
+      "sha1": "58331cc29cf9fd713c254bcea2451522177cc5ac"
+    },
+    {
+      "path": "android/app/src/main/assets/model/graph/Gr.fst",
+      "sha1": "09b11ef4fd0b3e7469d6ddd57bb6b640cf6cdde6"
+    },
+    {
+      "path": "android/app/src/main/assets/model/graph/HCLr.fst",
+      "sha1": "96eef5ffc0f47277ebcb67cc503b870eebbf09f7"
+    },
+    {
+      "path": "android/app/src/main/assets/model/graph/disambig_tid.int",
+      "sha1": "dcb1e56813162352800a34fbc0d3556fcc785f3d"
+    },
+    {
+      "path": "android/app/src/main/assets/model/graph/phones/word_boundary.int",
+      "sha1": "76e59f23a14a0b495fcc302903d19b406a3b6ffc"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/final.dubm",
+      "sha1": "d54e14407566992f116bd1c3e078425c70b448d0"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/final.ie",
+      "sha1": "0cc498a51de60dab924874d159b5692b5d960ec0"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/final.mat",
+      "sha1": "42e243fe6b7fe472332d68f7796ae8804d132636"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/global_cmvn.stats",
+      "sha1": "c61cb0008f9f09821d360fef51c1650cf7d76aa0"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/online_cmvn.conf",
+      "sha1": "9cf2b6941b3110f2678dac465a25099957f60369"
+    },
+    {
+      "path": "android/app/src/main/assets/model/ivector/splice.conf",
+      "sha1": "14768865d57598ce48119e8657ecafd0a7d62681"
+    },
+    {
+      "path": "android/app/src/main/assets/model/uuid",
+      "sha1": "5ca649f57b7cd7a68e973cb7c40506f9678ad1a8"
+    },
+    {
+      "path": "android/app/src/main/assets/yolov8n.onnx",
+      "sha1": "2df66711ab1121d3eeb1aed85922c779477ac73d"
+    }
+  ]
+}
