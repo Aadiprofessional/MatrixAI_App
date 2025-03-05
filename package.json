@@ -65,7 +65,8 @@
     "react-native-webview": "^13.13.1",
     "react-native-xml2js": "^1.0.3",
     "shebang-command": "^2.0.0",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "websocket": "^1.0.35"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
