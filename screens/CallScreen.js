@@ -14,7 +14,8 @@ const CallScreen = () => {
   const [conversation, setConversation] = useState([]);
   const [callActive, setCallActive] = useState(true);
   const [ttsReady, setTtsReady] = useState(false);
-  const [animationSpeed, setAnimationSpeed] = useState(1); // Control animation speed
+  const [animationSpeed, setAnimationSpeed] = useState(1.0);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
   
   // Store conversation history for DeepSeek
   const conversationHistory = useRef([
@@ -30,6 +31,13 @@ const CallScreen = () => {
   const lastTranscribedText = useRef('');
   const lastTextChangeTime = useRef(Date.now());
   const animationRef = useRef(null);
+  const countdownInterval = useRef(null);
+  const silenceCheckInterval = useRef(null);
+  const countdownEffectInterval = useRef(null);
+  const responseTimer = useRef(null);
+  
+  // Add a reference to track the last processed text
+  const lastProcessedText = useRef('');
 
   // Initialize TTS and Voice
   useEffect(() => {
@@ -161,17 +169,18 @@ const CallScreen = () => {
     }
   }, [ttsReady]);
 
+  // Effect to monitor countdown and stop recording when it reaches zero
+  useEffect(() => {
+    if (countdownSeconds === 0 && isListening && !isProcessing.current) {
+      console.log('Countdown reached zero in useEffect, stopping recording');
+      stopRecording();
+    }
+  }, [countdownSeconds, isListening]);
+
   const startCall = async () => {
     // Wait a moment before greeting to ensure TTS is ready
     setTimeout(() => {
       const greeting = "Hello, how can I help you?";
-      
-      // Speak with error handling
-      try {
-        Tts.speak(greeting);
-      } catch (err) {
-        console.error('TTS speak error:', err);
-      }
       
       // Add greeting to conversation
       addToConversation('AI', greeting);
@@ -185,19 +194,59 @@ const CallScreen = () => {
       // Set animation to normal when AI is speaking
       setAnimationSpeed(1.0);
       
-      // Start listening after greeting
+      // Remove any existing TTS finish listener before speaking
       if (ttsFinishListener.current) {
         ttsFinishListener.current.remove();
+        ttsFinishListener.current = null;
       }
       
+      // Set up the TTS finish listener BEFORE speaking
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
-        startRecording();
+        console.log('TTS finished speaking greeting');
+        
+        // Make sure processing flag is reset
+        isProcessing.current = false;
+        
+        // Remove listener to prevent multiple triggers
         if (ttsFinishListener.current) {
           ttsFinishListener.current.remove();
           ttsFinishListener.current = null;
         }
+        
+        // Start listening after greeting
+        if (callActive) {
+          console.log('AI finished greeting, starting to listen...');
+          
+          // Make sure we're in a clean state before starting recording
+          setIsListening(false);
+          
+          setTimeout(async () => {
+            // Double check that we're still not processing before starting
+            isProcessing.current = false;
+            
+            // Ensure Voice is stopped before starting again
+            await ensureVoiceStopped();
+            
+            // Now start recording
+            startRecording();
+          }, 1000); // Increased delay to ensure everything is reset properly
+        }
       });
-    }, 8000);
+      
+      // Speak the greeting AFTER setting up the listener
+      try {
+        console.log('Speaking greeting:', greeting);
+        Tts.speak(greeting);
+      } catch (err) {
+        console.error('TTS speak error:', err);
+        // If speaking fails, still start listening
+        if (callActive) {
+          setTimeout(() => {
+            startRecording();
+          }, 500);
+        }
+      }
+    }, 1000);
   };
 
   const addToConversation = (speaker, text) => {
@@ -205,22 +254,61 @@ const CallScreen = () => {
   };
 
   const onSpeechPartialResults = (event) => {
-    if (event.value && event.value.length > 0) {
-      const text = event.value[0];
-      setTranscribedText(text);
-      // Text changed, update the time
+    const partialText = event.value[0] || '';
+    console.log('Partial speech results:', partialText);
+    
+    // Check if this is the same as the last processed text
+    if (partialText === lastProcessedText.current) {
+      console.log('Ignoring partial result that matches last processed text:', partialText);
+      return;
+    }
+    
+    // Only update if the text has changed
+    if (partialText !== transcribedText) {
+      console.log('Updating transcribed text from:', transcribedText, 'to:', partialText);
+      setTranscribedText(partialText);
+    }
+    
+    // Reset the countdown timer when user is speaking
+    if (partialText !== lastTranscribedText.current) {
+      console.log('Speech detected, resetting timers');
       lastTextChangeTime.current = Date.now();
+      lastTranscribedText.current = partialText;
       
-      // Set animation to normal when user is speaking
-      setAnimationSpeed(1.0);
+      // If countdown is at 0 or not running, restart the silence detection
+      if (countdownSeconds <= 0) {
+        console.log('Speech detected after timer expired, restarting timer');
+        startSilenceDetection();
+      } else {
+        // Just reset the countdown value and restart the timer
+        setCountdownSeconds(8);
+        
+        // Clear existing timers
+        clearTimeout(silenceTimer.current);
+        
+        // Create a new timeout
+        silenceTimer.current = setTimeout(() => {
+          if (isListening && !isProcessing.current) {
+            console.log('Silence timeout reached, stopping recording');
+            stopRecording();
+          }
+        }, 8000);
+      }
     }
   };
 
   const onSpeechStart = () => {
     console.log('Speech started');
+    
+    // Set isListening to true when speech starts
     setIsListening(true);
+    
+    // Clear any existing timers
     clearTimeout(silenceTimer.current);
     clearInterval(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    
+    // Update the last text change time
     lastTextChangeTime.current = Date.now();
     
     // Set animation to normal when user starts speaking
@@ -231,26 +319,69 @@ const CallScreen = () => {
   };
 
   const startSilenceDetection = () => {
-    // Clear any existing timer
+    // Clear any existing timers
     clearTimeout(silenceTimer.current);
     clearInterval(silenceTimer.current);
+    clearInterval(countdownInterval.current);
     
-    // Set up a recurring check for silence based on text changes
-    silenceTimer.current = setInterval(() => {
+    // Set initial countdown value (8 seconds)
+    setCountdownSeconds(8);
+    
+    // Create a timeout that will definitely stop recording after 8 seconds
+    silenceTimer.current = setTimeout(() => {
+      if (isListening && !isProcessing.current) {
+        console.log('Silence timeout reached, stopping recording');
+        stopRecording();
+        // Don't set isListening to false here, let stopRecording handle it
+      }
+    }, 8000);
+    
+    // Start countdown timer that updates every second for UI display
+    countdownInterval.current = setInterval(() => {
+      setCountdownSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    // Add a separate effect to monitor countdown and trigger stop
+    const countdownEffect = setInterval(() => {
+      if (countdownSeconds <= 0 && isListening && !isProcessing.current) {
+        console.log('Countdown reached zero, stopping recording');
+        clearInterval(countdownEffect);
+        stopRecording();
+      }
+    }, 200);
+    
+    // Store the countdown effect so we can clear it later
+    countdownEffectInterval.current = countdownEffect;
+    
+    // Also set up a recurring check for silence based on text changes
+    // This is a backup to the main timer
+    const checkInterval = setInterval(() => {
       const now = Date.now();
       const timeSinceLastTextChange = now - lastTextChangeTime.current;
       
-      // If text hasn't changed for 2 seconds and we have some text
+      // If text hasn't changed for 8 seconds and we have some text
       if (transcribedText && timeSinceLastTextChange > 8000 && isListening && !isProcessing.current) {
-        console.log('No text changes for 2 seconds, stopping recording');
-        clearInterval(silenceTimer.current);
+        console.log('No text changes for 8 seconds, stopping recording');
+        clearInterval(checkInterval);
         stopRecording();
       }
     }, 500); // Check every 500ms
+    
+    // Store the check interval so we can clear it later
+    silenceCheckInterval.current = checkInterval;
   };
 
   const onSpeechEnd = () => {
     console.log('Speech ended');
+    
+    // Reset the countdown timer when speech ends
+    setCountdownSeconds(8);
     
     // When speech ends, wait a short time and then process if we have text
     setTimeout(() => {
@@ -263,7 +394,20 @@ const CallScreen = () => {
   const onSpeechResults = (event) => {
     if (event.value && event.value.length > 0) {
       const text = event.value[0];
-      setTranscribedText(text);
+      console.log('Final speech results:', text);
+      
+      // Check if this is the same as the last processed text
+      if (text === lastProcessedText.current) {
+        console.log('Ignoring final result that matches last processed text:', text);
+        return;
+      }
+      
+      // Only update if the text has changed
+      if (text !== transcribedText) {
+        console.log('Updating final transcribed text from:', transcribedText, 'to:', text);
+        setTranscribedText(text);
+      }
+      
       lastTextChangeTime.current = Date.now();
     }
   };
@@ -280,22 +424,44 @@ const CallScreen = () => {
   };
 
   const startRecording = async () => {
-    if (isListening || isProcessing.current || !callActive) {
+    // Ensure isListening is false before checking conditions
+    setIsListening(false);
+    
+    // Use a local variable to track the state we just set
+    const currentlyListening = false;
+    
+    console.log('startRecording called - isListening:', currentlyListening, 'isProcessing:', isProcessing.current, 'callActive:', callActive);
+    
+    // First check if we can start recording - use the local value we just set
+    if (currentlyListening || isProcessing.current || !callActive) {
+      console.log('Cannot start recording - conditions not met');
       return;
     }
 
     try {
-      // Reset state
-      setIsListening(true);
+      // Reset state - make sure to clear transcribed text first
+      console.log('Clearing transcribed text before starting recording. Current text:', transcribedText);
+      
+      // Force reset the transcribed text to empty string
       setTranscribedText('');
+      
+      // Reset the last transcribed text reference
       lastTranscribedText.current = '';
       lastTextChangeTime.current = Date.now();
+      
+      // Reset countdown timer
+      setCountdownSeconds(8);
       
       // Set animation state for user speaking
       setAnimationSpeed(1.0);
       
+      console.log('Starting voice recognition...');
       // Start voice recognition
       await Voice.start('en-US');
+      console.log('Voice recognition started successfully');
+      
+      // Set isListening to true AFTER successfully starting Voice
+      setIsListening(true);
       
       // Start silence detection
       startSilenceDetection();
@@ -303,66 +469,146 @@ const CallScreen = () => {
       console.error('Error starting voice recognition:', error);
       setIsListening(false);
       clearInterval(silenceTimer.current);
+      clearInterval(countdownInterval.current);
       Alert.alert('Error', `Failed to start listening: ${error.message}`);
     }
   };
 
   const stopRecording = async () => {
-    // Clear the silence detection timer
-    clearInterval(silenceTimer.current);
+    console.log('Stopping recording...');
     
-    // Only proceed if we're actually listening
-    if (!isListening) return;
+    // Store the current listening state before changing it
+    const wasListening = isListening;
+    
+    // Clear all timers
+    clearTimeout(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    clearInterval(silenceCheckInterval.current);
+    clearInterval(countdownEffectInterval.current);
+    
+    // Set isListening to false immediately
+    setIsListening(false);
+    
+    // Reset timer references
+    silenceTimer.current = null;
+    countdownInterval.current = null;
+    silenceCheckInterval.current = null;
+    countdownEffectInterval.current = null;
+    
+    // Reset countdown display
+    setCountdownSeconds(0);
+    
+    // Only proceed if we were actually listening
+    if (!wasListening) {
+      console.log('Not listening, ignoring stop recording call');
+      return;
+    }
     
     try {
+      console.log('Stopping Voice recognition');
       await Voice.stop();
-      setIsListening(false);
+      
+      // Store the current transcribed text before processing
+      const currentText = transcribedText;
+      console.log('Current transcribed text before processing:', currentText);
+      
+      // Check if the current text is the same as the last processed text
+      if (currentText === lastProcessedText.current) {
+        console.log('Detected repeated text, ignoring:', currentText);
+        // Clear the transcribed text
+        setTranscribedText('');
+        console.log('Cleared transcribed text (repeated)');
+        // Reset processing flag
+        isProcessing.current = false;
+        return;
+      }
       
       // Only process if we have text and we're not already processing
-      if (transcribedText && !isProcessing.current) {
-        const userText = transcribedText;
-        addToConversation('You', userText);
+      if (currentText && !isProcessing.current) {
+        console.log('Processing transcribed text:', currentText);
+        
+        // Store this text as the last processed text
+        lastProcessedText.current = currentText;
+        console.log('Updated lastProcessedText to:', currentText);
+        
+        // Clear the transcribed text immediately to prevent reuse
+        setTranscribedText('');
+        console.log('Cleared transcribed text');
+        
+        // Add to conversation
+        addToConversation('You', currentText);
         
         // Add to DeepSeek history
         conversationHistory.current.push({
           role: "user",
-          content: userText
+          content: currentText
         });
         
-        // Set animation to slow while AI is thinking
-        setAnimationSpeed(0.5);
-        
-        await sendToApi(userText);
+        // Process the text
+        await sendToApi(currentText);
       } else {
-        // If no text was captured, start listening again
-        startRecording();
+        console.log('No transcribed text or already processing, not sending to API');
+        // Make sure processing flag is reset if we're not sending to API
+        isProcessing.current = false;
+        // Clear the transcribed text even if we're not processing it
+        setTranscribedText('');
+        console.log('Cleared transcribed text (no processing)');
       }
     } catch (error) {
       console.error('Error stopping voice recognition:', error);
-      startRecording(); // Try to restart listening
+      // Make sure processing flag is reset on error
+      isProcessing.current = false;
+      // Clear the transcribed text on error
+      setTranscribedText('');
+      console.log('Cleared transcribed text (error)');
+      Alert.alert('Error', `Failed to process speech: ${error.message}`);
     }
   };
 
   const sendToApi = async (text) => {
-    if (!text || isProcessing.current) return;
+    console.log('sendToApi called with text:', text);
     
+    // Set processing flag to prevent multiple requests
     isProcessing.current = true;
+    
+    // Make sure transcribed text is cleared again (redundant but safe)
+    console.log('Clearing transcribed text in sendToApi. Current text:', transcribedText);
+    setTranscribedText('');
+    
+    // Set a timeout to reset the lastProcessedText after 30 seconds
+    // This allows the same text to be processed again after a while
+    setTimeout(() => {
+      if (lastProcessedText.current === text) {
+        console.log('Resetting lastProcessedText after timeout from:', lastProcessedText.current, 'to empty string');
+        lastProcessedText.current = '';
+      }
+    }, 30000); // 30 seconds
+    
+    // Set animation to active
+    setAnimationSpeed(1.0);
     
     try {
       // Show thinking message
       const thinkingMessage = "Let me think...";
       setResponseText(thinkingMessage);
       
-      // Set animation to slow while thinking
-      setAnimationSpeed(0.5);
-      
-      // Speak with error handling
-      try {
-        Tts.speak(thinkingMessage);
-      } catch (err) {
-        console.error('TTS speak error:', err);
+      // Clear any previous TTS listener
+      if (ttsFinishListener.current) {
+        ttsFinishListener.current.remove();
+        ttsFinishListener.current = null;
       }
       
+      // Clear any existing backup timer
+      if (responseTimer.current) {
+        clearTimeout(responseTimer.current);
+        responseTimer.current = null;
+      }
+      
+      // Speak thinking message
+      Tts.speak(thinkingMessage);
+      
+      // Get AI response while thinking message is being spoken
+      console.log('Sending request to DeepSeek API...');
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -377,88 +623,266 @@ const CallScreen = () => {
       });
       
       const data = await response.json();
+      console.log('Received response from DeepSeek API');
+      setIsListening(false);
       const aiResponse = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't process that.";
       
+      // Update UI and conversation history
       setResponseText(aiResponse);
       addToConversation('AI', aiResponse);
-      
-      // Add to DeepSeek history
       conversationHistory.current.push({
         role: "assistant",
         content: aiResponse
       });
       
-      // Set animation to normal when AI is speaking
-      setAnimationSpeed(1.0);
-      
-      // Speak the response with error handling
-      try {
-        Tts.speak(aiResponse);
-      } catch (err) {
-        console.error('TTS speak error:', err);
-      }
-      
-      // Listen again after speaking
-      if (ttsFinishListener.current) {
-        ttsFinishListener.current.remove();
-      }
-      
+      // Set up TTS finish listener
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
+        console.log('TTS finished speaking greeting');
+        
+        // Make sure processing flag is reset
         isProcessing.current = false;
         
-        // Set animation to stopped briefly before user speaks
-        setAnimationSpeed(0);
-        
-        // Short delay before starting to listen again
-        setTimeout(() => {
-          setAnimationSpeed(1.0);
-          startRecording();
-        }, 500);
-        
+        // Remove listener to prevent multiple triggers
         if (ttsFinishListener.current) {
           ttsFinishListener.current.remove();
           ttsFinishListener.current = null;
         }
+        
+        // Start listening after greeting
+        if (callActive) {
+          console.log('AI finished greeting, starting to listen...');
+          
+          // Make sure we're in a clean state before starting recording
+          setIsListening(false);
+          
+          // Make sure transcribed text is cleared
+          console.log('Clearing transcribed text in TTS finish listener. Current text:', transcribedText);
+          setTranscribedText('');
+          lastTranscribedText.current = '';
+          
+          // Force reset the lastProcessedText to allow new recordings
+          console.log('Force resetting lastProcessedText in TTS finish listener from:', lastProcessedText.current, 'to empty string');
+          lastProcessedText.current = '';
+          
+          setTimeout(async () => {
+            // Double check that we're still not processing before starting
+            isProcessing.current = false;
+            
+            // Ensure Voice is stopped before starting again
+            await ensureVoiceStopped();
+            
+            // Now start recording
+            startRecording();
+          }, 1000); // Increased delay to ensure everything is reset properly
+        }
       });
+      
+      // Calculate estimated speech duration in milliseconds (approx 100ms per character + buffer)
+      const estimatedDuration = aiResponse.length * 100 + 3000;
+      console.log(`Setting backup timer for ${estimatedDuration}ms to ensure recording restarts`);
+      
+      // Set backup timer in case TTS finish event doesn't trigger
+      responseTimer.current = setTimeout(() => {
+        console.log('Backup timer triggered to restart recording');
+        
+        // Clear any existing TTS listener that hasn't fired
+        if (ttsFinishListener.current) {
+          ttsFinishListener.current.remove();
+          ttsFinishListener.current = null;
+        }
+        
+        // Make sure processing flag is reset
+        isProcessing.current = false;
+        
+        // Make sure we're in a clean state before starting recording
+        setIsListening(false);
+        
+        // Make sure transcribed text is cleared
+        console.log('Clearing transcribed text in backup timer. Current text:', transcribedText);
+        setTranscribedText('');
+        lastTranscribedText.current = '';
+        
+        // Force reset the lastProcessedText to allow new recordings
+        console.log('Force resetting lastProcessedText in backup timer from:', lastProcessedText.current, 'to empty string');
+        lastProcessedText.current = '';
+        
+        // Start the listening cycle
+        console.log('Starting the listening cycle after AI response');
+        
+        // Follow the same pattern as the TTS finish listener
+        console.log('Following the listening pattern');
+        
+        // Make sure isListening is false before starting recording
+        console.log('isListening set to false before starting recording');
+        setIsListening(false);
+        
+        // Make sure isProcessing is false before starting recording
+        console.log('isProcessing set to false before starting recording');
+        isProcessing.current = false;
+        
+        // Ensure Voice is stopped before starting again
+        (async () => {
+          await ensureVoiceStopped();
+          
+          // Now start recording
+          console.log('STARTING RECORDING AFTER AI RESPONSE');
+          startRecording();
+        })();
+      }, estimatedDuration);
+      
+      // Speak the AI response
+      console.log('Speaking AI response:', aiResponse);
+      Tts.speak(aiResponse);
+      
     } catch (error) {
       console.error('API error:', error);
+      
+      // Handle error case
       const errorMessage = 'Sorry, there was an error processing your request.';
       setResponseText(errorMessage);
       addToConversation('AI', errorMessage);
       
-      // Add to DeepSeek history
-      conversationHistory.current.push({
-        role: "assistant",
-        content: errorMessage
-      });
+      // Function to start listening again after error
       
-      // Set animation to normal
-      setAnimationSpeed(1.0);
-      
-      // Speak error with error handling
-      try {
-        Tts.speak(errorMessage);
-      } catch (err) {
-        console.error('TTS speak error:', err);
-      }
-      
-      // Listen again after error
+      // Speak error message with the same pattern for continuation
+      // Clear any previous TTS listener
       if (ttsFinishListener.current) {
         ttsFinishListener.current.remove();
+        ttsFinishListener.current = null;
       }
       
+      // Set up TTS finish listener for error case
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
+        console.log('TTS finished speaking greeting');
+        
+        // Make sure processing flag is reset
         isProcessing.current = false;
-        startRecording();
+        
+        // Remove listener to prevent multiple triggers
         if (ttsFinishListener.current) {
           ttsFinishListener.current.remove();
           ttsFinishListener.current = null;
         }
+        
+        // Start listening after greeting
+        if (callActive) {
+          console.log('AI finished greeting, starting to listen...');
+          
+          // Make sure we're in a clean state before starting recording
+          setIsListening(false);
+          
+          // Make sure transcribed text is cleared
+          console.log('Clearing transcribed text in error case TTS finish listener. Current text:', transcribedText);
+          setTranscribedText('');
+          lastTranscribedText.current = '';
+          
+          // Force reset the lastProcessedText to allow new recordings
+          console.log('Force resetting lastProcessedText in error case TTS finish listener from:', lastProcessedText.current, 'to empty string');
+          lastProcessedText.current = '';
+          
+          setTimeout(async () => {
+            // Double check that we're still not processing before starting
+            isProcessing.current = false;
+            
+            // Ensure Voice is stopped before starting again
+            await ensureVoiceStopped();
+            
+            // Now start recording
+            startRecording();
+          }, 1000); // Increased delay to ensure everything is reset properly
+        }
       });
+      
+      // Set backup timer for error message
+      setTimeout(() => {
+        console.log('TTS finished speaking greeting');
+        
+        // Make sure processing flag is reset
+        isProcessing.current = false;
+        
+        // Remove listener to prevent multiple triggers
+        if (ttsFinishListener.current) {
+          ttsFinishListener.current.remove();
+          ttsFinishListener.current = null;
+        }
+        
+        // Start listening after greeting
+        if (callActive) {
+          console.log('AI finished greeting, starting to listen...');
+          
+          // Make sure we're in a clean state before starting recording
+          setIsListening(false);
+          
+          // Make sure transcribed text is cleared
+          console.log('Clearing transcribed text in error case backup timer. Current text:', transcribedText);
+          setTranscribedText('');
+          lastTranscribedText.current = '';
+          
+          // Force reset the lastProcessedText to allow new recordings
+          console.log('Force resetting lastProcessedText in error case backup timer from:', lastProcessedText.current, 'to empty string');
+          lastProcessedText.current = '';
+          
+          setTimeout(async () => {
+            // Double check that we're still not processing before starting
+            isProcessing.current = false;
+            
+            // Ensure Voice is stopped before starting again
+            await ensureVoiceStopped();
+            
+            // Now start recording
+            startRecording();
+          }, 1000); // Increased delay to ensure everything is reset properly
+        }
+      }, 5000); // 5 seconds should be enough for the error message
+      
+      // Speak error message
+      Tts.speak(errorMessage);
+    }
+  };
+
+  // Helper function to ensure Voice is stopped before starting again
+  const ensureVoiceStopped = async () => {
+    try {
+      console.log('Ensuring Voice is stopped before starting again');
+      await Voice.destroy();
+      await Voice.removeAllListeners();
+      setIsListening(false);
+      isProcessing.current = false;
+      
+      console.log('Clearing transcribed text in ensureVoiceStopped. Current text:', transcribedText);
+      setTranscribedText('');
+      lastTranscribedText.current = '';
+      lastTextChangeTime.current = Date.now();
+      
+      // Reset the last processed text after a certain number of calls
+      // This allows new recordings to use the same text after a while
+      if (Math.random() < 0.3) { // 30% chance to reset
+        console.log('Resetting lastProcessedText from:', lastProcessedText.current, 'to empty string');
+        lastProcessedText.current = '';
+      }
+      
+      console.log('Voice successfully stopped and cleaned up');
+    } catch (err) {
+      console.log('Error stopping Voice:', err);
+      // Try again with basic stop if destroy fails
+      try {
+        await Voice.stop();
+        setIsListening(false);
+        isProcessing.current = false;
+        
+        console.log('Clearing transcribed text in ensureVoiceStopped (fallback). Current text:', transcribedText);
+        setTranscribedText('');
+        lastTranscribedText.current = '';
+        lastTextChangeTime.current = Date.now();
+      } catch (err2) {
+        console.log('Error with basic Voice stop:', err2);
+      }
     }
   };
 
   const endCall = () => {
+    console.log('Ending call and cleaning up resources...');
+    
     // Update state first
     setCallActive(false);
     setIsListening(false);
@@ -466,16 +890,33 @@ const CallScreen = () => {
     
     // Clear any pending timers
     clearTimeout(silenceTimer.current);
-    clearInterval(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    clearInterval(silenceCheckInterval.current);
+    
+    // Reset timer references
+    silenceTimer.current = null;
+    countdownInterval.current = null;
+    silenceCheckInterval.current = null;
+    
+    // Make sure transcribed text is cleared
+    console.log('Clearing transcribed text in endCall. Current text:', transcribedText);
+    setTranscribedText('');
+    lastTranscribedText.current = '';
+    
+    // Force reset the lastProcessedText
+    console.log('Force resetting lastProcessedText in endCall from:', lastProcessedText.current, 'to empty string');
+    lastProcessedText.current = '';
     
     // Safe cleanup for TTS listeners
     if (ttsFinishListener.current) {
+      console.log('Removing TTS finish listener');
       ttsFinishListener.current.remove();
       ttsFinishListener.current = null;
     }
     
     // Stop voice recognition - with safe error handling
     try {
+      console.log('Stopping Voice recognition');
       Voice.stop();
     } catch (err) {
       console.error('Voice stop error:', err);
@@ -483,11 +924,15 @@ const CallScreen = () => {
     
     // Stop any ongoing TTS - with safe error handling for iOS
     try {
+      console.log('Stopping TTS');
       // On iOS, don't use await with stop() - it causes the BOOL error
       Tts.stop();
     } catch (err) {
       console.error('TTS stop error:', err);
     }
+    
+    // Reset animation
+    setAnimationSpeed(0);
     
     // Navigate back
     navigation.goBack();
@@ -532,16 +977,24 @@ const CallScreen = () => {
             ))}
           </View>
           
-          {/* Listening indicator */}
+          {/* Listening indicator with countdown */}
           {isListening && (
             <View style={styles.listeningIndicator}>
-              <Text style={styles.listeningText}>Listening...</Text>
+              <Text style={styles.listeningText}>
+                Listening{countdownSeconds > 0 ? ` (${countdownSeconds}s)` : '...'}
+              </Text>
             </View>
           )}
         </View>
       </View>
       
       <View style={styles.controlsContainer}>
+        <TouchableOpacity 
+          style={styles.stopButton} 
+          onPress={stopRecording}
+        >
+          <Text style={styles.buttonText}>⏹️</Text>
+        </TouchableOpacity>
         <TouchableOpacity 
           style={styles.endCallButton} 
           onPress={endCall}
@@ -645,6 +1098,20 @@ const styles = StyleSheet.create({
   controlsContainer: {
     alignItems: 'center',
     paddingBottom: 40,
+  },
+  stopButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#ffc107',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    marginRight: 20,
   },
   endCallButton: {
     width: 70,

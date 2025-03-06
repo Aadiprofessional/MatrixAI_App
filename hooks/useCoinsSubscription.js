@@ -54,7 +54,7 @@ export const useCoinsSubscription = (uid) => {
                         }
                     )
                     .subscribe((status) => {
-                        console.log(`Channel ${channelName} status:`, status);
+                       
                     });
 
                 return channel;

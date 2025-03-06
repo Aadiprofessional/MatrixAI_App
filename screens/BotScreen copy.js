@@ -221,6 +221,54 @@ const BotScreen2 = ({ navigation, route }) => {
     });
   };
 
+  const handleImageOCR = async (source = 'gallery') => {
+    launchImageLibrary({ noData: true }, async (response) => {
+      if (response.assets) {
+        const { uri } = response.assets[0];
+        const formData = new FormData();
+        formData.append('uid', uid);
+        formData.append('image', {
+          uri,
+          type: 'image/png',
+          name: 'image.png',
+        });
+
+        try {
+          setIsLoading(true);
+          const apiResponse = await axios.post(
+            'https://matrix-server-gzqd.vercel.app/understandImage',
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+
+          const { ocrText, imageUrl } = apiResponse.data;
+          const cleanedText = ocrText.replace(/(\*\*|\#\#)/g, "");
+
+          setMessages((prev) => [
+            ...prev,
+            { 
+              id: Date.now().toString(), 
+              image: imageUrl,
+              sender: 'user' 
+            },
+          ]);
+
+          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
+          saveChatHistory(imageUrl, 'user');
+        } catch (error) {
+          console.error('Error attaching image:', error);
+          Alert.alert('Error', 'Failed to send image for processing');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+  };
+
   useEffect(() => {
     const fetchChatHistory = async () => {
       try {
@@ -481,11 +529,11 @@ const BotScreen2 = ({ navigation, route }) => {
 
       {showAdditionalButtons && (
         <View style={styles.additionalButtonsContainer}>
-          <TouchableOpacity style={styles.additionalButton}>
+          <TouchableOpacity style={styles.additionalButton} onPress={() => handleImageOCR('camera')}>
             <Ionicons name="camera" size={24} color="#4C8EF7" />
             <Text>Photo OCR</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.additionalButton}>
+          <TouchableOpacity style={styles.additionalButton} onPress={() => handleImageOCR('gallery')}>
             <Ionicons name="image" size={24} color="#4C8EF7" />
             <Text>Image OCR</Text>
           </TouchableOpacity>

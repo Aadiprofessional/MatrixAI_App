@@ -67,23 +67,24 @@ const AudioVideoUploadScreen = () => {
     const [uploadData, setUploadData] = useState(null);
     const { uid, loading } = useAuth();
     const [languages, setLanguages] = useState([
-        { label: 'English (US)', value: 'en-US' },
-        { label: 'English (UK)', value: 'en-GB' },
-        { label: 'Hindi', value: 'hi' },
-        { label: 'Spanish', value: 'es' },
-        { label: 'French', value: 'fr' },
-        { label: 'German', value: 'de' },
-        { label: 'Japanese', value: 'ja' },
-        { label: 'Chinese', value: 'zh' },
+       
+            { label: 'Chinese', value: 'zh' },
+            { label: 'English (UK)', value: 'en-GB' },
+            { label: 'English (US)', value: 'en-US' },
+            { label: 'French', value: 'fr' },
+            { label: 'German', value: 'de' },
+            { label: 'Hindi', value: 'hi' },
+            { label: 'Japanese', value: 'ja' },
+            { label: 'Spanish', value: 'es' }
+        
     ]);
 
     // Function to generate a secure random audio ID
     const generateAudioID = () => {
-        const randomBytes = new Uint8Array(16);
-        crypto.getRandomValues(randomBytes);
-        return Array.from(randomBytes)
-            .map(byte => byte.toString(16).padStart(2, '0'))
-            .join('');
+        // Generate a random string using timestamp and Math.random
+        const timestamp = Date.now().toString(36);
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        return `${timestamp}-${randomStr}-${Math.random().toString(36).substring(2, 15)}`;
     };
 
     useFocusEffect(
@@ -349,8 +350,8 @@ const AudioVideoUploadScreen = () => {
             
             Toast.show({
                 type: 'success',
-                text1: 'Upload Complete',
-                text2: 'Your file has been uploaded successfully.'
+                text1: 'Import Complete',
+                text2: 'Your file has been imported successfully.'
             });
 
             setUploading(false);

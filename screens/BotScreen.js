@@ -10,6 +10,7 @@ import {
   Image,
   DrawerLayoutAndroid,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as Animatable from 'react-native-animatable';
@@ -17,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import OpenAI from 'openai';
 import LeftNavbarBot from '../components/LeftNavbarBot';
@@ -258,6 +260,54 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     setIsSidebarOpen(false);
   };
 
+  const handleImageOCR = async (source = 'gallery') => {
+    launchImageLibrary({ noData: true }, async (response) => {
+      if (response.assets) {
+        const { uri } = response.assets[0];
+        const formData = new FormData();
+        formData.append('uid', uid);
+        formData.append('image', {
+          uri,
+          type: 'image/png',
+          name: 'image.png',
+        });
+
+        try {
+          setIsLoading(true);
+          const apiResponse = await axios.post(
+            'https://matrix-server-gzqd.vercel.app/understandImage',
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+
+          const { ocrText, imageUrl } = apiResponse.data;
+          const cleanedText = ocrText.replace(/(\*\*|\#\#)/g, "");
+
+          setMessages((prev) => [
+            ...prev,
+            { 
+              id: Date.now().toString(), 
+              image: imageUrl,
+              sender: 'user' 
+            },
+          ]);
+
+          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
+          saveChatHistory(imageUrl, 'user');
+        } catch (error) {
+          console.error('Error attaching image:', error);
+          Alert.alert('Error', 'Failed to send image for processing');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Back Button */}
@@ -352,11 +402,11 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
 
          {showAdditionalButtons && (
                 <View style={styles.additionalButtonsContainer}>
-                  <TouchableOpacity style={styles.additionalButton}>
+                  <TouchableOpacity style={styles.additionalButton} onPress={() => handleImageOCR('camera')}>
                     <Ionicons name="camera" size={24} color="#4C8EF7" />
                     <Text>Photo OCR</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.additionalButton} >
+                  <TouchableOpacity style={styles.additionalButton} onPress={() => handleImageOCR('gallery')}>
                     <Ionicons name="image" size={24} color="#4C8EF7" />
                     <Text>Image OCR</Text>
                   </TouchableOpacity>
