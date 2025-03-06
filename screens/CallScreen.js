@@ -15,13 +15,14 @@ const CallScreen = () => {
   const [conversation, setConversation] = useState([]);
   const [callActive, setCallActive] = useState(true);
   const [ttsReady, setTtsReady] = useState(false);
-  const [animationSpeed, setAnimationSpeed] = useState(1.0);
+  const [animationSpeed, setAnimationSpeed] = useState(0.5);
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   // Add new states for the new features
   const [showRoleSlider, setShowRoleSlider] = useState(false);
   const [showTextContainer, setShowTextContainer] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentRole, setCurrentRole] = useState('Assistant');
+  const [animationMode, setAnimationMode] = useState('normal');
   
   // Store conversation history for DeepSeek
   const conversationHistory = useRef([
@@ -58,16 +59,19 @@ const CallScreen = () => {
   // Function to handle AI speaking animation
   const startSpeakingAnimation = () => {
     setIsSpeaking(true);
+    setAnimationMode('speaking');
+    setAnimationSpeed(1.5);
+    
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnimation, {
           toValue: 1.2,
-          duration: 500,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnimation, {
           toValue: 0.8,
-          duration: 500,
+          duration: 300,
           useNativeDriver: true,
         }),
       ])
@@ -76,8 +80,32 @@ const CallScreen = () => {
   
   const stopSpeakingAnimation = () => {
     setIsSpeaking(false);
+    setAnimationMode('normal');
+    setAnimationSpeed(0.5);
+    
     pulseAnimation.setValue(1);
     Animated.timing(pulseAnimation).stop();
+  };
+  
+  // Add a new function for thinking animation
+  const startThinkingAnimation = () => {
+    setAnimationMode('thinking');
+    setAnimationSpeed(0.3);
+    
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimation, {
+          toValue: 1.1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnimation, {
+          toValue: 0.9,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   };
   
   // Role slider animation
@@ -139,6 +167,19 @@ const CallScreen = () => {
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
+
+  // Add effect to handle animation mode changes
+  useEffect(() => {
+    if (animationMode === 'normal') {
+      setAnimationSpeed(0.5);
+      pulseAnimation.setValue(1);
+      Animated.timing(pulseAnimation).stop();
+    } else if (animationMode === 'thinking') {
+      startThinkingAnimation();
+    } else if (animationMode === 'speaking') {
+      startSpeakingAnimation();
+    }
+  }, [animationMode]);
 
   // Initialize TTS and Voice
   useEffect(() => {
@@ -524,23 +565,47 @@ const CallScreen = () => {
   };
 
   const onSpeechResults = (event) => {
-    if (event.value && event.value.length > 0) {
-      const text = event.value[0];
-      console.log('Final speech results:', text);
+    console.log('onSpeechResults event:', event);
+    
+    // Get the recognized text
+    const results = event.value;
+    if (results && results.length > 0) {
+      const recognizedText = results[0];
+      console.log('Recognized text:', recognizedText);
       
-      // Check if this is the same as the last processed text
-      if (text === lastProcessedText.current) {
-        console.log('Ignoring final result that matches last processed text:', text);
+      // Update the transcribed text state
+      setTranscribedText(recognizedText);
+      
+      // Update the last transcribed text ref
+      lastTranscribedText.current = recognizedText;
+      
+      // Update the last text change time
+      lastTextChangeTime.current = Date.now();
+      
+      // If we're already processing, don't send to API again
+      if (isProcessing.current) {
+        console.log('Already processing, not sending to API');
         return;
       }
       
-      // Only update if the text has changed
-      if (text !== transcribedText) {
-        console.log('Updating final transcribed text from:', transcribedText, 'to:', text);
-        setTranscribedText(text);
+      // Check if the text is different enough from the last processed text
+      if (recognizedText.trim() === lastProcessedText.current.trim()) {
+        console.log('Text is the same as last processed text, not sending to API');
+        return;
       }
       
-      lastTextChangeTime.current = Date.now();
+      // Update the last processed text ref
+      lastProcessedText.current = recognizedText;
+      
+      // Add user message to conversation history
+      addToConversation('You', recognizedText);
+      conversationHistory.current.push({
+        role: "user",
+        content: recognizedText
+      });
+      
+      // Send the text to the API
+      sendToApi(recognizedText);
     }
   };
 
@@ -726,8 +791,8 @@ const CallScreen = () => {
       }
     }, 30000); // 30 seconds
     
-    // Set animation to active for AI thinking
-    setAnimationSpeed(1.0);
+    // Set animation to thinking mode for AI thinking
+    startThinkingAnimation();
     
     try {
       // Show thinking message
@@ -745,9 +810,6 @@ const CallScreen = () => {
         clearTimeout(responseTimer.current);
         responseTimer.current = null;
       }
-      
-      // Start the speaking animation for the thinking message
-      startSpeakingAnimation();
       
       // Speak thinking message
       Tts.speak(thinkingMessage);
@@ -780,6 +842,9 @@ const CallScreen = () => {
         content: aiResponse
       });
       
+      // Start speaking animation for AI response
+      startSpeakingAnimation();
+      
       // Set up TTS finish listener
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
         console.log('TTS finished speaking greeting');
@@ -798,92 +863,15 @@ const CallScreen = () => {
         
         // Start listening after greeting
         if (callActive) {
-          console.log('AI finished greeting, starting to listen...');
-          
-          // Make sure we're in a clean state before starting recording
-          setIsListening(false);
-          
-          // Make sure transcribed text is cleared
-          console.log('Clearing transcribed text in TTS finish listener. Current text:', transcribedText);
-          setTranscribedText('');
-          lastTranscribedText.current = '';
-          
-          // Force reset the lastProcessedText to allow new recordings
-          console.log('Force resetting lastProcessedText in TTS finish listener from:', lastProcessedText.current, 'to empty string');
-          lastProcessedText.current = '';
-          
-          setTimeout(async () => {
-            // Double check that we're still not processing before starting
-            isProcessing.current = false;
-            
-            // Ensure Voice is stopped before starting again
-            await ensureVoiceStopped();
-            
-            // Now start recording
-            startRecording();
-          }, 1000); // Increased delay to ensure everything is reset properly
+          setTimeout(() => {
+            if (callActive) {
+              startRecording();
+            }
+          }, 500);
         }
       });
       
-      // Calculate estimated speech duration in milliseconds (approx 100ms per character + buffer)
-      const estimatedDuration = aiResponse.length * 100 + 3000;
-      console.log(`Setting backup timer for ${estimatedDuration}ms to ensure recording restarts`);
-      
-      // Set backup timer in case TTS finish event doesn't trigger
-      responseTimer.current = setTimeout(() => {
-        console.log('Backup timer triggered to restart recording');
-        
-        // Stop the speaking animation in case it's still running
-        stopSpeakingAnimation();
-        
-        // Clear any existing TTS listener that hasn't fired
-        if (ttsFinishListener.current) {
-          ttsFinishListener.current.remove();
-          ttsFinishListener.current = null;
-        }
-        
-        // Make sure processing flag is reset
-        isProcessing.current = false;
-        
-        // Make sure we're in a clean state before starting recording
-        setIsListening(false);
-        
-        // Make sure transcribed text is cleared
-        console.log('Clearing transcribed text in backup timer. Current text:', transcribedText);
-        setTranscribedText('');
-        lastTranscribedText.current = '';
-        
-        // Force reset the lastProcessedText to allow new recordings
-        console.log('Force resetting lastProcessedText in backup timer from:', lastProcessedText.current, 'to empty string');
-        lastProcessedText.current = '';
-        
-        // Start the listening cycle
-        console.log('Starting the listening cycle after AI response');
-        
-        // Follow the same pattern as the TTS finish listener
-        console.log('Following the listening pattern');
-        
-        // Make sure isListening is false before starting recording
-        console.log('isListening set to false before starting recording');
-        setIsListening(false);
-        
-        // Make sure isProcessing is false before starting recording
-        console.log('isProcessing set to false before starting recording');
-        isProcessing.current = false;
-        
-        // Ensure Voice is stopped before starting again
-        (async () => {
-          await ensureVoiceStopped();
-          
-          // Now start recording
-          console.log('STARTING RECORDING AFTER AI RESPONSE');
-          startRecording();
-        })();
-      }, estimatedDuration);
-      
       // Speak the AI response
-      console.log('Speaking AI response:', aiResponse);
-      // The startSpeakingAnimation will be triggered by the TTS start event
       Tts.speak(aiResponse);
       
     } catch (error) {
@@ -1106,65 +1094,71 @@ const CallScreen = () => {
           end={{ x: 1, y: 1 }}
         />
       </Animated.View>
-
-      <View style={styles.headerContainer}>
-        <TouchableOpacity 
-          style={styles.roleButton}
-          onPress={toggleRoleSlider}
-        >
-          <Text style={styles.roleButtonText}>{currentRole}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.textButton}
-          onPress={() => setShowTextContainer(!showTextContainer)}
-        >
-          <Text style={styles.textButtonText}>Text</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Role slider */}
-      <Animated.View 
-        style={[
-          styles.roleSlider,
-          {
-            transform: [
-              { translateY: roleSliderAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [300, 0]
-              })}
-            ],
-            opacity: roleSliderAnim
-          }
-        ]}
-      >
-        <View style={styles.roleSliderContent}>
-          <Text style={styles.roleSliderTitle}>Select AI Role</Text>
-          <View style={styles.roleOptions}>
-            {['Assistant', 'Teacher', 'Mathematician', 'English Teacher', 'Programmer', 'Singer'].map((role) => (
-              <TouchableOpacity 
-                key={role} 
-                style={[
-                  styles.roleOption,
-                  currentRole === role && styles.selectedRoleOption
-                ]}
-                onPress={() => selectRole(role)}
-              >
-                <Text style={[
-                  styles.roleOptionText,
-                  currentRole === role && styles.selectedRoleOptionText
-                ]}>
-                  {role}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+     
+        <View style={styles.headerContainer}>
+          <TouchableOpacity 
+            style={styles.roleButton}
+            onPress={toggleRoleSlider}
+          >
+            <Text style={styles.roleButtonText}>{currentRole}</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.textButton}
+            onPress={() => setShowTextContainer(!showTextContainer)}
+          >
+            <Text style={styles.textButtonText}>
+              {showTextContainer ? 'Hide Text' : 'Show Text'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+        
+        {/* Role selection slider */}
+        <Animated.View 
+          style={[
+            styles.roleSlider,
+            {
+              transform: [
+                { 
+                  translateY: roleSliderAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [300, 0]
+                  }) 
+                }
+              ],
+              opacity: roleSliderAnim
+            }
+          ]}
+        >
+          <View style={styles.roleSliderContent}>
+            <Text style={styles.roleSliderTitle}>Select AI Role</Text>
+            <View style={styles.roleOptions}>
+              {['Assistant', 'Teacher', 'Mathematician', 'English Teacher', 'Programmer', 'Singer'].map((role) => (
+                <TouchableOpacity 
+                  key={role} 
+                  style={[
+                    styles.roleOption,
+                    currentRole === role && styles.selectedRoleOption
+                  ]}
+                  onPress={() => selectRole(role)}
+                >
+                  <Text style={[
+                    styles.roleOptionText,
+                    currentRole === role && styles.selectedRoleOptionText
+                  ]}>
+                    {role}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
+   
 
       <View style={styles.contentContainer}>
         <View style={styles.avatarContainer}>
           <Animated.View style={{
-            transform: [{ scale: isSpeaking ? pulseAnimation : 1 }]
+            transform: [{ scale: pulseAnimation }]
           }}>
             <Lottie
               ref={aiAnimationRef}
@@ -1267,7 +1261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    zIndex: 1,
+    zIndex: 50,
   },
   roleButton: {
     position: 'absolute',
@@ -1279,24 +1273,32 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     zIndex: 10,
+    elevation: 5,
   },
   textButton: {
     position: 'absolute',
     right: 20,
+    top: Platform.OS === 'ios' ? 50 : 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
+    zIndex: 10,
+    elevation: 5,
   },
   roleButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginRight: 10,
   },
   textButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginRight: 10,
   },
   roleSlider: {
     position: 'absolute',
@@ -1313,6 +1315,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 10,
+    height: 300,
   },
   roleSliderContent: {
     paddingBottom: 30,
@@ -1328,6 +1331,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: 20,
   },
   roleOption: {
     width: '48%',
@@ -1358,14 +1362,20 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   avatarContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 30,
+    zIndex: 5,
+    pointerEvents: 'none', // Make sure it doesn't block touch events
   },
   animation: {
     width: 400,
     height: 400,
- 
+    alignSelf: 'center',
   },
   animation2: {
     width: 100,
@@ -1374,16 +1384,20 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   fullScreenTextContainer: {
-   
-    backgroundColor: '#41006F67',
+    position: 'absolute',
+    top: '25%',
+    left: '10%',
+    right: '10%',
+    maxHeight: '50%',
+    backgroundColor: 'rgba(65, 0, 111, 0.04)',
     zIndex: 50,
     padding: 20,
+    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-
   },
   textContainerHeader: {
     flexDirection: 'row',
@@ -1391,11 +1405,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  closeButton: {
+    closeButton: {
     padding: 5,
   },
   transcriptionContainer: {
-
     padding: 10,
     borderRadius: 10,
     marginTop: 5,
