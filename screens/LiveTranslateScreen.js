@@ -18,14 +18,23 @@ import {
   Alert
 } from 'react-native';
 import Voice from '@react-native-voice/voice'; // Import Voice library
-import { v4 as uuidv4 } from 'uuid';
 import Tts from 'react-native-tts'; // Importing TTS library
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/core';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Add a simple UUID generator function that doesn't rely on crypto
+const generateSimpleUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const LiveTranslateScreen = () => {
-  const slideAnimation = new Animated.Value(300);
+  const [isTranslateMode, setIsTranslateMode] = useState(false); // New state for translation mode
+  const slideAnimation = new Animated.Value(isTranslateMode ? 0 : 300);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [selectedLanguage2, setSelectedLanguage2] = useState('Chinese');
@@ -110,9 +119,9 @@ const LiveTranslateScreen = () => {
   const region = 'eastus';
 
   useEffect(() => {
-    // Initialize animation
+    // Initialize animation based on translation mode
     Animated.timing(slideAnimation, {
-      toValue: 0,
+      toValue: isTranslateMode ? 0 : 300,
       duration: 500,
       useNativeDriver: true,
     }).start();
@@ -130,7 +139,7 @@ const LiveTranslateScreen = () => {
     return () => {
       Voice.destroy().then(Voice.removeAllListeners);
     };
-  }, []);
+  }, [isTranslateMode]); // Add isTranslateMode as a dependency
 
   // Speech recognition event handlers
   const onSpeechStart = () => {
@@ -149,7 +158,10 @@ const LiveTranslateScreen = () => {
     if (event.value && event.value.length > 0) {
       const result = event.value[0];
       setTranscription(result);
-      translateText(result);
+      // Only translate if in translate mode
+      if (isTranslateMode) {
+        translateText(result);
+      }
     }
   };
 
@@ -277,7 +289,7 @@ const LiveTranslateScreen = () => {
               'Ocp-Apim-Subscription-Key': azureKey,
               'Ocp-Apim-Subscription-Region': region,
               'Content-Type': 'application/json',
-              'X-ClientTraceId': uuidv4(), // Add unique trace ID
+              'X-ClientTraceId': generateSimpleUUID(), // Add unique trace ID
               'X-ForceTranslation': 'true' // Force translation to target language
             },
             params: {
@@ -354,6 +366,27 @@ const LiveTranslateScreen = () => {
     }
   };
 
+  // Add toggle translation mode function
+  const toggleTranslateMode = () => {
+    const newMode = !isTranslateMode;
+    setIsTranslateMode(newMode);
+    
+    // Animate the bottom section
+    Animated.timing(slideAnimation, {
+      toValue: newMode ? 0 : 300, // Slide up when in translate mode, down when not
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+    
+    // If exiting translate mode, reset translated text
+    if (!newMode) {
+      setTranslatedText('');
+    } else if (transcription && transcription !== 'Press Mic to start listening' && transcription !== 'Listening...') {
+      // If entering translate mode and we have transcription, translate it
+      translateText(transcription);
+    }
+  };
+
   const swapLanguages = async () => {
     // Swap the languages
     const temp = selectedLanguage;
@@ -425,60 +458,85 @@ const LiveTranslateScreen = () => {
       {/* Header with Back, Copy, Share */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
-                 <Image source={require('../assets/back.png')} style={styles.icon2} />
-               </TouchableOpacity>
+          <Image source={require('../assets/back.png')} style={styles.icon2} />
+        </TouchableOpacity>
         <View style={styles.rightHeader}>
-        <TouchableOpacity >
-            <Image source={require('../assets/cliper.png')} style={styles.icon3} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleCopyText}>
-            <Image source={require('../assets/copy.png')} style={styles.icon3} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleShareText}>
-            <Image source={require('../assets/share.png')} style={styles.icon3} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSpeakerPress}>
-            <Image source={require('../assets/speaker.png')} style={styles.icon3} />
+          {/* Only show these buttons in translate mode */}
+          {isTranslateMode && (
+            <>
+              <TouchableOpacity>
+                <Image source={require('../assets/cliper.png')} style={styles.icon3} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleCopyText}>
+                <Image source={require('../assets/copy.png')} style={styles.icon3} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleShareText}>
+                <Image source={require('../assets/share.png')} style={styles.icon3} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSpeakerPress}>
+                <Image source={require('../assets/speaker.png')} style={styles.icon3} />
+              </TouchableOpacity>
+            </>
+          )}
+          {/* Toggle translate mode button */}
+          <TouchableOpacity 
+            onPress={toggleTranslateMode} 
+            style={[
+              styles.translateButton, 
+              isTranslateMode && styles.activeTranslateButton
+            ]}
+          >
+            <Image 
+              source={require('../assets/Translate.png')} 
+              style={[styles.icon4, isTranslateMode && styles.activeIcon]} 
+            />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Top Blue Section */}
       <View style={styles.topSection}>
-      <View style={styles.container2}>
-       <View style={styles.languageSwitcher}>
-        <TouchableOpacity
-          style={styles.languageButton}
-          onPress={() => {
-            setEditingLanguage('source');
-            setLanguageModalVisible(true);
-          }}
-        >
-          <Text style={styles.languageText}>{selectedLanguage}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
-          <Image
-            source={require('../assets/Change.png')}
-            style={styles.swapIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.languageButton}
-          onPress={() => {
-            setEditingLanguage('target');
-            setLanguageModalVisible(true);
-          }}
-        >
-          <Text style={styles.languageText}>{selectedLanguage2}</Text>
-        </TouchableOpacity>
+        <View style={styles.container2}>
+          <View style={styles.languageSwitcher}>
+            {/* Always show source language */}
+            <TouchableOpacity
+              style={styles.languageButton}
+              onPress={() => {
+                setEditingLanguage('source');
+                setLanguageModalVisible(true);
+              }}
+            >
+              <Text style={styles.languageText}>{selectedLanguage}</Text>
+            </TouchableOpacity>
+            
+            {/* Only show language swap and target language in translate mode */}
+            {isTranslateMode ? (
+              <>
+                <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
+                  <Image
+                    source={require('../assets/Change.png')}
+                    style={styles.swapIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.languageButton}
+                  onPress={() => {
+                    setEditingLanguage('target');
+                    setLanguageModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.languageText}>{selectedLanguage2}</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
         </View>
-      </View>
   
-  {/* Scroll view added for transcription */}
-  <ScrollView style={{ height: 280,  }}>
-    <Text style={styles.documentText}>{transcription}</Text>
-  </ScrollView>
-</View>
+        {/* Scroll view added for transcription */}
+        <ScrollView style={{ height: 280 }}>
+          <Text style={styles.documentText}>{transcription}</Text>
+        </ScrollView>
+      </View>
 
       {/* Animated Circle Behind Mic Icon */}
       <Animated.View
@@ -498,10 +556,10 @@ const LiveTranslateScreen = () => {
         ]}
       />
 
-      {/* Sliding White Section */}
+      {/* Sliding White Section - Only visible in translate mode */}
       <Animated.View style={[styles.bottomSection, { transform: [{ translateY: slideAnimation }] }]}>
         <ScrollView contentContainerStyle={styles.scrollView}>
-          <Text style={styles.translatedText}>{ translatedText}</Text>
+          <Text style={styles.translatedText}>{translatedText}</Text>
         </ScrollView>
         
         <View style={styles.bottomButtons}>
@@ -522,6 +580,27 @@ const LiveTranslateScreen = () => {
           )}
         </View>
       </Animated.View>
+
+      {/* Floating mic button when not in translate mode */}
+      {!isTranslateMode && (
+        <View style={styles.floatingMicContainer}>
+          {isListening ? (
+            <TouchableOpacity style={styles.floatingMicButton} onPress={handleStopListening}>
+              <Image source={require('../assets/Tick.png')} style={styles.icon} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.floatingMicButton} 
+              onPress={handleStartListening}
+            >
+              <Image 
+                source={require('../assets/mic3.png')} 
+                style={styles.icon} 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Language Selection Modal */}
       <Modal
@@ -596,7 +675,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     tintColor: '#ffffff',
-    marginLeft:10
+    marginLeft:10,
+  },
+  icon4: {
+    width: 24,
+    height: 24,
+    tintColor: '#ffffff',
+  
   },
   rightHeader: {
     flexDirection: 'row',
@@ -712,6 +797,46 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  translateButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E26C05FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+    resizeMode: 'cover',
+  },
+  activeTranslateButton: {
+    backgroundColor: '#0056b3',
+  },
+  activeIcon: {
+    tintColor: '#fff',
+  },
+  floatingMicContainer: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  floatingMicButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007bff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
