@@ -7,56 +7,56 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		B7E857A4A661F11D7DB34FAD /* libPods-MatrixAI.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AA2A05E4CE744B4A7EA2AD17 /* libPods-MatrixAI.a */; };
-		F74B356AAF8BF90997BCDB63 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		F60BFCF710624B71880B5AD9 /* README in Resources */ = {isa = PBXBuildFile; fileRef = 6B124BFB54654BA88BA2F597 /* README */; };
-		EECDCE076C134C9CA63F2843 /* final.mdl in Resources */ = {isa = PBXBuildFile; fileRef = 9AC9DCEBBA6843058F95594B /* final.mdl */; };
-		D9A4078017FC45B79D52997C /* mfcc.conf in Resources */ = {isa = PBXBuildFile; fileRef = 31D1A25BC03F4268AD4D30E3 /* mfcc.conf */; };
 		00D6977373B642529D22C9DA /* model.conf in Resources */ = {isa = PBXBuildFile; fileRef = 0EF2C9FADF424F60BECED758 /* model.conf */; };
-		1DE3EA8A9C2F4CEF896AA556 /* Gr.fst in Resources */ = {isa = PBXBuildFile; fileRef = 3F102C5F572C468594F18F93 /* Gr.fst */; };
-		4AF560CE8FD349A6B97D2EE6 /* HCLr.fst in Resources */ = {isa = PBXBuildFile; fileRef = 7CFCCD029E1743ABAFE762DC /* HCLr.fst */; };
-		FB26729B3CA345D6BBE324E9 /* disambig_tid.int in Resources */ = {isa = PBXBuildFile; fileRef = B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */; };
 		09FF086C4A8B4DBCBB8006E3 /* word_boundary.int in Resources */ = {isa = PBXBuildFile; fileRef = 671B4B2BB5E1429DB5044B0F /* word_boundary.int */; };
 		0A46A7B4064C437C96886BFF /* final.dubm in Resources */ = {isa = PBXBuildFile; fileRef = 96E084F6F6424B5CBAD8C6BD /* final.dubm */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		1DE3EA8A9C2F4CEF896AA556 /* Gr.fst in Resources */ = {isa = PBXBuildFile; fileRef = 3F102C5F572C468594F18F93 /* Gr.fst */; };
+		4AF560CE8FD349A6B97D2EE6 /* HCLr.fst in Resources */ = {isa = PBXBuildFile; fileRef = 7CFCCD029E1743ABAFE762DC /* HCLr.fst */; };
 		6AF87604C2FA4B83A532BBA6 /* final.ie in Resources */ = {isa = PBXBuildFile; fileRef = 68F14CDF19C44CAFA232F544 /* final.ie */; };
-		9A8AC546AC8C457C81CF8D31 /* final.mat in Resources */ = {isa = PBXBuildFile; fileRef = A316500FE2D94626B4877014 /* final.mat */; };
+		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		854DBB7E938844329F6AC8C4 /* global_cmvn.stats in Resources */ = {isa = PBXBuildFile; fileRef = DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */; };
-		FDAEE218E7FE43FE8317FF3A /* online_cmvn.conf in Resources */ = {isa = PBXBuildFile; fileRef = CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */; };
+		9A8AC546AC8C457C81CF8D31 /* final.mat in Resources */ = {isa = PBXBuildFile; fileRef = A316500FE2D94626B4877014 /* final.mat */; };
 		B73B05C88D05467998DF325D /* splice.conf in Resources */ = {isa = PBXBuildFile; fileRef = EC7D8247F5BE440EBB39BBA1 /* splice.conf */; };
-		D5EB651FE11A45779042C2C1 /* uuid in Resources */ = {isa = PBXBuildFile; fileRef = 936DF5C4E4384884A9D5D7C1 /* uuid */; };
+		B7E857A4A661F11D7DB34FAD /* libPods-MatrixAI.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AA2A05E4CE744B4A7EA2AD17 /* libPods-MatrixAI.a */; };
 		C7007DEF3E174815A348ED84 /* yolov8n.onnx in Resources */ = {isa = PBXBuildFile; fileRef = 2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */; };
+		D5EB651FE11A45779042C2C1 /* uuid in Resources */ = {isa = PBXBuildFile; fileRef = 936DF5C4E4384884A9D5D7C1 /* uuid */; };
+		D9A4078017FC45B79D52997C /* mfcc.conf in Resources */ = {isa = PBXBuildFile; fileRef = 31D1A25BC03F4268AD4D30E3 /* mfcc.conf */; };
+		EECDCE076C134C9CA63F2843 /* final.mdl in Resources */ = {isa = PBXBuildFile; fileRef = 9AC9DCEBBA6843058F95594B /* final.mdl */; };
+		F60BFCF710624B71880B5AD9 /* README in Resources */ = {isa = PBXBuildFile; fileRef = 6B124BFB54654BA88BA2F597 /* README */; };
+		F74B356AAF8BF90997BCDB63 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		FB26729B3CA345D6BBE324E9 /* disambig_tid.int in Resources */ = {isa = PBXBuildFile; fileRef = B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */; };
+		FDAEE218E7FE43FE8317FF3A /* online_cmvn.conf in Resources */ = {isa = PBXBuildFile; fileRef = CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0EF2C9FADF424F60BECED758 /* model.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = model.conf; path = ../android/app/src/main/assets/model/conf/model.conf; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* MatrixAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MatrixAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MatrixAI/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MatrixAI/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = MatrixAI/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = yolov8n.onnx; path = ../android/app/src/main/assets/yolov8n.onnx; sourceTree = "<group>"; };
+		31D1A25BC03F4268AD4D30E3 /* mfcc.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = mfcc.conf; path = ../android/app/src/main/assets/model/conf/mfcc.conf; sourceTree = "<group>"; };
+		3F102C5F572C468594F18F93 /* Gr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Gr.fst; path = ../android/app/src/main/assets/model/graph/Gr.fst; sourceTree = "<group>"; };
+		671B4B2BB5E1429DB5044B0F /* word_boundary.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = word_boundary.int; path = ../android/app/src/main/assets/model/graph/phones/word_boundary.int; sourceTree = "<group>"; };
+		68F14CDF19C44CAFA232F544 /* final.ie */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.ie; path = ../android/app/src/main/assets/model/ivector/final.ie; sourceTree = "<group>"; };
+		6B124BFB54654BA88BA2F597 /* README */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = README; path = ../android/app/src/main/assets/model/README; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MatrixAI/AppDelegate.swift; sourceTree = "<group>"; };
+		7CFCCD029E1743ABAFE762DC /* HCLr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = HCLr.fst; path = ../android/app/src/main/assets/model/graph/HCLr.fst; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MatrixAI/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		936DF5C4E4384884A9D5D7C1 /* uuid */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = uuid; path = ../android/app/src/main/assets/model/uuid; sourceTree = "<group>"; };
+		96E084F6F6424B5CBAD8C6BD /* final.dubm */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.dubm; path = ../android/app/src/main/assets/model/ivector/final.dubm; sourceTree = "<group>"; };
+		9AC9DCEBBA6843058F95594B /* final.mdl */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.mdl; path = ../android/app/src/main/assets/model/am/final.mdl; sourceTree = "<group>"; };
+		A316500FE2D94626B4877014 /* final.mat */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.mat; path = ../android/app/src/main/assets/model/ivector/final.mat; sourceTree = "<group>"; };
 		A4982562DA235B0AF6C61C77 /* Pods-MatrixAI.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MatrixAI.debug.xcconfig"; path = "Target Support Files/Pods-MatrixAI/Pods-MatrixAI.debug.xcconfig"; sourceTree = "<group>"; };
 		AA2A05E4CE744B4A7EA2AD17 /* libPods-MatrixAI.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MatrixAI.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = disambig_tid.int; path = ../android/app/src/main/assets/model/graph/disambig_tid.int; sourceTree = "<group>"; };
+		CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = online_cmvn.conf; path = ../android/app/src/main/assets/model/ivector/online_cmvn.conf; sourceTree = "<group>"; };
+		DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = global_cmvn.stats; path = ../android/app/src/main/assets/model/ivector/global_cmvn.stats; sourceTree = "<group>"; };
 		EAF830AA3C60C5035ACCF92C /* Pods-MatrixAI.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MatrixAI.release.xcconfig"; path = "Target Support Files/Pods-MatrixAI/Pods-MatrixAI.release.xcconfig"; sourceTree = "<group>"; };
+		EC7D8247F5BE440EBB39BBA1 /* splice.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = splice.conf; path = ../android/app/src/main/assets/model/ivector/splice.conf; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		6B124BFB54654BA88BA2F597 /* README */ = {isa = PBXFileReference; name = "README"; path = "../android/app/src/main/assets/model/README"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		9AC9DCEBBA6843058F95594B /* final.mdl */ = {isa = PBXFileReference; name = "final.mdl"; path = "../android/app/src/main/assets/model/am/final.mdl"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		31D1A25BC03F4268AD4D30E3 /* mfcc.conf */ = {isa = PBXFileReference; name = "mfcc.conf"; path = "../android/app/src/main/assets/model/conf/mfcc.conf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		0EF2C9FADF424F60BECED758 /* model.conf */ = {isa = PBXFileReference; name = "model.conf"; path = "../android/app/src/main/assets/model/conf/model.conf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		3F102C5F572C468594F18F93 /* Gr.fst */ = {isa = PBXFileReference; name = "Gr.fst"; path = "../android/app/src/main/assets/model/graph/Gr.fst"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		7CFCCD029E1743ABAFE762DC /* HCLr.fst */ = {isa = PBXFileReference; name = "HCLr.fst"; path = "../android/app/src/main/assets/model/graph/HCLr.fst"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */ = {isa = PBXFileReference; name = "disambig_tid.int"; path = "../android/app/src/main/assets/model/graph/disambig_tid.int"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		671B4B2BB5E1429DB5044B0F /* word_boundary.int */ = {isa = PBXFileReference; name = "word_boundary.int"; path = "../android/app/src/main/assets/model/graph/phones/word_boundary.int"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		96E084F6F6424B5CBAD8C6BD /* final.dubm */ = {isa = PBXFileReference; name = "final.dubm"; path = "../android/app/src/main/assets/model/ivector/final.dubm"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		68F14CDF19C44CAFA232F544 /* final.ie */ = {isa = PBXFileReference; name = "final.ie"; path = "../android/app/src/main/assets/model/ivector/final.ie"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A316500FE2D94626B4877014 /* final.mat */ = {isa = PBXFileReference; name = "final.mat"; path = "../android/app/src/main/assets/model/ivector/final.mat"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */ = {isa = PBXFileReference; name = "global_cmvn.stats"; path = "../android/app/src/main/assets/model/ivector/global_cmvn.stats"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */ = {isa = PBXFileReference; name = "online_cmvn.conf"; path = "../android/app/src/main/assets/model/ivector/online_cmvn.conf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		EC7D8247F5BE440EBB39BBA1 /* splice.conf */ = {isa = PBXFileReference; name = "splice.conf"; path = "../android/app/src/main/assets/model/ivector/splice.conf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		936DF5C4E4384884A9D5D7C1 /* uuid */ = {isa = PBXFileReference; name = "uuid"; path = "../android/app/src/main/assets/model/uuid"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */ = {isa = PBXFileReference; name = "yolov8n.onnx"; path = "../android/app/src/main/assets/yolov8n.onnx"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +81,30 @@
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
 			name = MatrixAI;
+			sourceTree = "<group>";
+		};
+		1B1E44E5547149F4BB8590FB /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				6B124BFB54654BA88BA2F597 /* README */,
+				9AC9DCEBBA6843058F95594B /* final.mdl */,
+				31D1A25BC03F4268AD4D30E3 /* mfcc.conf */,
+				0EF2C9FADF424F60BECED758 /* model.conf */,
+				3F102C5F572C468594F18F93 /* Gr.fst */,
+				7CFCCD029E1743ABAFE762DC /* HCLr.fst */,
+				B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */,
+				671B4B2BB5E1429DB5044B0F /* word_boundary.int */,
+				96E084F6F6424B5CBAD8C6BD /* final.dubm */,
+				68F14CDF19C44CAFA232F544 /* final.ie */,
+				A316500FE2D94626B4877014 /* final.mat */,
+				DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */,
+				CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */,
+				EC7D8247F5BE440EBB39BBA1 /* splice.conf */,
+				936DF5C4E4384884A9D5D7C1 /* uuid */,
+				2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */,
+			);
+			name = Resources;
+			path = "";
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -130,30 +154,6 @@
 			);
 			path = Pods;
 			sourceTree = "<group>";
-		};
-		1B1E44E5547149F4BB8590FB /* Resources */ = {
-			isa = "PBXGroup";
-			children = (
-				6B124BFB54654BA88BA2F597 /* README */,
-				9AC9DCEBBA6843058F95594B /* final.mdl */,
-				31D1A25BC03F4268AD4D30E3 /* mfcc.conf */,
-				0EF2C9FADF424F60BECED758 /* model.conf */,
-				3F102C5F572C468594F18F93 /* Gr.fst */,
-				7CFCCD029E1743ABAFE762DC /* HCLr.fst */,
-				B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */,
-				671B4B2BB5E1429DB5044B0F /* word_boundary.int */,
-				96E084F6F6424B5CBAD8C6BD /* final.dubm */,
-				68F14CDF19C44CAFA232F544 /* final.ie */,
-				A316500FE2D94626B4877014 /* final.mat */,
-				DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */,
-				CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */,
-				EC7D8247F5BE440EBB39BBA1 /* splice.conf */,
-				936DF5C4E4384884A9D5D7C1 /* uuid */,
-				2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */,
-			);
-			name = Resources;
-			sourceTree = "<group>";
-			path = "";
 		};
 /* End PBXGroup section */
 

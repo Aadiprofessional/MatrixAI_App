@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform, Animated, Dimensions } from 'react-native';
 import Voice from '@react-native-voice/voice'; // Import for voice recognition
 import Tts from 'react-native-tts'; // Import for text-to-speech
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Lottie from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 const CallScreen = () => {
   const navigation = useNavigation();
   const [transcribedText, setTranscribedText] = useState('');
@@ -16,6 +17,11 @@ const CallScreen = () => {
   const [ttsReady, setTtsReady] = useState(false);
   const [animationSpeed, setAnimationSpeed] = useState(1.0);
   const [countdownSeconds, setCountdownSeconds] = useState(0);
+  // Add new states for the new features
+  const [showRoleSlider, setShowRoleSlider] = useState(false);
+  const [showTextContainer, setShowTextContainer] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentRole, setCurrentRole] = useState('Assistant');
   
   // Store conversation history for DeepSeek
   const conversationHistory = useRef([
@@ -38,6 +44,101 @@ const CallScreen = () => {
   
   // Add a reference to track the last processed text
   const lastProcessedText = useRef('');
+
+  // Add new state and ref for gradient rotation
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  // Animation refs
+  const aiAnimationRef = useRef(null);
+  const audioWavesRef = useRef(null);
+  
+  // Add animation for AI speaking
+  const pulseAnimation = useRef(new Animated.Value(1)).current;
+  
+  // Function to handle AI speaking animation
+  const startSpeakingAnimation = () => {
+    setIsSpeaking(true);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimation, {
+          toValue: 1.2,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnimation, {
+          toValue: 0.8,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+  
+  const stopSpeakingAnimation = () => {
+    setIsSpeaking(false);
+    pulseAnimation.setValue(1);
+    Animated.timing(pulseAnimation).stop();
+  };
+  
+  // Role slider animation
+  const roleSliderAnim = useRef(new Animated.Value(0)).current;
+  
+  const toggleRoleSlider = () => {
+    const toValue = showRoleSlider ? 0 : 1;
+    setShowRoleSlider(!showRoleSlider);
+    
+    Animated.spring(roleSliderAnim, {
+      toValue,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+  
+  // Select a role
+  const selectRole = (role) => {
+    setCurrentRole(role);
+    // Update the system prompt based on the selected role
+    const rolePrompts = {
+      'Assistant': "You are an AI assistant on a phone call. Keep your responses brief and conversational as if speaking on the phone.",
+      'Teacher': "You are an AI teacher on a phone call. Explain concepts clearly and provide educational guidance.",
+      'Mathematician': "You are an AI mathematician on a phone call. Help solve math problems and explain mathematical concepts.",
+      'English Teacher': "You are an AI English teacher on a phone call. Help with language learning, grammar, and vocabulary.",
+      'Programmer': "You are an AI programming expert on a phone call. Help with coding problems and explain programming concepts.",
+      'Singer': "You are an AI singer on a phone call. You can create lyrics, discuss music theory, and talk about songs."
+    };
+    
+    conversationHistory.current = [
+      {
+        role: "system",
+        content: rolePrompts[role] + " Limit responses to 1-3 sentences. Remember previous parts of our conversation for context."
+      }
+    ];
+    
+    // Close the slider after selection
+    toggleRoleSlider();
+  };
+  
+  // Add rotation animation
+  useEffect(() => {
+    const startRotationAnimation = () => {
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 10000,
+          useNativeDriver: true,
+        })
+      ).start();
+    };
+    
+    startRotationAnimation();
+  }, []);
+  
+  // Calculate rotation interpolation
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   // Initialize TTS and Voice
   useEffect(() => {
@@ -111,6 +212,23 @@ const CallScreen = () => {
           await Tts.setDefaultRate(0.5);
           await Tts.setDefaultPitch(1.2);
         }
+        
+        // Add event listeners for TTS
+        Tts.addEventListener('tts-start', () => {
+          console.log('TTS started speaking');
+          startSpeakingAnimation();
+        });
+        
+        ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
+          console.log('TTS finished speaking');
+          stopSpeakingAnimation();
+        });
+        
+        // Add error listener
+        Tts.addEventListener('tts-error', (err) => {
+          console.error('TTS error:', err);
+          stopSpeakingAnimation();
+        });
         
         setTtsReady(true);
         console.log('TTS initialized successfully');
@@ -316,6 +434,11 @@ const CallScreen = () => {
     
     // Start the silence detection loop
     startSilenceDetection();
+    
+    // Start the AudioWaves animation when speech starts
+    if (audioWavesRef.current) {
+      audioWavesRef.current.play();
+    }
   };
 
   const startSilenceDetection = () => {
@@ -380,15 +503,24 @@ const CallScreen = () => {
   const onSpeechEnd = () => {
     console.log('Speech ended');
     
-    // Reset the countdown timer when speech ends
-    setCountdownSeconds(8);
+    // Stop the AudioWaves animation when speech ends
+    if (audioWavesRef.current) {
+      audioWavesRef.current.pause();
+    }
     
-    // When speech ends, wait a short time and then process if we have text
-    setTimeout(() => {
-      if (isListening && !isProcessing.current && transcribedText) {
-        stopRecording();
-      }
-    }, 8000);
+    // Check if we should process the text now
+    const currentText = transcribedText;
+    const timeSinceLastChange = Date.now() - lastTextChangeTime.current;
+    
+    console.log('Speech ended with text:', currentText, 'Time since last change:', timeSinceLastChange);
+    
+    // If we have text and it's been stable for a short time, process it
+    if (currentText && timeSinceLastChange > 500 && !isProcessing.current) {
+      console.log('Processing text on speech end');
+      stopRecording();
+    } else {
+      console.log('Not processing text on speech end - conditions not met');
+    }
   };
 
   const onSpeechResults = (event) => {
@@ -465,6 +597,11 @@ const CallScreen = () => {
       
       // Start silence detection
       startSilenceDetection();
+
+      // Start the AudioWaves animation when recording starts
+      if (audioWavesRef.current) {
+        audioWavesRef.current.play();
+      }
     } catch (error) {
       console.error('Error starting voice recognition:', error);
       setIsListening(false);
@@ -554,6 +691,11 @@ const CallScreen = () => {
         setTranscribedText('');
         console.log('Cleared transcribed text (no processing)');
       }
+
+      // Stop the AudioWaves animation when recording stops
+      if (audioWavesRef.current) {
+        audioWavesRef.current.pause();
+      }
     } catch (error) {
       console.error('Error stopping voice recognition:', error);
       // Make sure processing flag is reset on error
@@ -584,7 +726,7 @@ const CallScreen = () => {
       }
     }, 30000); // 30 seconds
     
-    // Set animation to active
+    // Set animation to active for AI thinking
     setAnimationSpeed(1.0);
     
     try {
@@ -603,6 +745,9 @@ const CallScreen = () => {
         clearTimeout(responseTimer.current);
         responseTimer.current = null;
       }
+      
+      // Start the speaking animation for the thinking message
+      startSpeakingAnimation();
       
       // Speak thinking message
       Tts.speak(thinkingMessage);
@@ -638,6 +783,9 @@ const CallScreen = () => {
       // Set up TTS finish listener
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
         console.log('TTS finished speaking greeting');
+        
+        // Stop the speaking animation when TTS finishes
+        stopSpeakingAnimation();
         
         // Make sure processing flag is reset
         isProcessing.current = false;
@@ -684,6 +832,9 @@ const CallScreen = () => {
       // Set backup timer in case TTS finish event doesn't trigger
       responseTimer.current = setTimeout(() => {
         console.log('Backup timer triggered to restart recording');
+        
+        // Stop the speaking animation in case it's still running
+        stopSpeakingAnimation();
         
         // Clear any existing TTS listener that hasn't fired
         if (ttsFinishListener.current) {
@@ -732,10 +883,14 @@ const CallScreen = () => {
       
       // Speak the AI response
       console.log('Speaking AI response:', aiResponse);
+      // The startSpeakingAnimation will be triggered by the TTS start event
       Tts.speak(aiResponse);
       
     } catch (error) {
       console.error('API error:', error);
+      
+      // Stop the speaking animation in case of error
+      stopSpeakingAnimation();
       
       // Handle error case
       const errorMessage = 'Sorry, there was an error processing your request.';
@@ -837,6 +992,9 @@ const CallScreen = () => {
       
       // Speak error message
       Tts.speak(errorMessage);
+    } finally {
+      // Make sure processing flag is reset
+      isProcessing.current = false;
     }
   };
 
@@ -940,32 +1098,98 @@ const CallScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.gradientContainer, { transform: [{ rotate }] }]}>
+        <LinearGradient
+          colors={['#0C7BB3', '#F2BAE8']}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </Animated.View>
+
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.roleButton}
+          onPress={toggleRoleSlider}
+        >
+          <Text style={styles.roleButtonText}>{currentRole}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.textButton}
+          onPress={() => setShowTextContainer(!showTextContainer)}
+        >
+          <Text style={styles.textButtonText}>Text</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Role slider */}
+      <Animated.View 
+        style={[
+          styles.roleSlider,
+          {
+            transform: [
+              { translateY: roleSliderAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [300, 0]
+              })}
+            ],
+            opacity: roleSliderAnim
+          }
+        ]}
+      >
+        <View style={styles.roleSliderContent}>
+          <Text style={styles.roleSliderTitle}>Select AI Role</Text>
+          <View style={styles.roleOptions}>
+            {['Assistant', 'Teacher', 'Mathematician', 'English Teacher', 'Programmer', 'Singer'].map((role) => (
+              <TouchableOpacity 
+                key={role} 
+                style={[
+                  styles.roleOption,
+                  currentRole === role && styles.selectedRoleOption
+                ]}
+                onPress={() => selectRole(role)}
+              >
+                <Text style={[
+                  styles.roleOptionText,
+                  currentRole === role && styles.selectedRoleOptionText
+                ]}>
+                  {role}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Animated.View>
+
       <View style={styles.contentContainer}>
         <View style={styles.avatarContainer}>
-          <Lottie
-            ref={animationRef}
-            source={require('../assets/CallAnimation.json')}
-            autoPlay
-            loop
-            speed={animationSpeed}
-            style={styles.animation}
-          />
-          <Image 
-            source={require('../assets/Avatar/Cat.png')} 
-            style={styles.image}
-          />
+          <Animated.View style={{
+            transform: [{ scale: isSpeaking ? pulseAnimation : 1 }]
+          }}>
+            <Lottie
+              ref={aiAnimationRef}
+              source={require('../assets/Animation - 1740689806927.json')}
+              autoPlay
+              loop
+              speed={animationSpeed}
+              style={styles.animation}
+            />
+          </Animated.View>
         </View>
-        
-        <View style={styles.textContainer}>
-          <Text style={styles.conversationTitle}>Conversation</Text>
-          
-          {/* Live transcription */}
-          {isListening && transcribedText && (
-            <View style={styles.liveTranscriptionContainer}>
-              <Text style={styles.liveTranscriptionLabel}>Currently speaking:</Text>
-              <Text style={styles.liveTranscriptionText}>{transcribedText}</Text>
-            </View>
-          )}
+      </View>
+      
+      {/* Full screen text container */}
+      {showTextContainer && (
+        <View style={styles.fullScreenTextContainer}>
+          <View style={styles.textContainerHeader}>
+            <Text style={styles.conversationTitle}>Conversation</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowTextContainer(false)}
+            >
+              <Icon name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
           
           {/* Conversation history */}
           <View style={styles.conversationHistory}>
@@ -976,31 +1200,48 @@ const CallScreen = () => {
               </View>
             ))}
           </View>
+        </View>
+      )}
+      
+      <View style={styles.controlsContainer2}>
+        <View style={styles.audioWavesContainer}>
+          <Lottie
+            ref={audioWavesRef}
+            source={require('../assets/AudioWaves.json')}
+            autoPlay={false}
+            loop
+            speed={1.0}
+            style={styles.animation2}
+          />
           
-          {/* Listening indicator with countdown */}
-          {isListening && (
-            <View style={styles.listeningIndicator}>
-              <Text style={styles.listeningText}>
-                Listening{countdownSeconds > 0 ? ` (${countdownSeconds}s)` : '...'}
-              </Text>
+          {/* Transcribed text below AudioWaves */}
+          {isListening && transcribedText && (
+            <View style={styles.transcriptionContainer}>
+              <Text style={styles.transcriptionText}>{transcribedText}</Text>
             </View>
           )}
         </View>
-      </View>
-      
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity 
-          style={styles.stopButton} 
-          onPress={stopRecording}
-        >
-          <Text style={styles.buttonText}>⏹️</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.endCallButton} 
-          onPress={endCall}
-        >
-          <Text style={styles.buttonText}>📞</Text>
-        </TouchableOpacity>
+        
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity 
+            style={styles.endCallButton2} 
+            onPress={startRecording}
+          >
+            <Icon name="mic" size={24} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.stopButton} 
+            onPress={stopRecording}
+          >
+            <Icon name="stop" size={24} color="#FFFFFF00" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.endCallButton} 
+            onPress={endCall}
+          >
+            <Icon name="call-end" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -1009,13 +1250,112 @@ const CallScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+  },
+  gradientContainer: {
+    position: 'absolute',
+    width: Dimensions.get('window').width * 4,
+    height: Dimensions.get('window').height * 2,
+    top: -Dimensions.get('window').height / 2,
+    left: -Dimensions.get('window').width / 2,
+  },
+  gradient: {
+    flex: 1,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    zIndex: 1,
+  },
+  roleButton: {
+    position: 'absolute',
+    left: '50%',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    transform: [{ translateX: -50 }],
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  textButton: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  roleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  textButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  roleSlider: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  roleSliderContent: {
+    paddingBottom: 30,
+  },
+  roleSliderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  roleOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  roleOption: {
+    width: '48%',
+    backgroundColor: 'rgba(12, 123, 179, 0.1)',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  selectedRoleOption: {
+    backgroundColor: 'rgba(12, 123, 179, 0.3)',
+    borderWidth: 1,
+    borderColor: '#0C7BB3',
+  },
+  roleOptionText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedRoleOptionText: {
+    color: '#0C7BB3',
+    fontWeight: 'bold',
   },
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 1,
   },
   avatarContainer: {
     alignItems: 'center',
@@ -1023,27 +1363,50 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   animation: {
-    width: 200,
-    height: 200,
-    position: 'absolute',
+    width: 400,
+    height: 400,
+ 
   },
-  image: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    zIndex: 1,
+  animation2: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
+    alignSelf: 'center',
   },
-  textContainer: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 15,
+  fullScreenTextContainer: {
+   
+    backgroundColor: '#41006F67',
+    zIndex: 50,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    maxHeight: '50%',
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+
+  },
+  textContainerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  closeButton: {
+    padding: 5,
+  },
+  transcriptionContainer: {
+
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 5,
+    marginBottom: 10,
+    width: '90%',
+    alignSelf: 'center',
+  },
+  transcriptionText: {
+    color: '#333',
+    textAlign: 'center',
+    fontSize: 16,
   },
   conversationTitle: {
     fontSize: 18,
@@ -1053,10 +1416,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   conversationHistory: {
-    maxHeight: '70%',
+    maxHeight: '90%',
   },
   messageContainer: {
     marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    padding: 10,
+    borderRadius: 10,
   },
   speakerLabel: {
     fontSize: 14,
@@ -1067,43 +1433,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  liveTranscriptionContainer: {
-    backgroundColor: '#f0f8ff',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#cce5ff',
+  controlsContainer2: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    marginTop: -50,
   },
-  liveTranscriptionLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#0066cc',
-  },
-  liveTranscriptionText: {
-    fontSize: 16,
-    color: '#333',
-    fontStyle: 'italic',
-  },
-  listeningIndicator: {
-    marginTop: 10,
-    padding: 8,
-    backgroundColor: '#e6f7ff',
-    borderRadius: 8,
-  },
-  listeningText: {
-    color: '#0066cc',
-    textAlign: 'center',
+  audioWavesContainer: {
+    alignItems: 'center',
+    width: '100%',
   },
   controlsContainer: {
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    alignSelf: 'center',
+    marginTop: 10,
   },
   stopButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#ffc107',
+    backgroundColor: '#FFFFFF00',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1117,7 +1470,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#dc3545',
+    backgroundColor: 'rgba(220, 53, 69, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1126,10 +1479,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 24,
-    transform: [{ rotate: '135deg' }],
+  endCallButton2: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#FFFFFF90',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    marginRight: 20,
   },
 });
 
