@@ -796,7 +796,7 @@ const AudioVideoUploadScreen = () => {
                                        style={styles.headerIcon}
                                    />
                                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Matrix AI</Text>
+                <Image source={require('../assets/logo8.png')} style={styles.headerTitle} />
               
             </View>
             <View style={styles.topButtonsContainer}>
@@ -865,11 +865,9 @@ const AudioVideoUploadScreen = () => {
             </TouchableOpacity>
         )}
             {/* Add File Floating Button */}
-            <TouchableOpacity style={styles.floatingButton} onPress={handleFloatingButton2Press}>
+          
+            <TouchableOpacity style={styles.floatingButton} onPress={handleFloatingButtonPress}>
                 <Image source={micIcon} style={styles.floatingButtonIcon} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.floatingButton2} onPress={handleFloatingButtonPress}>
-                <Image source={micIcon2} style={styles.floatingButtonIcon} />
             </TouchableOpacity>
     
     
@@ -1299,11 +1297,14 @@ color:'#000',
         paddingVertical: 12,
     },
     headerTitle: {
-        fontSize: 20,
+       
         position:'absolute',
-        left:'45%',
-        fontWeight: 'bold',
-        color: '#007bff',
+        left:'20%',
+       width:250,
+       height:80,
+       resizeMode:'contain',
+      
+        
     },
     headerIcon: {
         width: 24,

@@ -1219,6 +1219,9 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.headerContainer2}>
+                <Image source={require('../assets/logo8.png')} style={styles.headerTitle} />
+            </View>
                  <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
                     <Image
@@ -1512,6 +1515,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         <LinearGradient
                             colors={['#13EF97', '#1D8EC4']} // Gradient colors
                             style={styles.gradientButton} // Use a new style for the gradient
+                            start={{ x: 1, y: 0 }}
+                            end={{ x: 0, y: 0 }}
                         >
                             <Text style={styles.buttonText2}>
                                 Mind Map
@@ -2036,6 +2041,15 @@ const styles = StyleSheet.create({
       
         zIndex:200,
       },
+      headerTitle: {
+        width: 250,
+        height: 80,
+        resizeMode: 'contain',
+       
+        
+        left:'20%',
+        position:'absolute',
+      },
     container: {
         flex: 1,
         backgroundColor: '#fff',
@@ -2052,6 +2066,15 @@ const styles = StyleSheet.create({
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#ccc',
+        backgroundColor:'#fff',
+    },
+    headerContainer2: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+       
+        backgroundColor:'#fff',
     },
     overlayButtonContainer: {
         position: 'absolute',
@@ -2244,7 +2267,7 @@ flexDirection:'row',
       },
     button: {
         flex: 1,
-        borderColor: '#007BFF',
+        borderColor: '#1D8EC4',
         borderWidth: 1,
      
         margin: 8,
@@ -2362,6 +2385,9 @@ flexDirection:'row',
     header: {
         fontSize: 13,
         fontWeight: '600',
+        alignSelf:'center',
+        position:'absolute',
+        left:'45%',
     },
     iconButton: {
         padding: 8,
