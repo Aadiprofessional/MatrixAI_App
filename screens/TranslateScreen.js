@@ -39,6 +39,8 @@ import Slider from '@react-native-community/slider'; // Import the Slider compon
   import { Picker } from '@react-native-picker/picker';
   import DropDownPicker from 'react-native-dropdown-picker';
   import Svg, { Path } from 'react-native-svg';
+  import LinearGradient from 'react-native-linear-gradient'; // Import LinearGradient
+
   const TranslateScreen = ({ route }) => {
     const graphRef = useRef(null);
       const { audioid ,uid} = route.params || {};
@@ -1486,16 +1488,40 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 <TouchableOpacity
                     style={[styles.button, selectedButton === 'transcription' ? styles.selectedButton : null]}
                     onPress={() => handleButtonPress('transcription')}>
-                    <Text style={[styles.buttonText, selectedButton === 'transcription' ? styles.buttonText2 : null]}>
-                        Transcription
-                    </Text>
+                    {selectedButton === 'transcription' ? (
+                        <LinearGradient
+                            colors={['#13EF97', '#1D8EC4']} // Gradient colors
+                            style={styles.gradientButton} // Use a new style for the gradient
+                            start={{ x: 1, y: 0 }}
+                            end={{ x: 0, y: 0 }}
+                        >
+                            <Text style={styles.buttonText2}>
+                                Transcription
+                            </Text>
+                        </LinearGradient>
+                    ) : (
+                        <Text style={styles.buttonText}>
+                            Transcription
+                        </Text>
+                    )}
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.button, selectedButton === 'mindMap' ? styles.selectedButton : null]}
                     onPress={() => handleButtonPress('mindMap')}>
-                    <Text style={[styles.buttonText, selectedButton === 'mindMap' ? styles.buttonText2 : null]}>
-                        Mind Map
-                    </Text>
+                    {selectedButton === 'mindMap' ? (
+                        <LinearGradient
+                            colors={['#13EF97', '#1D8EC4']} // Gradient colors
+                            style={styles.gradientButton} // Use a new style for the gradient
+                        >
+                            <Text style={styles.buttonText2}>
+                                Mind Map
+                            </Text>
+                        </LinearGradient>
+                    ) : (
+                        <Text style={styles.buttonText}>
+                            Mind Map
+                        </Text>
+                    )}
                 </TouchableOpacity>
             </View>
         
@@ -2071,9 +2097,7 @@ const styles = StyleSheet.create({
                 fontSize:16,
                 color:'#fff',
                     },
-    selectedButton: {
-        backgroundColor: '#007bff', // Change to the selected button color
-    },
+  
     translatedText: {
         color: '#007bff',
         fontSize: 16,
@@ -2222,7 +2246,7 @@ flexDirection:'row',
         flex: 1,
         borderColor: '#007BFF',
         borderWidth: 1,
-        padding: 5,
+     
         margin: 8,
         alignItems: 'center',
         borderRadius: 10,
@@ -2237,6 +2261,7 @@ flexDirection:'row',
     buttonText: {
         color: '#007BFF',
         fontWeight: '600',
+        marginVertical:5,
     },
     buttonText2: {
         color: '#fff',
@@ -2269,6 +2294,12 @@ flexDirection:'row',
         width: '100%',
         borderRadius: 10,
    
+    },
+    selectedButton: {
+      
+        borderWidth:0,
+        borderRadius:10,
+        marginVertical:5,
     },
     dropdownItem: {
         paddingVertical: 10,
@@ -2599,6 +2630,13 @@ flexDirection:'row',
         right: 10, // Adjust as necessary for spacing
         top: 5, // Position it above the paragraph
         zIndex: 1, // Ensure it appears above other elements
+    },
+    gradientButton: {
+       width:'100%',
+       height:32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius:10,
     },
 });
 
