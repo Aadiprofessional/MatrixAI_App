@@ -197,7 +197,7 @@ const CallScreen = () => {
           ttsFinishListener.current = null;
         }
       });
-    }, 1000);
+    }, 8000);
   };
 
   const addToConversation = (speaker, text) => {
@@ -241,7 +241,7 @@ const CallScreen = () => {
       const timeSinceLastTextChange = now - lastTextChangeTime.current;
       
       // If text hasn't changed for 2 seconds and we have some text
-      if (transcribedText && timeSinceLastTextChange > 2000 && isListening && !isProcessing.current) {
+      if (transcribedText && timeSinceLastTextChange > 8000 && isListening && !isProcessing.current) {
         console.log('No text changes for 2 seconds, stopping recording');
         clearInterval(silenceTimer.current);
         stopRecording();
@@ -257,7 +257,7 @@ const CallScreen = () => {
       if (isListening && !isProcessing.current && transcribedText) {
         stopRecording();
       }
-    }, 1000);
+    }, 8000);
   };
 
   const onSpeechResults = (event) => {
