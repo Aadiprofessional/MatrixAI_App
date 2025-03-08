@@ -111,6 +111,7 @@ const BotScreen2 = ({ navigation, route }) => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isApiLoading, setIsApiLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState({});
   const [fullTranscription, setFullTranscription] = useState('');
@@ -292,14 +293,21 @@ const BotScreen2 = ({ navigation, route }) => {
         ]);
 
         setDataLoaded(true);
-        setShowSummaryPrompt(!hasChatHistory); // Set prompt visibility based on chat history
+        
+        // Only show summary prompt after data is loaded and if there's no chat history
+        if (!hasChatHistory) {
+          setShowSummaryPrompt(true);
+        }
       } catch (error) {
         console.error('Error fetching chat history:', error);
         setDataLoaded(true);
-        setShowSummaryPrompt(true); // Show prompt if there's an error fetching chat history
+        // Don't show prompt on error, only if no data exists
+        setShowSummaryPrompt(false);
       }
     };
 
+    // Initially hide the summary prompt while loading
+    setShowSummaryPrompt(false);
     fetchChatHistory();
   }, [audioid]);
   
@@ -443,7 +451,7 @@ const BotScreen2 = ({ navigation, route }) => {
       </View>
 
       {/* Chat List or Animation */}
-      {messages.length === 1 ? (
+      {messages.length === 1 || isApiLoading ? (
         <View style={styles.animationContainer}>
           <LottieView
             source={require('../assets/loading.json')}
@@ -529,7 +537,7 @@ const BotScreen2 = ({ navigation, route }) => {
       >
         <View style={styles.fullScreenContainer}>
           <View style={styles.fullScreenGraphContainer}>
-            <ForceDirectedGraph2 transcription={selectedMessage?.text || ''} uid={uid} audioid={audioid}/>
+            <ForceDirectedGraph2 message={selectedMessage?.text || ''} uid={uid} audioid={audioid}/>
           </View>
           <TouchableOpacity
             onPress={() => setIsFullScreen(false)}
@@ -700,8 +708,8 @@ const styles = StyleSheet.create({
     height: '100%',
     maxWidth: '100%',
     maxHeight: '100%',
-    marginTop: 200,
-    marginRight: 50,
+    marginTop:20,
+    marginRight:-10,
     padding: 10,
     overflow: 'hidden',
   },

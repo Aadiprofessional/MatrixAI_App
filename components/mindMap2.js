@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
@@ -146,7 +146,8 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
   if (!graphData) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading graph...</Text>
+       <ActivityIndicator size="large" color="#0000ff" />
+       <Text style={styles.loadingText}>Loading graph...</Text>
       </View>
     );
   }
@@ -160,7 +161,7 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
-    <div id="chart" style="width: 100%; height: 1200%;"></div>
+    <div id="chart" style="width: 100%; height: 2200%;"></div>
     <script>
       const chartDom = document.getElementById('chart');
       const myChart = echarts.init(chartDom);
@@ -313,12 +314,12 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
 
   return (
     <View style={styles.container}>
-      <WebView
+       <WebView
         originWhitelist={['*']}
         source={{ html: chartHtml }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        style={{ flex: 1 }}
+        style={styles.webview}
       />
     </View>
   );
@@ -326,7 +327,11 @@ const ForceDirectedGraph2 = ({ transcription, uid, audioid, xmlData }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  loadingText: { fontSize: 24, fontWeight: 'bold', color: '#000' },
+  webview: {
+    ...StyleSheet.absoluteFillObject, // Makes it cover the whole screen
+  },
 });
 
 export default ForceDirectedGraph2;

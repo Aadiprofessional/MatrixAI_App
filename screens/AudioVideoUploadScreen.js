@@ -78,6 +78,7 @@ const AudioVideoUploadScreen = () => {
             { label: 'Spanish', value: 'es' }
         
     ]);
+    const [loadingAudioIds, setLoadingAudioIds] = useState(new Set()); // Track loading audio IDs
 
     // Function to generate a secure random audio ID
     const generateAudioID = () => {
@@ -150,30 +151,76 @@ const AudioVideoUploadScreen = () => {
     };
 
     const getAudioDuration = async (uri) => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             try {
-                // For Android, try to get duration from file metadata if possible
-                if (Platform.OS === 'android') {
-                    // For now, use a default duration that's more reasonable for typical audio files
-                    // In a production app, you might want to implement a native module to get actual duration
-                    resolve(60); // Default 60 seconds for Android
-                    return;
-                }
-                
-                // For iOS, continue using Sound
-                const sound = new Sound(uri, '', (error) => {
-                    if (error) {
-                        console.error('Error loading audio:', error);
-                        // Default to a reasonable duration if there's an error
-                        resolve(60);
-                    } else {
-                        const durationInSeconds = sound.getDuration();
-                        sound.release();
-                        resolve(Math.round(durationInSeconds));
+                // First try to estimate duration based on file size
+                // This is a fallback method that works for most audio files
+                const estimateDurationFromSize = async () => {
+                    try {
+                        // Check if the URI is valid and accessible
+                        const exists = await RNFS.exists(uri);
+                        if (!exists) {
+                            console.log('File does not exist at path:', uri);
+                            return 60; // Default duration if file doesn't exist
+                        }
+                        
+                        // Get file stats to determine size
+                        const stats = await RNFS.stat(uri);
+                        if (stats && stats.size) {
+                            // Estimate duration based on file size
+                            // Assuming average bitrate of 128kbps for MP3 files
+                            const estimatedDuration = Math.round(stats.size / (128 * 1024 / 8));
+                            // Cap at reasonable values between 30 seconds and 10 minutes
+                            return Math.min(Math.max(estimatedDuration, 30), 600);
+                        }
+                    } catch (err) {
+                        console.log('Error getting file stats:', err);
                     }
-                });
+                    // Default duration if estimation fails
+                    return 60;
+                };
+                
+                // For iOS, try using Sound but with better error handling
+                if (Platform.OS === 'ios') {
+                    // Set a timeout to prevent hanging if Sound initialization takes too long
+                    const timeoutPromise = new Promise(resolve => {
+                        setTimeout(() => resolve(null), 3000); // 3 second timeout
+                    });
+                    
+                    const soundPromise = new Promise(resolve => {
+                        const sound = new Sound(uri, '', (error) => {
+                            if (error) {
+                                console.log('Error loading audio with Sound:', error);
+                                resolve(null);
+                            } else {
+                                const durationInSeconds = sound.getDuration();
+                                sound.release();
+                                if (durationInSeconds > 0) {
+                                    resolve(Math.round(durationInSeconds));
+                                } else {
+                                    resolve(null);
+                                }
+                            }
+                        });
+                    });
+                    
+                    // Race between timeout and sound initialization
+                    Promise.race([soundPromise, timeoutPromise])
+                        .then(async (duration) => {
+                            if (duration) {
+                                resolve(duration);
+                            } else {
+                                // Fall back to size-based estimation if Sound fails
+                                const estimatedDuration = await estimateDurationFromSize();
+                                resolve(estimatedDuration);
+                            }
+                        });
+                } else {
+                    // For Android, use size-based estimation directly
+                    estimateDurationFromSize().then(resolve);
+                }
             } catch (err) {
-                console.error('Error in getAudioDuration:', err);
+                console.error('Unhandled error in getAudioDuration:', err);
                 // Default to a reasonable duration if there's an exception
                 resolve(60);
             }
@@ -188,35 +235,26 @@ const AudioVideoUploadScreen = () => {
     
             if (res && res[0]) {
                 setAudioFile(res[0]);
-    
-                // For Android, try to get file size to estimate duration
-                // Assuming average bitrate of 128kbps for MP3 files
-                if (Platform.OS === 'android' && res[0].size) {
-                    // Estimate duration based on file size (very rough estimate)
-                    // Formula: size (bytes) / (bitrate (bits/s) / 8) = duration (s)
-                    const estimatedDuration = Math.round(res[0].size / (128 * 1024 / 8));
-                    // Cap at reasonable values
-                    const cappedDuration = Math.min(Math.max(estimatedDuration, 30), 600);
-                    setDuration(cappedDuration);
-                    console.log('Estimated duration from file size:', cappedDuration);
-                    setPopupVisible(true);
-                    return;
-                }
-    
-                // Calculate audio duration using Sound for iOS
-                const uri = res[0].uri;
+                
+                // Show loading indicator while calculating duration
+                setUploading(true);
+                
                 try {
-                    const durationInSeconds = await getAudioDuration(uri);
+                    // Get duration with improved error handling
+                    const durationInSeconds = await getAudioDuration(res[0].uri);
                     setDuration(durationInSeconds);
-                    setPopupVisible(true); // Show popup after file selection
+                    console.log('Calculated audio duration:', durationInSeconds);
                 } catch (durationError) {
                     console.error('Error getting duration:', durationError);
                     // Set a default duration if we can't determine it
                     setDuration(60);
-                    setPopupVisible(true);
+                } finally {
+                    setUploading(false);
+                    setPopupVisible(true); // Show popup after file selection
                 }
             }
         } catch (err) {
+            setUploading(false);
             if (DocumentPicker.isCancel(err)) {
                 console.log('User cancelled file picker.');
             } else {
@@ -291,6 +329,12 @@ const AudioVideoUploadScreen = () => {
         setUploading(true);
 
         try {
+            // Verify file exists before proceeding
+            const fileExists = await RNFS.exists(file.uri);
+            if (!fileExists) {
+                throw new Error(`File does not exist at path: ${file.uri}`);
+            }
+
             // Generate a secure unique ID for the audio file
             const audioID = generateAudioID();
             const audioName = file.name || `audio_${Date.now()}.mp3`;
@@ -386,6 +430,7 @@ const AudioVideoUploadScreen = () => {
     
     const handlePress = async ({ audioid }) => {
         try {
+            setLoadingAudioIds(prev => new Set(prev).add(audioid)); // Set loading for this audioid
             console.log('audioid:', audioid, 'uid:', uid);
             console.log('Types:', typeof audioid, typeof uid);
     
@@ -434,6 +479,12 @@ const AudioVideoUploadScreen = () => {
         } catch (error) {
             console.error('Network Error:', error);
             Alert.alert('Error', 'Network error occurred. Please check your connection.');
+        } finally {
+            setLoadingAudioIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(audioid); // Remove loading for this audioid
+                return newSet;
+            });
         }
     };
     
@@ -683,8 +734,9 @@ const AudioVideoUploadScreen = () => {
         </View>
     );
     const renderFileItem = ({ item }) => {
-       
         const isSelected = selectedFiles.includes(item.audioid);
+        const isLoading = loadingAudioIds.has(item.audioid); // Check if this audioid is loading
+
         return (
             <Swipeable
             renderRightActions={(progress, dragX) => renderRightActions(item, progress, dragX)} // Pass `item` to renderRightActions
@@ -730,10 +782,19 @@ const AudioVideoUploadScreen = () => {
                         style={styles.actionButton}
                         onPress={() => handlePress2(item)}
                     >
-                         <Text style={styles.convert}>
-                            Convert
-                        </Text>
-                        <Image source={Translate} style={styles.detailIcon5} />
+                         {isLoading ? ( // Show loading indicator if this audioid is loading
+                            <>
+                                <ActivityIndicator size="small" color="#000" />
+                                <Text style={styles.convert}>Loading...</Text>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.convert}>
+                                    Convert
+                                </Text>
+                                <Image source={Translate} style={styles.detailIcon5} />
+                            </>
+                        )}
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Swipeable>
@@ -779,6 +840,18 @@ const AudioVideoUploadScreen = () => {
     const decode = (base64) => {
         return Buffer.from(base64, 'base64');
     };
+
+    // Add this to refresh files when the screen comes into focus
+    useEffect(() => {
+        // Subscribe to focus events
+        const unsubscribe = navigation.addListener('focus', () => {
+            // When the screen is focused, refresh files
+            loadFiles();
+        });
+
+        // Clean up the subscription when component unmounts
+        return unsubscribe;
+    }, [navigation]);
 
     return (
         <SafeAreaView style={styles.container}>
