@@ -47,6 +47,7 @@ const AudioVideoUploadScreen = () => {
     const navigation = useNavigation();
     const [files, setFiles] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // Add loading state
    
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [isFilterMode, setIsFilterMode] = useState(false);
@@ -95,6 +96,7 @@ const AudioVideoUploadScreen = () => {
     );
 
     const loadFiles = async () => {
+        setIsLoading(true); // Start loading
         try {
             const response = await fetch(`https://matrix-server.vercel.app/getAudio/${uid}`);
             
@@ -102,8 +104,9 @@ const AudioVideoUploadScreen = () => {
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 console.log('Non-JSON response received');
-                setFiles([]); // Set empty files array
-                return;
+            setFiles([]); // Set empty files array
+            setIsLoading(false); // Stop loading
+            return;
             }
 
             const data = await response.json();
@@ -117,10 +120,12 @@ const AudioVideoUploadScreen = () => {
             } else {
                 console.log('Error fetching audio:', data.error);
                 setFiles([]); // Set empty files array
+            setIsLoading(false); // Stop loading
             }
         } catch (error) {
             console.log('Error fetching audio:', error);
             setFiles([]); // Set empty files array
+            setIsLoading(false); // Stop loading
         }
     };
 
@@ -913,15 +918,21 @@ const AudioVideoUploadScreen = () => {
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Image 
-                            source={emptyIcon}
-                            style={styles.emptyImage}
-                        />
-                        <Text style={styles.emptyText}>
-                            {searchQuery 
-                                ? "No files match your search"
-                                : "No audio files found"}
-                        </Text>
+                        {isLoading ? (
+                            <ActivityIndicator size="large" color="#007bff" />
+                        ) : (
+                            <>
+                                <Image 
+                                    source={emptyIcon}
+                                    style={styles.emptyImage}
+                                />
+                                <Text style={styles.emptyText}>
+                                    {searchQuery 
+                                        ? "No files match your search"
+                                        : "No audio files found"}
+                                </Text>
+                            </>
+                        )}
                     </View>
                 }
             />

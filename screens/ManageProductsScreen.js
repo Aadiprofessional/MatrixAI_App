@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ImageBackground, ActivityIndicator, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+  import { useAuth } from '../context/AuthContext'; 
 const BoostModal = ({ visible, onClose, onBoost, selectedDays, setSelectedDays }) => {
+  const { uid } = useAuth();
   return (
     <Modal
       visible={visible}
@@ -96,7 +98,7 @@ const ManageProductsScreen = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uid: '50867e0a-f756-4bb6-bbb8-8e29484274d5',
+          uid: uid,
           [type === 'image' ? 'imageproductid' : 
            type === 'video' ? 'videoproductid' : 
            'musicproductid']: id,
@@ -125,7 +127,7 @@ const ManageProductsScreen = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            uid: '50867e0a-f756-4bb6-bbb8-8e29484274d5'
+            uid: uid
           })
         });
         const data = await response.json();
@@ -149,7 +151,7 @@ const ManageProductsScreen = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uid: '50867e0a-f756-4bb6-bbb8-8e29484274d5',
+          uid: uid,
           [type === 'image' ? 'imageproductid' : 
            type === 'video' ? 'videoproductid' : 
            'musicproductid']: id

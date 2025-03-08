@@ -68,6 +68,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       const [sliderWidth, setSliderWidth] = useState(Dimensions.get('window').width);
       const [isLoading, setIsLoading] = useState(true);
       const [paragraphs, setParagraphs] = useState([]);
+      const paragraphRefs = useRef({});
       const [audioUrl, setAudioUrl] = useState('');
       const [keyPoints, setKeypoints] = useState('');
       const [XMLData, setXMLData] = useState('');
@@ -90,8 +91,12 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       useEffect(() => {
         if (scrollViewRef.current && currentWordIndex.paraIndex !== undefined) {
           // Calculate approximate y position based on paragraph index
-          const yOffset = currentWordIndex.paraIndex * 200; // 200 is estimated height per paragraph
-          scrollViewRef.current.scrollTo({ y: yOffset, animated: true });
+          // Use a smaller offset to position the paragraph at the top with some padding
+          const yOffset = currentWordIndex.paraIndex * 150 - 20; // Adjust based on paragraph height
+          scrollViewRef.current.scrollTo({ 
+            y: Math.max(0, yOffset), // Ensure we don't scroll to negative values
+            animated: true 
+          });
         }
       }, [currentWordIndex.paraIndex]);
       const [wordTimings, setWordTimings] = useState([]);
@@ -118,6 +123,8 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
       const [sound, setSound] = useState(null);
       const resizeIcon = require('../assets/robot.png');
     
+      // Add a ref for the wave animation
+      const waveAnimationRef = useRef(null);
      
       const languages = [
           { label: 'Chinese', value: 'zh' },
@@ -127,6 +134,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
           { label: 'Hindi', value: 'hi' },
       ];
   
+      // Add useEffect to sync wave animation with audio playback state
+      useEffect(() => {
+          if (waveAnimationRef.current) {
+              if (isAudioPlaying) {
+                  waveAnimationRef.current.play();
+              } else {
+                  waveAnimationRef.current.pause();
+              }
+          }
+      }, [isAudioPlaying]);
+
       const handleSelectLanguage = (value) => {
           setSelectedLanguage(value);
           setShowDropdown(false); // Close dropdown after selection
@@ -309,6 +327,17 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         setWaveformHeights(heights);
     }, []);
 
+    // Ensure waveform animation state is always in sync with audio playback state
+    useEffect(() => {
+        if (waveAnimationRef.current) {
+            if (isAudioPlaying) {
+                waveAnimationRef.current.play();
+            } else {
+                waveAnimationRef.current.pause();
+            }
+        }
+    }, [isAudioPlaying]);
+
     // Add a state to track if user is manually scrolling
     const [isUserScrolling, setIsUserScrolling] = useState(false);
 
@@ -351,7 +380,35 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             currentParaIndex = 0;
         }
         
-        // STEP 2: Find the appropriate word to highlight
+        // STEP 2: Auto-scroll to keep current paragraph at the top
+        // Only scroll if we have a valid paragraph and user is not manually scrolling
+        if (currentParaIndex !== -1 && scrollViewRef.current && !isUserScrolling) {
+            // Always scroll when the paragraph changes
+            if (currentParaIndex !== lastScrolledPara) {
+                setLastScrolledPara(currentParaIndex);
+                
+                // Get the paragraph element's position using the paragraph refs
+                if (paragraphRefs.current[currentParaIndex]) {
+                    // Measure the position of the current paragraph
+                    paragraphRefs.current[currentParaIndex].measureLayout(
+                        scrollViewRef.current,
+                        (x, y) => {
+                            // Scroll to position with a small offset (20) for better visibility
+                            scrollViewRef.current.scrollTo({
+                                y: y - 20, // Small offset from the top
+                                animated: true
+                            });
+                        },
+                        () => {
+                            // Fallback if measurement fails
+                            console.log('Failed to measure paragraph position');
+                        }
+                    );
+                }
+            }
+        }
+        
+        // STEP 3: Find the appropriate word to highlight
         if (currentParaIndex !== -1) {
             const currentParagraphWords = wordTimings[currentParaIndex].words || [];
             
@@ -395,7 +452,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 }
             }
             
-            // STEP 3: Decision logic for word selection with improved fallback
+            // STEP 4: Decision logic for word selection with improved fallback
             
             // If we found an exact match, use it
             if (selectedWordIdx === -1) {
@@ -500,7 +557,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 }
             }
             
-            // STEP 4: If we still don't have a word, implement aggressive forward-looking
+            // STEP 5: If we still don't have a word, implement aggressive forward-looking
             if (selectedWordIdx === -1) {
                 // Look ahead across multiple paragraphs if necessary
                 let foundWord = false;
@@ -560,7 +617,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 }
             }
             
-            // STEP 5: Update the UI with our selected word
+            // STEP 6: Update the UI with our selected word
             if (selectedWordIdx !== -1) {
                 // Get the current word index state
                 const prevWordIndex = currentWordIndex;
@@ -575,24 +632,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                         word: currentParagraphWords[selectedWordIdx]?.punctuated_word || 
                               currentParagraphWords[selectedWordIdx]?.word || ''
                     });
-                    
-                    // Auto-scroll to the current paragraph only if:
-                    // 1. Paragraph changed from the last scrolled paragraph
-                    // 2. User is not manually scrolling
-                    if (scrollViewRef.current && 
-                        currentParaIndex !== lastScrolledPara && 
-                        !isUserScrolling) {
-                        
-                        // Update the last scrolled paragraph
-                        setLastScrolledPara(currentParaIndex);
-                        
-                        // Scroll to the paragraph
-                        const yOffset = currentParaIndex * 200; // Approximate height per paragraph
-                        scrollViewRef.current.scrollTo({
-                            y: yOffset,
-                            animated: true
-                        });
-                    }
                 }
             }
         }
@@ -678,6 +717,10 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         if (isAudioPlaying) {
             sound.pause();
             setIsAudioPlaying(false);
+            // Pause the wave animation
+            if (waveAnimationRef.current) {
+                waveAnimationRef.current.pause();
+            }
         } else {
             // If at the end, start from beginning
             if (audioPosition >= audioDuration) {
@@ -697,14 +740,26 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                     } else {
                         setIsAudioPlaying(false);
                         setAudioPosition(audioDuration);
+                        // Pause the wave animation when audio completes
+                        if (waveAnimationRef.current) {
+                            waveAnimationRef.current.pause();
+                        }
                     }
                 } else {
                     console.error('Playback failed');
                     setIsAudioPlaying(false);
+                    // Pause the wave animation on failure
+                    if (waveAnimationRef.current) {
+                        waveAnimationRef.current.pause();
+                    }
                 }
             });
             
             setIsAudioPlaying(true);
+            // Play the wave animation
+            if (waveAnimationRef.current) {
+                waveAnimationRef.current.play();
+            }
         }
     };
 
@@ -714,6 +769,11 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
         const newPosition = Math.max(0, Math.min(audioPosition + seconds, audioDuration));
         sound.setCurrentTime(newPosition);
         setAudioPosition(newPosition);
+        
+        // If audio is playing, ensure the wave animation is also playing
+        if (isAudioPlaying && waveAnimationRef.current) {
+            waveAnimationRef.current.play();
+        }
         
         // Trigger audio progress update when seeking
         onAudioProgress({
@@ -927,8 +987,6 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             const data = await response.json();
           
     
-           
-            
             if (response.ok) {
                 setTranscriptionGeneratedFor(prev => new Set(prev).add(audioid));
                 await fetchAudioMetadata(uid, audioid); // Reload data from API
@@ -972,6 +1030,36 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
             // End seeking state
             setIsSeeking(false);
         }, 100);
+    };
+
+    // Add a function to handle tapping on the waveform container
+    const handleWaveformTap = (event) => {
+        if (!sound || !audioDuration) return;
+        
+        // Get the tap position relative to the container
+        const { locationX, locationX: tapX } = event.nativeEvent;
+        
+        // Calculate the percentage of the tap position
+        const containerWidth = sliderWidth;
+        const tapPercentage = tapX / containerWidth;
+        
+        // Calculate the new position in seconds
+        const newPosition = tapPercentage * audioDuration;
+        
+        // Set the audio to the new position
+        sound.setCurrentTime(newPosition);
+        setAudioPosition(newPosition);
+        
+        // If audio is playing, ensure the wave animation is also playing
+        if (isAudioPlaying && waveAnimationRef.current) {
+            waveAnimationRef.current.play();
+        }
+        
+        // Trigger progress update to update highlighted paragraph
+        onAudioProgress({
+            currentTime: newPosition,
+            duration: audioDuration
+        });
     };
 
     const handleLayout = (event) => {
@@ -1313,7 +1401,11 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 justifyContent: 'center', // Center slider horizontally
               }]}>
                 {/* Slider with Progress Trail */}
-                <View style={styles.container69} onLayout={handleLayout}>
+                <View 
+                  style={styles.container69} 
+                  onLayout={handleLayout}
+                  onTouchEnd={handleWaveformTap}
+                >
                 <Slider
                   style={{ width: '100%', height: 40 }}
                   minimumValue={0}
@@ -1330,10 +1422,14 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 </View>
   
                 {/* Lottie Animation for Waves */}
-                <View style={styles.waveAnimationContainer}>
+                <View 
+                  style={styles.waveAnimationContainer}
+                  onTouchEnd={handleWaveformTap}
+                >
                   <LottieView
-                    source={require('../assets/waves.json')} // Add your Lottie animation JSON here
-                    autoPlay={isAudioPlaying} // Sync with audio playback
+                    ref={waveAnimationRef}
+                    source={require('../assets/waves.json')}
+                    autoPlay={false} // We'll control play/pause manually
                     loop
                     style={styles.waveAnimation}
                   />
@@ -1571,11 +1667,14 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
                 >
                     
                     {paragraphs.map((para, index) => (
-                        <View key={index} style={[
-                            styles.paragraphContainer,
-                            styles.paragraphWrapper,
-                            index === currentWordIndex.paraIndex && styles.highlightedParagraph
-                        ]}>
+                        <View 
+                            key={index} 
+                            ref={ref => paragraphRefs.current[index] = ref}
+                            style={[
+                                styles.paragraphContainer,
+                                styles.paragraphWrapper,
+                                index === currentWordIndex.paraIndex && styles.highlightedParagraph
+                            ]}>
                             {isSpeechToTextEnabled && (
                                 <Text style={[styles.timestamp, {color: 'orange'}]}>
                                     {formatTime(wordTimings[index]?.start || 0)}
@@ -1818,8 +1917,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: '100%', // Cover the entire waveform box
         height: '100%',
-        borderRadius:50,
+        borderRadius: 50,
         overflow: 'hidden', // Clip the animation
+        zIndex: 10, // Ensure it's above other elements for better tapping
     },
     waveAnimationContainer2: {
         position: 'absolute',
@@ -2282,13 +2382,15 @@ flexDirection:'row',
         fontSize: 18,
         color: '#333',
     },
-    header: {
-        fontSize: 13,
-        fontWeight: '600',
-        alignSelf:'center',
-        position:'absolute',
-        left:'45%',
-    },
+   header: {
+    fontSize: 13,
+    fontWeight: '600',
+    position: 'absolute',
+    left: '45%',  // Move to the center
+           // Adjust as needed
+    transform: [{ translateX: -50 }], // Shift back by half of its width
+},
+
     iconButton: {
         padding: 8,
     },
