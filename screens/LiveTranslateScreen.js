@@ -27,6 +27,7 @@ import RNFS from 'react-native-fs'; // Import for file system operations
 import Toast from 'react-native-toast-message'; // Import for toast messages
 import { decode } from 'base-64'; // Import for base64 decoding
 import { supabase } from '../supabaseClient'; // Import Supabase client
+import { useAuth } from '../context/AuthContext';
 
 // Add a simple UUID generator function that doesn't rely on crypto
 const generateSimpleUUID = () => {
@@ -59,7 +60,7 @@ const LiveTranslateScreen = () => {
   const [isUploading, setIsUploading] = useState(false);
   const durationTimerRef = useRef(null);
   const audioRecordRef = useRef(null);
-  const uid = useRef(generateSimpleUUID()).current; // Generate a user ID for this session
+  const { uid, loading } = useAuth(); // Generate a user ID for this session
 
   // Add a pulsing animation for the recording dot
   const [pulseAnimation] = useState(new Animated.Value(1));
@@ -81,7 +82,75 @@ const LiveTranslateScreen = () => {
     Czech: 'cs',
     Danish: 'da',
     Dutch: 'nl',
-    English: 'en',
+    English: 'en', // Use 'en' for display
+    Estonian: 'et',
+    Finnish: 'fi',
+    French: 'fr',
+    Georgian: 'ka',
+    German: 'de',
+    Greek: 'el',
+    Gujarati: 'gu',
+    Hebrew: 'he',
+    Hindi: 'hi',
+    Hungarian: 'hu',
+    Icelandic: 'is',
+    Indonesian: 'id',
+    Irish: 'ga',
+    Italian: 'it',
+    Japanese: 'ja',
+    Kannada: 'kn',
+    Kazakh: 'kk',
+    Korean: 'ko',
+    Latvian: 'lv',
+    Lithuanian: 'lt',
+    Macedonian: 'mk',
+    Malay: 'ms',
+    Malayalam: 'ml',
+    Marathi: 'mr',
+    Mongolian: 'mn',
+    Nepali: 'ne',
+    Norwegian: 'no',
+    Persian: 'fa',
+    Polish: 'pl',
+    Portuguese: 'pt',
+    Punjabi: 'pa',
+    Romanian: 'ro',
+    Russian: 'ru',
+    Serbian: 'sr',
+    Sinhala: 'si',
+    Slovak: 'sk',
+    Slovenian: 'sl',
+    Spanish: 'es',
+    Swahili: 'sw',
+    Swedish: 'sv',
+    Tamil: 'ta',
+    Telugu: 'te',
+    Thai: 'th',
+    Turkish: 'tr',
+    Ukrainian: 'uk',
+    Urdu: 'ur',
+    Uzbek: 'uz',
+    Vietnamese: 'vi',
+    Welsh: 'cy',
+  };
+
+  // New mapping for upload language codes
+  const uploadLanguageCodes = {
+    Afrikaans: 'af',
+    Albanian: 'sq',
+    Arabic: 'ar',
+    Armenian: 'hy',
+    Azerbaijani: 'az',
+    Bengali: 'bn',
+    Bosnian: 'bs',
+    Bulgarian: 'bg',
+    Catalan: 'ca',
+    Chinese: 'zh',
+    Croatian: 'hr',
+    Czech: 'cs',
+    Danish: 'da',
+    Dutch: 'nl',
+    English: 'en-US', // Use 'en-US' for upload
     Estonian: 'et',
     Finnish: 'fi',
     French: 'fr',
@@ -870,13 +939,7 @@ const LiveTranslateScreen = () => {
       console.log('File copied to:', localFilePath);
       
       // Navigate directly to the translation screen with the local file
-      navigation.navigate('TranslateScreen2', {
-        uid,
-        audioid: audioID,
-        audio_url: `file://${localFilePath}`,
-        transcription: 'Transcription not available. Using local file.',
-        isLocalFile: true
-      });
+   
       
       // Show success message
       Toast.show({
@@ -986,14 +1049,6 @@ const LiveTranslateScreen = () => {
         
         console.log('Public URL:', publicUrl);
             
-        // Additional user data to help with authentication
-        const userMetadata = {
-          uid: uid,
-          user_id: currentUser?.id || uid,
-          email: currentUser?.email || 'anonymous@user.com',
-          is_anonymous: !currentUser
-        };
-            
         // Save metadata to database
         const { data: metadataData, error: metadataError } = await supabase
           .from('audio_metadata')
@@ -1002,12 +1057,11 @@ const LiveTranslateScreen = () => {
               uid,
               audioid: audioID,
               audio_name: audioName,
-              language: selectedLanguage,
+              language: uploadLanguageCodes[selectedLanguage], // Use upload language code here
               audio_url: publicUrl,
               file_path: filePath,
               duration: parseInt(duration, 10),
               uploaded_at: new Date().toISOString(),
-              user_metadata: userMetadata
             }
           ]);
             
@@ -1031,20 +1085,20 @@ const LiveTranslateScreen = () => {
           // Navigate to translation screen with the generated audioid
           handlePress({ audioid: audioID });
         }, 2000);
-      } catch (uploadError) {
-        console.error('Supabase upload failed:', uploadError.message);
+      } catch (error) {
+        console.error('Upload error details:', error.message);
         
         // Ask the user if they want to use the local file instead
         Alert.alert(
-          'Upload Failed',
-          'Failed to upload to cloud storage. Would you like to use the local file instead?',
+          'Error',
+          'Failed to upload file: ' + error.message,
           [
             {
-              text: 'Yes',
+              text: 'Use Local File',
               onPress: () => handleDirectNavigation(file)
             },
             {
-              text: 'No',
+              text: 'Cancel',
               style: 'cancel'
             }
           ]
@@ -1498,7 +1552,7 @@ const LiveTranslateScreen = () => {
                 <>
                   {/* Delete button */}
                   <TouchableOpacity 
-                    style={[styles.actionButton, styles.deleteButton]} 
+                    style={[styles.actionButton, styles.deleteButton2]} 
                     onPress={handleDeleteRecording}
                   >
                     <Image 
@@ -1509,7 +1563,7 @@ const LiveTranslateScreen = () => {
                   
                   {/* Tick button */}
                   <TouchableOpacity 
-                    style={[styles.actionButton, styles.tickButton]} 
+                    style={[styles.actionButton, styles.tickButton2]} 
                     onPress={handleSaveRecording}
                   >
                     <Image 
@@ -1911,13 +1965,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
-  deleteButton: {
-    backgroundColor: '#ff3b30',
-    left: -60, // Position to the left of the mic button
-  },
+    deleteButton: {
+      backgroundColor: '#ff3b30',
+      left: -60, // Position to the left of the mic button
+    },
+    deleteButton2: {  
+      backgroundColor: '#ff3b30',
+     // Position to the left of the mic button
+     left: 60,
+    },
+
   tickButton: {
     backgroundColor: '#4cd964',
     right: -60, // Position to the right of the mic button
+  },
+  tickButton2: {
+    backgroundColor: '#4cd964',
+    // Position to the right of the mic button
+    right: 60,
   },
   smallIcon: {
     width: 24,

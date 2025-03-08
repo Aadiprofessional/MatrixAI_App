@@ -529,7 +529,7 @@ const BotScreen2 = ({ navigation, route }) => {
       >
         <View style={styles.fullScreenContainer}>
           <View style={styles.fullScreenGraphContainer}>
-            <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid}/>
+            <ForceDirectedGraph2 transcription={selectedMessage?.text || ''} uid={uid} audioid={audioid}/>
           </View>
           <TouchableOpacity
             onPress={() => setIsFullScreen(false)}
