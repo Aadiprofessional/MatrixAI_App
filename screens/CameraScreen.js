@@ -504,10 +504,14 @@ const CameraScreen = ({ navigation }) => {
       try {
         console.log('Sending data to DeepSeek for explanation...');
         const deepSeekResponse = await axios.post(
-          'https://api.deepseek.com/v1/chat/completions',
+          'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
           {
-            model: "deepseek-chat", // Ensure this is the correct model name
-            messages: [ 
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
+            },
+            model: "doubao-pro-32k-241215",
+            messages: [
               { role: "system", content: "Understand the image and describe it in a way that is easy to understand in less than 100 words.and at the end ask did question that dud you want more infomation about the image" },
               { role: "user", content: `Description: ${azureDescription}. Detected objects: ${detectedObjects.map(obj => `${obj.object} (${obj.confidence})`).join(', ')}` }
             ]
@@ -700,9 +704,13 @@ const CameraScreen = ({ navigation }) => {
       
       // Send to DeepSeek API
       const deepSeekResponse = await axios.post(
-        'https://api.deepseek.com/v1/chat/completions',
+        'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
         {
-          model: "deepseek-chat",
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
+          },
+          model: "doubao-pro-32k-241215",
           messages: messages
         },
         {

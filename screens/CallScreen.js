@@ -816,14 +816,14 @@ const CallScreen = () => {
       
       // Get AI response while thinking message is being spoken
       console.log('Sending request to DeepSeek API...');
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816`,
+          'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89',
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: "doubao-pro-32k-241215",
           messages: conversationHistory.current,
           max_tokens: 150
         }),

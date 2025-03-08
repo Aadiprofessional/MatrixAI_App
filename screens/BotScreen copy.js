@@ -17,7 +17,6 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { GestureHandlerRootView, Swipeable, TouchableWithoutFeedback } from 'react-native-gesture-handler';
-import OpenAI from 'openai';
 import ForceDirectedGraph2 from '../components/mindMap2';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
@@ -132,11 +131,6 @@ const BotScreen2 = ({ navigation, route }) => {
     // Change the icon from plus to cross
   };
 
-  const openai = new OpenAI({
-    baseURL: 'https://api.deepseek.com',
-    apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
-  });
-
   // Format message history for API
   const messageHistory = messages.map(msg => ({
     role: msg.sender === 'bot' ? 'assistant' : 'user',
@@ -182,18 +176,25 @@ const BotScreen2 = ({ navigation, route }) => {
 
     setIsLoading(true);
     try {
-      const response = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          ...messageHistory,
-          { role: "user", content: userMessage },
-        ],
-        model: "deepseek-chat",
-      });
+      const response = await axios.post(
+        'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+        {
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant.' },
+            ...messageHistory,
+            { role: 'user', content: userMessage },
+          ],
+          model: 'doubao-pro-32k-241215',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
+          }
+        }
+      );
 
-      let botMessage = response.choices[0].message.content.trim();
-
-      // Clean the bot message of any unwanted characters
+      let botMessage = response.data.choices[0].message.content.trim();
       botMessage = botMessage.replace(/(\*\*|\#\#)/g, "");
 
       setMessages((prev) => [
@@ -528,7 +529,7 @@ const BotScreen2 = ({ navigation, route }) => {
       >
         <View style={styles.fullScreenContainer}>
           <View style={styles.fullScreenGraphContainer}>
-            <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid} xmlData={XMLData} />
+            <ForceDirectedGraph2 transcription={transcription} uid={uid} audioid={audioid}/>
           </View>
           <TouchableOpacity
             onPress={() => setIsFullScreen(false)}

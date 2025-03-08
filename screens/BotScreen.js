@@ -20,7 +20,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { launchImageLibrary } from 'react-native-image-picker';
 
-import OpenAI from 'openai';
 import LeftNavbarBot from '../components/LeftNavbarBot';
 
 const BotScreen = ({ navigation, route }) => {
@@ -55,12 +54,6 @@ const BotScreen = ({ navigation, route }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
-  // Function to get response from DeepSeek (Gemini API in your case)
-  const openai = new OpenAI({
-    baseURL: 'https://api.deepseek.com',  // DeepSeek API URL
-    apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816', // Your DeepSeek API key
-  });
-
 const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
   const maxRetries = 5;
   const retryDelay = Math.min(Math.pow(2, retryCount) * 1000, 60000); // Max delay is 1 minute
@@ -73,16 +66,25 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
       content: msg.text
     }));
 
-    const response = await openai.chat.completions.create({
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        ...messageHistory,
-        { role: 'user', content: userMessage },
-      ],
-      model: 'deepseek-chat',
-    });
+    const response = await axios.post(
+      'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      {
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          ...messageHistory,
+          { role: 'user', content: userMessage },
+        ],
+        model: 'doubao-pro-32k-241215',
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
+        }
+      }
+    );
 
-    const botMessage = response.choices[0].message.content.trim();
+    const botMessage = response.data.choices[0].message.content.trim();
 
     let chatNameUpdated = false;
     setChats(prevChats => prevChats.map(chat => {

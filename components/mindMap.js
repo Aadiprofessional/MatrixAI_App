@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, PermissionsAndroid, ActivityIndicator, Alert } from 'react-native';
-import OpenAI from 'openai';
 import { WebView } from 'react-native-webview';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import axios from 'axios';
@@ -15,10 +14,6 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
   const [loading, setLoading] = useState(false);
   const [tempWebView, setTempWebView] = useState(null);
   const webViewRef = useRef(null);
-  const openai = new OpenAI({
-    baseURL: 'https://api.deepseek.com',
-    apiKey: 'sk-fed0eb08e6ad4f1aabe2b0c27c643816',
-  });
 
   const parseXMLData = (xmlString) => {
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, parseTagValue: true });
@@ -75,39 +70,48 @@ const ForceDirectedGraph = ({ transcription, uid, audioid, xmlData }) => {
 
   const fetchGraphData = async (transcription) => {
     try {
-      const response = await openai.chat.completions.create({
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: `Generate a hierarchical XML structure from this meeting transcript in the same language as the input transcription: "${transcription}".
-            Create a tree structure with main topics and subtopics.
-            Use this format:
-            <meeting>
-              <topic name="Main Topic 1">
-                <subtopic name="Subtopic 1">
-                  <description>Detailed description of subtopic</description>
-                  <action_items>
-                    <item>Action item 1</item>
-                    <item>Action item 2</item>
-                  </action_items>
-                </subtopic>
-                <subtopic name="Subtopic 2">
-                  <description>Detailed description of subtopic</description>
-                </subtopic>
-              </topic>
-              <topic name="Main Topic 2">
-                <description>Overall description of topic</description>
-              </topic>
-            </meeting>
-            Please keep the output in the same language as the input transcription .`
+      const response = await axios.post(
+        "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+        {
+          model: "doubao-pro-32k-241215",
+          messages: [
+            {
+              role: "user",
+              content: `Generate a hierarchical XML structure from this meeting transcript in the same language as the input transcription: "${transcription}".
+              Create a tree structure with main topics and subtopics.
+              Use this format:
+              <meeting>
+                <topic name="Main Topic 1">
+                  <subtopic name="Subtopic 1">
+                    <description>Detailed description of subtopic</description>
+                    <action_items>
+                      <item>Action item 1</item>
+                      <item>Action item 2</item>
+                    </action_items>
+                  </subtopic>
+                  <subtopic name="Subtopic 2">
+                    <description>Detailed description of subtopic</description>
+                  </subtopic>
+                </topic>
+                <topic name="Main Topic 2">
+                  <description>Overall description of topic</description>
+                </topic>
+              </meeting>
+              Please keep the output in the same language as the input transcription.`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2048
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer 95fad12c-0768-4de2-a4c2-83247337ea89"
           }
-        ],
-        temperature: 0.7,
-        max_tokens: 2048
-      });
+        }
+      );
 
-      const content = response.choices[0]?.message?.content;
+      const content = response.data.choices[0]?.message?.content;
       if (content) {
         console.log('XML Response from API:', content);
         sendXmlGraphData(content);
