@@ -217,6 +217,7 @@ const BotScreen2 = ({ navigation, route }) => {
           sender: 'user',
         };
         setMessages((prev) => [...prev, newMessage]);
+        saveChatHistory(newMessage.image, 'user'); // Save image message
       }
     });
   };
@@ -236,7 +237,7 @@ const BotScreen2 = ({ navigation, route }) => {
         try {
           setIsLoading(true);
           const apiResponse = await axios.post(
-            'https://matrix-server-gzqd.vercel.app/understandImage',
+            'https://matrix-server.vercel.app/understandImage',
             formData,
             {
               headers: {
@@ -256,8 +257,8 @@ const BotScreen2 = ({ navigation, route }) => {
               sender: 'user' 
             },
           ]);
-
-          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
+          setIsLoading(true);
+          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format and also give the summary of the image and if thier is any numerical data solve it: ${cleanedText}`);
           saveChatHistory(imageUrl, 'user');
         } catch (error) {
           console.error('Error attaching image:', error);
@@ -388,47 +389,22 @@ const BotScreen2 = ({ navigation, route }) => {
                 isBot ? styles.botMessageContainer : styles.userMessageContainer,
               ]}
             >
-              {/* Text Display (Exclude URLs for User) */}
-              {item.text && (!isUser || (isUser && !containsUrl(item.text))) && (
-                <View>
-                  {formatMessageText(isExpanded ? item.text : item.text.slice(0, 100)).map((line, index) => (
-                    <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {isBot && line.isHeading && (
-                        <Text style={{ marginRight: 5, color: '#4C8EF7' }}>➤</Text>
-                      )}
-                      <Text style={[
-                        isBot ? styles.botText : styles.userText,
-                        line.isHeading && styles.headingText,
-                        line.isSubheading && styles.subheadingText,
-                      ]}>
-                        {line.text}
-                      </Text>
-                    </View>
-                  ))}
-                  {item.text.length > 100 && (
-                    <Text
-                      style={styles.viewMoreText}
-                      onPress={() => toggleMessageExpansion(item.id)}
-                    >
-                      {isExpanded ? ' View less' : '... View more'}
-                    </Text>
-                  )}
-                </View>
-              )}
-
-              {/* Show image if the user sends a URL */}
-              {isUser && item.text && containsUrl(item.text) && (
-                <Image source={{ uri: item.text }} style={styles.messageImage} />
-              )}
-
               {/* Show image if the user sends an image */}
-              {isUser && item.image && !containsUrl(item.text) && (
+              {isUser && item.image && (
                 <Image source={{ uri: item.image }} style={styles.messageImage} />
+              )}
+
+              {/* Show text if the user sends a text message */}
+              {isUser && item.text && !containsUrl(item.text) && (
+                <Text style={styles.userText}>{item.text}</Text>
               )}
 
               {/* Bot's message can have both text and images */}
               {isBot && item.image && (
                 <Image source={{ uri: item.image }} style={styles.messageImage} />
+              )}
+              {isBot && item.text && (
+                <Text style={styles.botText}>{item.text}</Text>
               )}
             </Animatable.View>
             <TouchableOpacity

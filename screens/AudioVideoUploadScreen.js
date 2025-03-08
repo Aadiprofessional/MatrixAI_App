@@ -796,7 +796,7 @@ const AudioVideoUploadScreen = () => {
                                        style={styles.headerIcon}
                                    />
                                </TouchableOpacity>
-                <Image source={require('../assets/logo8.png')} style={styles.headerTitle} />
+             <Text style={styles.headerTitle}>Matrix AI</Text>
               
             </View>
             <View style={styles.topButtonsContainer}>
@@ -1299,12 +1299,10 @@ color:'#000',
     headerTitle: {
        
         position:'absolute',
-        left:'20%',
-       width:250,
-       height:80,
-       resizeMode:'contain',
-      
-        
+        left:'42%',
+     fontSize:20,
+     fontWeight:'bold',
+     color:'#007bff',
     },
     headerIcon: {
         width: 24,

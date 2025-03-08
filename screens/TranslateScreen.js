@@ -1220,7 +1220,7 @@ const [transcriptionGeneratedFor, setTranscriptionGeneratedFor] = useState(new S
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.headerContainer2}>
-                <Image source={require('../assets/logo8.png')} style={styles.headerTitle} />
+                <Image source={require('../assets/logo10.png')} style={styles.headerTitle} />
             </View>
                  <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
@@ -2047,7 +2047,7 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
        
         
-        left:'20%',
+        left:'25%',
         position:'absolute',
       },
     container: {

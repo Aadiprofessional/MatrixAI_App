@@ -43,7 +43,7 @@ const BotScreen = ({ navigation, route }) => {
   const [currentChatId, setCurrentChatId] = useState('1');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const currentChat = chats.find(chat => chat.id === currentChatId);
-  const [messages, setMessages] = useState(currentChat ? currentChat.messages : []);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,11 +166,15 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
   };
 
   const renderMessage = ({ item }) => {
-    if (!dataLoaded) return null;
+    // Log the messages state for debugging
+    console.log('Messages:', messages);
     
+    // Ensure messages is an array and data is loaded
+    if (!dataLoaded || !Array.isArray(messages) || messages.length === 0) return null; 
+
     const isBot = item.sender === 'bot';
     const isExpanded = expandedMessages[item.id];
-    const shouldTruncate = item.text.length > 100;
+    const shouldTruncate = item.text && item.text.length > 100; // Check if text exists
     const displayText = shouldTruncate && !isExpanded 
       ? `${item.text.substring(0, 100)}...`
       : item.text;
@@ -184,9 +188,16 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
           isBot ? styles.botMessageContainer : styles.userMessageContainer,
         ]}
       >
-        <Text style={isBot ? styles.botText : styles.userText}>
-          {displayText}
-        </Text>
+        {item.image ? ( // Check if the message has an image
+          <Image
+            source={{ uri: item.image }}
+            style={{ width: 200, height: 200, borderRadius: 10 }} // Adjust size as needed
+          />
+        ) : (
+          <Text style={isBot ? styles.botText : styles.userText}>
+            {displayText}
+          </Text>
+        )}
         {shouldTruncate && (
           <TouchableOpacity
             style={styles.viewMoreButton}
@@ -206,7 +217,7 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
     const fetchChatHistory = async () => {
       try {
         const response = await axios.post('https://matrix-server.vercel.app/getChat', { uid, chatid });
-        const history = response.data.messages;
+        const history = response.data.messages || []; // Default to an empty array if undefined
         setChats(prevChats => [
           ...prevChats,
           {
@@ -275,7 +286,7 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
         try {
           setIsLoading(true);
           const apiResponse = await axios.post(
-            'https://matrix-server-gzqd.vercel.app/understandImage',
+            'https://matrix-server.vercel.app/understandImage',
             formData,
             {
               headers: {
@@ -295,8 +306,8 @@ const fetchDeepSeekResponse = async (userMessage, retryCount = 0) => {
               sender: 'user' 
             },
           ]);
-
-          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format: ${cleanedText}`);
+          setIsLoading(true);
+          fetchDeepSeekResponse(`Please understand this ocrtext of the image and give response in human readable format and also give the summary of the image and if thier is any numerical data solve it: ${cleanedText}`);
           saveChatHistory(imageUrl, 'user');
         } catch (error) {
           console.error('Error attaching image:', error);
