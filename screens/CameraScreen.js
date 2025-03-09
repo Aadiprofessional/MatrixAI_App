@@ -27,6 +27,21 @@ const CameraScreen = ({ navigation }) => {
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [inputModalVisible, setInputModalVisible] = useState(false);
   const [textInputValue, setTextInputValue] = useState('');
+  
+  // Add new states for conversation flow
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
+  
+  // Add refs for conversation flow
+  const silenceTimer = useRef(null);
+  const isProcessingRef = useRef(false);
+  const ttsFinishListener = useRef(null);
+  const lastTranscribedText = useRef('');
+  const lastTextChangeTime = useRef(Date.now());
+  const countdownInterval = useRef(null);
+  const silenceCheckInterval = useRef(null);
+  const countdownEffectInterval = useRef(null);
+  const lastProcessedText = useRef('');
 
   // Helper function to check if a device is usable
   const isDeviceUsable = (device) => {
@@ -44,6 +59,7 @@ const CameraScreen = ({ navigation }) => {
   // Initialize TTS with proper cleanup
   useEffect(() => {
     let errorListener = null;
+    let finishListener = null;
     
     const initTts = async () => {
       try {
@@ -53,6 +69,19 @@ const CameraScreen = ({ navigation }) => {
         
         errorListener = Tts.addEventListener('error', (error) => {
           console.error('TTS error:', error);
+        });
+        
+        // Add finish listener for conversation flow
+        finishListener = Tts.addEventListener('tts-finish', () => {
+          console.log('TTS finished speaking');
+          setIsSpeaking(false);
+          
+          // Start listening again after AI finishes speaking
+          if (!isProcessingRef.current) {
+            setTimeout(() => {
+              startVoiceRecognition();
+            }, 500);
+          }
         });
         
         setTtsInitialized(true);
@@ -68,14 +97,15 @@ const CameraScreen = ({ navigation }) => {
       if (errorListener) {
         errorListener.remove();
       }
+      if (finishListener) {
+        finishListener.remove();
+      }
       Tts.stop();
     };
   }, []);
 
   // Initialize Voice recognition
   useEffect(() => {
-    let voiceListener = null;
-    
     const setupVoiceRecognition = async () => {
       try {
         // Check if Voice is available
@@ -94,34 +124,11 @@ const CameraScreen = ({ navigation }) => {
         }
         
         // Set up Voice event listeners directly
-        Voice.onSpeechStart = () => {
-          console.log('Speech recognition started');
-          setIsListening(true);
-        };
-
-        Voice.onSpeechEnd = () => {
-          console.log('Speech recognition ended');
-          setIsListening(false);
-        };
-
-        Voice.onSpeechResults = (event) => {
-          if (event.value && event.value.length > 0) {
-            const recognizedText = event.value[0];
-            console.log('Speech recognized:', recognizedText);
-            setRecognizedText(recognizedText);
-            // Process the recognized text
-            if (recognizedText.trim().length > 0) {
-              processVoiceInput(recognizedText);
-            }
-          }
-        };
-
-        Voice.onSpeechError = (error) => {
-          console.error('Speech recognition error:', error);
-          setIsListening(false);
-          // Show text input as fallback
-          showTextInputDialog();
-        };
+        Voice.onSpeechStart = onSpeechStart;
+        Voice.onSpeechEnd = onSpeechEnd;
+        Voice.onSpeechResults = onSpeechResults;
+        Voice.onSpeechPartialResults = onSpeechPartialResults;
+        Voice.onSpeechError = onSpeechError;
 
         // Request microphone permission if needed
         if (Platform.OS === 'android') {
@@ -241,127 +248,81 @@ const CameraScreen = ({ navigation }) => {
   // Move initializeCamera function outside of useEffect
   const initializeCamera = async () => {
     try {
-      console.log('Initializing camera...', {
-        hasPermission,
-        devices: Array.isArray(devices) 
-          ? `Array with ${devices.length} items` 
-          : {
-              back: !!devices?.back,
-              front: !!devices?.front
-            }
-      });
-
-      if (hasPermission === null) {
-        console.log('Waiting for permission check...');
-        return;
-      }
-
+      console.log('Initializing camera...');
+      
+      // Check if we have permission
       if (!hasPermission) {
-        console.log('No camera permission');
+        console.log('No camera permission, requesting...');
+        await checkAndRequestCameraPermission();
         return;
       }
-
-      // Clear any previous errors
-      setCameraError(null);
-
-      // Check if devices is an array (as shown in your logs)
-      if (Array.isArray(devices) && devices.length > 0) {
-        console.log('Processing array of camera devices...');
-        
-        // Filter usable devices first
-        const usableDevices = devices.filter(isDeviceUsable);
-        console.log(`Found ${usableDevices.length} usable devices out of ${devices.length}`);
-        
-        if (usableDevices.length === 0) {
-          console.log('No usable camera devices found');
-          setCameraError('No usable camera devices found. Please check your device settings.');
-          return;
-        }
-        
-        // Try to identify back and front cameras
-        // First check for position property
-        let backCamera = usableDevices.find(d => d.position === 'back');
-        let frontCamera = usableDevices.find(d => d.position === 'front');
-        
-        // If position property doesn't exist, try to use physicalDevices
-        if (!backCamera && !frontCamera) {
-          backCamera = usableDevices.find(d => 
-            d.physicalDevices && 
-            d.physicalDevices.some(pd => pd.includes('back'))
-          );
-          
-          frontCamera = usableDevices.find(d => 
-            d.physicalDevices && 
-            d.physicalDevices.some(pd => pd.includes('front'))
-          );
-        }
-        
-        // If still can't identify, use the first device as back and second as front if available
-        if (!backCamera && usableDevices.length > 0) {
-          console.log('Using first device as back camera');
-          backCamera = usableDevices[0];
-        }
-        
-        if (!frontCamera && usableDevices.length > 1) {
-          console.log('Using second device as front camera');
-          frontCamera = usableDevices[1];
-        }
-        
-        console.log('Found back camera:', !!backCamera);
-        console.log('Found front camera:', !!frontCamera);
-        
-        // Set the appropriate device based on cameraType
-        if (backCamera && cameraType === 'back') {
-          console.log('Setting back camera');
-          setDevice(backCamera);
-          setIsLoading(false);
-        } else if (frontCamera && cameraType === 'front') {
-          console.log('Setting front camera');
-          setDevice(frontCamera);
-          setIsLoading(false);
-        } else if (backCamera) {
-          console.log('Defaulting to back camera');
-          setCameraType('back');
-          setDevice(backCamera);
-          setIsLoading(false);
-        } else if (frontCamera) {
-          console.log('Defaulting to front camera');
-          setCameraType('front');
-          setDevice(frontCamera);
-          setIsLoading(false);
-        } else {
-          console.log('No usable camera devices found in array');
-          setCameraError('No usable camera devices found. Please check your device settings.');
-        }
-      } 
-      // Original logic for object-based devices
-      else if (devices?.back && cameraType === 'back') {
-        console.log('Setting back camera from object');
-        setDevice(devices.back);
-        setIsLoading(false);
-      } else if (devices?.front && cameraType === 'front') {
-        console.log('Setting front camera from object');
-        setDevice(devices.front);
-        setIsLoading(false);
-      } else if (devices?.back) {
-        console.log('Defaulting to back camera from object');
-        setCameraType('back');
-        setDevice(devices.back);
-        setIsLoading(false);
-      } else if (devices?.front) {
-        console.log('Defaulting to front camera from object');
-        setCameraType('front');
-        setDevice(devices.front);
-        setIsLoading(false);
+      
+      // Get available devices
+      console.log('Getting available devices...');
+      
+      // Check if we have any devices
+      if (!devices) {
+        console.log('No devices available yet');
+        setIsLoading(true);
+        return;
+      }
+      
+      // Find the appropriate device based on camera type
+      let selectedDevice = null;
+      
+      if (cameraType === 'back' && devices.back) {
+        console.log('Using back camera');
+        selectedDevice = devices.back;
+      } else if (cameraType === 'front' && devices.front) {
+        console.log('Using front camera');
+        selectedDevice = devices.front;
       } else {
-        console.log('No camera devices available');
-        if (hasPermission) {
-          setCameraError('No camera devices found. Please check your device settings.');
+        // Fallback to any available camera
+        console.log('Preferred camera not available, checking alternatives...');
+        if (devices.back) {
+          console.log('Using back camera as fallback');
+          selectedDevice = devices.back;
+          setCameraType('back');
+        } else if (devices.front) {
+          console.log('Using front camera as fallback');
+          selectedDevice = devices.front;
+          setCameraType('front');
         }
+      }
+      
+      // Check if the selected device is usable
+      if (selectedDevice && isDeviceUsable(selectedDevice)) {
+        console.log('Setting device:', selectedDevice.id);
+        setDevice(selectedDevice);
+        setIsLoading(false);
+        setCameraError(null);
+        
+        // Start the conversation after camera is initialized and TTS is ready
+        if (ttsInitialized) {
+          setTimeout(() => {
+            const greeting = "Hello! I'm Matrix AI. You can ask me questions or ask me what I can see.";
+            setAiResponse(greeting);
+            
+            if (ttsInitialized) {
+              setIsSpeaking(true);
+              Tts.speak(greeting);
+            }
+            
+            // Add AI greeting to conversation history
+            setConversationHistory([
+              { role: 'assistant', content: greeting }
+            ]);
+          }, 1500);
+        }
+      } else {
+        console.log('No usable camera device found');
+        setCameraError('No usable camera found on this device');
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Camera initialization error:', error);
-      setCameraError('Failed to initialize camera: ' + error.message);
+      console.error('Error initializing camera:', error);
+      setCameraError(`Camera error: ${error.message}`);
+      setIsLoading(false);
     }
   };
 
@@ -394,7 +355,7 @@ const CameraScreen = ({ navigation }) => {
     }
   }, [devices]);
 
-  // Retry mechanism for device detection
+  // Retry camera initialization if it fails
   useEffect(() => {
     const retryInterval = setInterval(() => {
       if (!device && hasPermission) {
@@ -407,6 +368,27 @@ const CameraScreen = ({ navigation }) => {
 
     return () => clearInterval(retryInterval);
   }, [device, hasPermission]);
+
+  // Start conversation when camera is ready
+  useEffect(() => {
+    if (device && ttsInitialized && !isLoading) {
+      // Start the conversation after a short delay
+      setTimeout(() => {
+        const greeting = "Hello! I'm Matrix AI. You can ask me questions or ask me what I can see.";
+        setAiResponse(greeting);
+        
+        if (ttsInitialized) {
+          setIsSpeaking(true);
+          Tts.speak(greeting);
+        }
+        
+        // Add AI greeting to conversation history
+        setConversationHistory([
+          { role: 'assistant', content: greeting }
+        ]);
+      }, 1500);
+    }
+  }, [device, ttsInitialized, isLoading]);
 
   // Toggle camera type (front/back)
   const toggleCameraType = () => {
@@ -444,108 +426,104 @@ const CameraScreen = ({ navigation }) => {
     }
   };
 
-  // Analyze image using DeepSeek API
-  const analyzeImageWithDeepSeek = async (imagePath) => {
+  // Analyze image using DeepSeek Vision API
+  const analyzeImageWithDeepSeek = async (imagePath, userPrompt = "What do you see in this image?") => {
     try {
       console.log('Reading image file for analysis...');
       const imageBinary = await RNFS.readFile(imagePath, 'base64'); // Read image as base64
-      const imageBuffer = Buffer.from(imageBinary, 'base64'); // Convert base64 to binary buffer
-  
-      let azureDescription = 'No description available';
-      let detectedObjects = [];
-  
-      // Azure Vision API - Object Detection
-      try {
-        console.log('Sending image to Azure for object detection...');
-        const azureObjectResponse = await axios.post(
-          'https://imagechatbot.cognitiveservices.azure.com/vision/v3.2/detect',
-          imageBuffer, // Send raw binary data
-          {
-            headers: {
-              'Ocp-Apim-Subscription-Key': '7gyhlB7IxeUdV2VgBGFYCyyc8zCUI57KL9Sfl4ZkhkQaS4JpIvttJQQJ99ALACYeBjFXJ3w3AAAFACOGGqMc',
-              'Content-Type': 'application/octet-stream' // Required for binary image
-            }
-          }
-        );
-  
-        console.log('Azure Object Detection Response:', azureObjectResponse.status);
-        detectedObjects = azureObjectResponse.data.objects.map(obj => ({
-          object: obj.object,
-          confidence: obj.confidence.toFixed(2)
-        }));
-  
-      } catch (error) {
-        console.error('Azure Object Detection Error:', error.response?.data || error.message);
+      
+      // First, upload the image to Supabase storage
+      console.log('Uploading image to Supabase storage...');
+      
+      // Generate a unique filename
+      const timestamp = new Date().getTime();
+      const filename = `camera_capture_${timestamp}.jpg`;
+      
+      // Upload to Supabase
+      const response = await fetch('https://rnbdxfpbxvxjjrxjlnpz.supabase.co/storage/v1/object/public/images/' + filename, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuYmR4ZnBieHZ4ampyeGpsbnh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk1NzA1NzYsImV4cCI6MjAyNTE0NjU3Nn0.Nh83ebqzf8OtRCGjpDHcLCzNUmby_vPFTdXJsQQy1Ck',
+          'x-upsert': 'true'
+        },
+        body: Buffer.from(imageBinary, 'base64')
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to upload image: ${response.statusText}`);
       }
-  
-      // Azure Vision API - Image Analysis
-      try {
-        console.log('Sending image to Azure for description analysis...');
-        const azureResponse = await axios.post(
-          'https://imagechatbot.cognitiveservices.azure.com/vision/v3.2/analyze?visualFeatures=Description',
-          imageBuffer, // Send raw binary data
-          {
-            headers: {
-              'Ocp-Apim-Subscription-Key': '7gyhlB7IxeUdV2VgBGFYCyyc8zCUI57KL9Sfl4ZkhkQaS4JpIvttJQQJ99ALACYeBjFXJ3w3AAAFACOGGqMc',
-              'Content-Type': 'application/octet-stream'
+      
+      console.log('Image uploaded successfully');
+      
+      // Get the public URL of the uploaded image
+      const imageUrl = `https://rnbdxfpbxvxjjrxjlnpz.supabase.co/storage/v1/object/public/images/${filename}`;
+      console.log('Image URL:', imageUrl);
+      
+      // Now use DeepSeek Vision API to analyze the image
+      console.log('Sending image to DeepSeek Vision API...');
+      const deepSeekResponse = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "doubao-vision-pro-32k-241028",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: userPrompt
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl
+                  }
+                }
+              ]
             }
-          }
-        );
-  
-        console.log('Azure Description Response:', azureResponse.status);
-        console.log('Azure Description:', azureResponse.data);
-        azureDescription = azureResponse.data.description?.captions?.[0]?.text || 'No description available';
-  
-      } catch (error) {
-        console.error('Azure Description Analysis Error:', error.response?.data || error.message);
+          ]
+        })
+      });
+      
+      if (!deepSeekResponse.ok) {
+        throw new Error(`DeepSeek API error: ${deepSeekResponse.statusText}`);
       }
-  
-      // Send data to DeepSeek API for user-friendly explanation
-      try {
-        console.log('Sending data to DeepSeek for explanation...');
-        const deepSeekResponse = await axios.post(
-          'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
-            },
-            model: "doubao-pro-32k-241215",
-            messages: [
-              { role: "system", content: "Understand the image and describe it in a way that is easy to understand in less than 100 words.and at the end ask did question that dud you want more infomation about the image" },
-              { role: "user", content: `Description: ${azureDescription}. Detected objects: ${detectedObjects.map(obj => `${obj.object} (${obj.confidence})`).join(', ')}` }
-            ]
-          },
-          {
-            headers: {
-              'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-  
-        console.log('DeepSeek Response:', deepSeekResponse.status);
-        const deepSeekExplanation = deepSeekResponse.data.choices[0].message.content || 'No explanation available';
-  
-        // Update AI response with DeepSeek explanation
-        setAiResponse(deepSeekExplanation);
-  
-        // Speak the explanation if TTS is initialized
-        if (ttsInitialized) {
-          Tts.speak(deepSeekExplanation);
-        }
-  
-        return { description: deepSeekExplanation };
-  
-      } catch (error) {
-        console.error('DeepSeek API Error:', error.response?.data || error.message);
-        setAiResponse('Error generating explanation. Please try again.');
-        return { description: 'Error generating explanation.' };
+      
+      const deepSeekData = await deepSeekResponse.json();
+      console.log('DeepSeek Vision API response:', deepSeekData);
+      
+      // Extract the response text
+      const analysisResult = deepSeekData.choices?.[0]?.message?.content || "I couldn't analyze the image properly.";
+      
+      // Speak the result if TTS is initialized
+      if (ttsInitialized) {
+        setIsSpeaking(true);
+        Tts.speak(analysisResult);
       }
+      
+      // Update AI response
+      setAiResponse(analysisResult);
+      
+      return analysisResult;
     } catch (error) {
-      console.error('General Image Analysis Error:', error);
-      setAiResponse('Error analyzing the image. Please try again.');
-      return { description: 'Error analyzing the image.' };
+      console.error('Error analyzing image:', error);
+      const errorMessage = "I'm sorry, I couldn't analyze the image. " + (error.message || "Please try again.");
+      
+      // Speak the error message if TTS is initialized
+      if (ttsInitialized) {
+        setIsSpeaking(true);
+        Tts.speak(errorMessage);
+      }
+      
+      // Update AI response
+      setAiResponse(errorMessage);
+      
+      return errorMessage;
     }
   };
   
@@ -564,22 +542,268 @@ const CameraScreen = ({ navigation }) => {
     }
   };
 
+  // Add conversation flow functions
+  const onSpeechStart = () => {
+    console.log('Speech started');
+    
+    // Set isListening to true when speech starts
+    setIsListening(true);
+    
+    // Clear any existing timers
+    clearTimeout(silenceTimer.current);
+    clearInterval(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    
+    // Update the last text change time
+    lastTextChangeTime.current = Date.now();
+    
+    // Start the silence detection loop
+    startSilenceDetection();
+  };
+
+  const startSilenceDetection = () => {
+    // Clear any existing timers
+    clearTimeout(silenceTimer.current);
+    clearInterval(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    clearInterval(countdownEffectInterval.current);
+    clearInterval(silenceCheckInterval.current);
+    
+    // Set initial countdown value (3 seconds)
+    setCountdownSeconds(3);
+    
+    // Create a timeout that will stop recording after 3 seconds of silence
+    silenceTimer.current = setTimeout(() => {
+      if (isListening && !isProcessingRef.current) {
+        // Only stop recording if we have some text
+        if (recognizedText && recognizedText.trim() !== '') {
+          console.log('Silence timeout reached with text, stopping recording');
+          stopVoiceRecognition();
+          processVoiceInput(recognizedText);
+        } else {
+          console.log('Silence timeout reached but no text detected, resetting timer');
+          // Reset the timer to give more time for speech detection
+          startSilenceDetection();
+        }
+      }
+    }, 3000);
+    
+    // Start countdown timer that updates every second for UI display
+    countdownInterval.current = setInterval(() => {
+      setCountdownSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    // Also set up a recurring check for silence based on text changes
+    const checkInterval = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastTextChange = now - lastTextChangeTime.current;
+      
+      // If text hasn't changed for 3 seconds and we have some text
+      if (recognizedText && recognizedText.trim() !== '' && 
+          timeSinceLastTextChange > 3000 && isListening && !isProcessingRef.current) {
+        console.log('No text changes for 3 seconds with text, stopping recording');
+        clearInterval(checkInterval);
+        stopVoiceRecognition();
+        processVoiceInput(recognizedText);
+      }
+    }, 500); // Check every 500ms
+    
+    // Store the check interval so we can clear it later
+    silenceCheckInterval.current = checkInterval;
+  };
+
+  const onSpeechEnd = () => {
+    console.log('Speech ended');
+    
+    // Check if we should process the text now
+    const currentText = recognizedText;
+    const timeSinceLastChange = Date.now() - lastTextChangeTime.current;
+    
+    console.log('Speech ended with text:', currentText, 'Time since last change:', timeSinceLastChange);
+    
+    // If we have text and it's been stable for a short time, process it
+    if (currentText && currentText.trim() !== '' && timeSinceLastChange > 500 && !isProcessingRef.current) {
+      console.log('Processing text on speech end');
+      stopVoiceRecognition();
+      processVoiceInput(currentText);
+    } else if (!currentText || currentText.trim() === '') {
+      console.log('No text detected on speech end, continuing to listen');
+      // Reset the timer to give more time for speech detection
+      startSilenceDetection();
+    } else {
+      console.log('Not processing text on speech end - conditions not met');
+    }
+  };
+
+  const onSpeechPartialResults = (event) => {
+    // Only process partial results if we're not already processing a request
+    if (isProcessingRef.current) {
+      console.log('Ignoring partial results while processing a request');
+      return;
+    }
+
+    const partialText = event.value[0] || '';
+    console.log('Partial speech results:', partialText);
+    
+    // Check if this is the same as the last processed text
+    if (partialText === lastProcessedText.current) {
+      console.log('Ignoring partial result that matches last processed text:', partialText);
+      return;
+    }
+    
+    // Only update if the text has changed
+    if (partialText !== recognizedText) {
+      console.log('Updating recognized text from:', recognizedText, 'to:', partialText);
+      setRecognizedText(partialText);
+    }
+    
+    // Reset the countdown timer when user is speaking
+    if (partialText !== lastTranscribedText.current) {
+      console.log('Speech detected, resetting timers');
+      lastTextChangeTime.current = Date.now();
+      lastTranscribedText.current = partialText;
+      
+      // Always restart the silence detection when new speech is detected
+      startSilenceDetection();
+    }
+  };
+
+  const onSpeechResults = (event) => {
+    console.log('onSpeechResults event:', event);
+    
+    // If we're already processing, don't process again
+    if (isProcessingRef.current) {
+      console.log('Already processing, not processing speech results');
+      return;
+    }
+    
+    // Get the recognized text
+    const results = event.value;
+    if (results && results.length > 0) {
+      const recognizedText = results[0];
+      console.log('Recognized text:', recognizedText);
+      
+      // Update the recognized text state
+      setRecognizedText(recognizedText);
+      
+      // Update the last transcribed text ref
+      lastTranscribedText.current = recognizedText;
+      
+      // Update the last text change time
+      lastTextChangeTime.current = Date.now();
+      
+      // Check if the text is different enough from the last processed text
+      if (recognizedText.trim() === lastProcessedText.current.trim()) {
+        console.log('Text is the same as last processed text, not processing');
+        return;
+      }
+      
+      // Set processing flag to prevent multiple requests
+      isProcessingRef.current = true;
+      
+      // Update the last processed text ref
+      lastProcessedText.current = recognizedText;
+      
+      // Process the recognized text
+      processVoiceInput(recognizedText);
+    }
+  };
+
+  const onSpeechError = (error) => {
+    console.error('Speech recognition error:', error);
+    setIsListening(false);
+    
+    // Only show text input dialog if we're not already processing
+    if (!isProcessingRef.current) {
+      showTextInputDialog();
+    }
+  };
+
+  // Custom text input dialog
+  const showTextInputDialog = () => {
+    // If we're in "listening" mode on Android, stop it
+    if (Platform.OS === 'android' && isListening) {
+      setIsListening(false);
+    }
+    
+    setTextInputValue('');
+    setInputModalVisible(true);
+  };
+
+  // Handle text input submission
+  const handleTextInputSubmit = () => {
+    if (textInputValue.trim().length > 0) {
+      setRecognizedText(textInputValue);
+      
+      // Set processing flag to prevent multiple requests
+      isProcessingRef.current = true;
+      
+      // Update the last processed text ref
+      lastProcessedText.current = textInputValue;
+      
+      // Process the text input
+      processVoiceInput(textInputValue);
+    }
+    setInputModalVisible(false);
+    setTextInputValue('');
+  };
+
   // Start voice recognition
   const startVoiceRecognition = async () => {
+    // Don't start recording if AI is speaking or we're processing
+    if (isSpeaking || isProcessingRef.current) {
+      console.log('Cannot start recording - AI is speaking or processing');
+      return;
+    }
+
+    // Ensure isListening is false before starting
+    if (isListening) {
+      console.log('Already listening, stopping before starting again');
+      try {
+        await Voice.stop();
+        await Voice.destroy();
+        
+        // Re-initialize Voice with our listeners
+        Voice.onSpeechStart = onSpeechStart;
+        Voice.onSpeechEnd = onSpeechEnd;
+        Voice.onSpeechResults = onSpeechResults;
+        Voice.onSpeechPartialResults = onSpeechPartialResults;
+        Voice.onSpeechError = onSpeechError;
+      } catch (error) {
+        console.error('Error stopping voice before restart:', error);
+      }
+      setIsListening(false);
+    }
+    
+    console.log('startVoiceRecognition called - isProcessing:', isProcessingRef.current);
+    
     try {
       // Stop any ongoing TTS
       if (ttsInitialized) {
         Tts.stop();
       }
       
-      // Clear previous recognized text
+      // Reset state - make sure to clear recognized text first
+      console.log('Clearing recognized text before starting recording. Current text:', recognizedText);
+      
+      // Force reset the recognized text to empty string
       setRecognizedText('');
       
-      // Check if already listening
-      if (isListening) {
-        console.log('Already listening!');
-        return;
-      }
+      // Reset the last transcribed text reference
+      lastTranscribedText.current = '';
+      lastTextChangeTime.current = Date.now();
+      
+      // Reset the last processed text reference to prevent duplicate detection
+      lastProcessedText.current = '';
+      
+      // Reset countdown timer
+      setCountdownSeconds(3);
       
       // Check if Voice module is available
       if (!isVoiceModuleAvailable()) {
@@ -588,14 +812,20 @@ const CameraScreen = ({ navigation }) => {
         return;
       }
       
+      // Add a small delay before starting Voice to ensure it's ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Start voice recognition
       console.log('Starting voice recognition...');
       setIsListening(true);
-      setIsVoiceProcessing(true);
+      setIsVoiceProcessing(false);
       
       try {
         await Voice.start('en-US');
         console.log('Voice recognition started successfully');
+        
+        // Start silence detection
+        startSilenceDetection();
       } catch (error) {
         console.error('Error starting voice recognition:', error);
         setIsListening(false);
@@ -609,55 +839,139 @@ const CameraScreen = ({ navigation }) => {
       showTextInputDialog();
     }
   };
-  
-  // Custom text input dialog
-  const showTextInputDialog = () => {
-    // If we're in "listening" mode on Android, stop it
-    if (Platform.OS === 'android' && isListening) {
-      setIsListening(false);
-    }
-    
-    setTextInputValue('');
-    setInputModalVisible(true);
-  };
-  
-  // Handle text input submission
-  const handleTextInputSubmit = () => {
-    if (textInputValue.trim().length > 0) {
-      setRecognizedText(textInputValue);
-      processVoiceInput(textInputValue);
-    }
-    setInputModalVisible(false);
-  };
-  
+
   // Stop voice recognition
   const stopVoiceRecognition = async () => {
+    console.log('Stopping voice recognition...');
+    
+    // Store the current listening state before changing it
+    const wasListening = isListening;
+    
+    // Clear all timers
+    clearTimeout(silenceTimer.current);
+    clearInterval(countdownInterval.current);
+    clearInterval(silenceCheckInterval.current);
+    clearInterval(countdownEffectInterval.current);
+    
+    // Set isListening to false immediately
+    setIsListening(false);
+    
+    // Reset timer references
+    silenceTimer.current = null;
+    countdownInterval.current = null;
+    silenceCheckInterval.current = null;
+    countdownEffectInterval.current = null;
+    
+    // Reset countdown display
+    setCountdownSeconds(0);
+    
+    // Only proceed if we were actually listening
+    if (!wasListening) {
+      console.log('Not listening, ignoring stop recording call');
+      return;
+    }
+    
     try {
-      if (!isListening) {
-        console.log('Not currently listening');
-        return;
-      }
-      
-      console.log('Stopping voice recognition...');
-      
-      try {
-        await Voice.stop();
-        console.log('Voice recognition stopped successfully');
-      } catch (error) {
-        console.error('Error stopping voice recognition:', error);
-      }
-      
-      setIsListening(false);
+      console.log('Stopping Voice recognition');
+      await Voice.stop();
     } catch (error) {
-      console.error('Error in stop voice recognition process:', error);
-      setIsListening(false);
+      console.error('Error stopping voice recognition:', error);
     }
   };
-  
+
   // Process voice input and send to DeepSeek
   const processVoiceInput = async (text) => {
     try {
+      // Set processing flag to prevent multiple requests
+      isProcessingRef.current = true;
       setIsVoiceProcessing(true);
+      
+      // Check if the user is asking about what's in front of the camera
+      const shouldTakePhoto = 
+        text.toLowerCase().includes('what do you see') || 
+        text.toLowerCase().includes('what is in front of you') || 
+        text.toLowerCase().includes('what is in front of the camera') ||
+        text.toLowerCase().includes('what can you see') ||
+        text.toLowerCase().includes('take a picture') ||
+        text.toLowerCase().includes('take a photo') ||
+        text.toLowerCase().includes('capture') ||
+        text.toLowerCase().includes('snap a photo') ||
+        text.toLowerCase().includes('analyze what you see');
+      
+      if (shouldTakePhoto && cameraRef.current) {
+        // Let the user know we're taking a photo
+        const processingMessage = "I'll take a photo and analyze what I see.";
+        setAiResponse(processingMessage);
+        
+        // Speak the processing message
+        if (ttsInitialized) {
+          setIsSpeaking(true);
+          Tts.speak(processingMessage);
+        }
+        
+        // Add user message to conversation history
+        const updatedHistory = [
+          ...conversationHistory,
+          { role: 'user', content: text }
+        ];
+        
+        // Keep only the last 10 messages to avoid token limits
+        const limitedHistory = updatedHistory.slice(-10);
+        setConversationHistory(limitedHistory);
+        
+        try {
+          console.log('Taking photo for analysis...');
+          const photo = await cameraRef.current.takePhoto({ 
+            flash: 'off',
+            qualityPrioritization: 'speed',
+            enableShutterSound: false,
+            base64: true
+          });
+          console.log('Photo taken, path:', photo.path);
+          
+          const analysisResult = await analyzeImageWithDeepSeek(photo.path, text);
+          console.log('Analysis result:', analysisResult);
+          
+          // Update conversation history with AI response
+          const finalHistory = [
+            ...limitedHistory,
+            { role: 'assistant', content: analysisResult }
+          ];
+          setConversationHistory(finalHistory);
+          
+          // Reset processing flags
+          isProcessingRef.current = false;
+          setIsVoiceProcessing(false);
+          
+          // Start listening again after a delay (this will happen via TTS finish listener)
+          return;
+        } catch (error) {
+          console.error('Error capturing or analyzing image:', error);
+          
+          // Handle error
+          const errorMessage = "I'm sorry, I couldn't take or analyze the photo. Please try again.";
+          setAiResponse(errorMessage);
+          
+          // Speak the error message
+          if (ttsInitialized) {
+            setIsSpeaking(true);
+            Tts.speak(errorMessage);
+          }
+          
+          // Update conversation history with error
+          const finalHistory = [
+            ...limitedHistory,
+            { role: 'assistant', content: errorMessage }
+          ];
+          setConversationHistory(finalHistory);
+          
+          // Reset processing flags
+          isProcessingRef.current = false;
+          setIsVoiceProcessing(false);
+          
+          return;
+        }
+      }
       
       // Special handling for "Hello Matrix" greeting
       if (text.toLowerCase().includes('hello matrix')) {
@@ -676,9 +990,12 @@ const CameraScreen = ({ navigation }) => {
         
         // Speak the greeting if TTS is initialized
         if (ttsInitialized) {
+          setIsSpeaking(true);
           Tts.speak(greeting);
         }
         
+        // Reset processing flags
+        isProcessingRef.current = false;
         setIsVoiceProcessing(false);
         return;
       }
@@ -699,58 +1016,62 @@ const CameraScreen = ({ navigation }) => {
         ...limitedHistory
       ];
       
-      console.log('Sending text input to DeepSeek:', text);
-      console.log('Conversation history:', messages);
-      
       // Send to DeepSeek API
-      const deepSeekResponse = await axios.post(
-        'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89'
-          },
-          model: "doubao-pro-32k-241215",
-          messages: messages
+      console.log('Sending to DeepSeek API...');
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 95fad12c-0768-4de2-a4c2-83247337ea89',
         },
-        {
-          headers: {
-            'Authorization': 'Bearer sk-fed0eb08e6ad4f1aabe2b0c27c643816',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+        body: JSON.stringify({
+          model: "doubao-pro-32k-241215",
+          messages: messages,
+          max_tokens: 150
+        }),
+      });
       
-      console.log('DeepSeek Response:', deepSeekResponse.status);
-      const deepSeekReply = deepSeekResponse.data.choices[0].message.content || 'No response available';
+      const data = await response.json();
+      console.log('Received response from DeepSeek API');
       
-      // Add AI response to conversation history
+      // Extract AI response
+      const aiResponseText = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't process that.";
+      
+      // Update conversation history with AI response
       const finalHistory = [
         ...limitedHistory,
-        { role: 'assistant', content: deepSeekReply }
+        { role: 'assistant', content: aiResponseText }
       ];
       setConversationHistory(finalHistory);
       
       // Update AI response
-      setAiResponse(deepSeekReply);
+      setAiResponse(aiResponseText);
       
       // Speak the response if TTS is initialized
       if (ttsInitialized) {
-        Tts.speak(deepSeekReply);
+        setIsSpeaking(true);
+        Tts.speak(aiResponseText);
       }
       
+      // Reset processing flags
+      isProcessingRef.current = false;
+      setIsVoiceProcessing(false);
+      
     } catch (error) {
-      console.error('DeepSeek API Error:', error.response?.data || error.message);
-      setAiResponse('Error processing your request. Please try again.');
+      console.error('Error processing voice input:', error);
       
-      // Add error message to conversation history
-      setConversationHistory([
-        ...conversationHistory,
-        { role: 'user', content: text },
-        { role: 'assistant', content: 'Error processing your request. Please try again.' }
-      ]);
+      // Handle error
+      const errorMessage = "I'm sorry, I couldn't process your request. Please try again.";
+      setAiResponse(errorMessage);
       
-    } finally {
+      // Speak the error message if TTS is initialized
+      if (ttsInitialized) {
+        setIsSpeaking(true);
+        Tts.speak(errorMessage);
+      }
+      
+      // Reset processing flags
+      isProcessingRef.current = false;
       setIsVoiceProcessing(false);
     }
   };

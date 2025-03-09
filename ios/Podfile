@@ -8,6 +8,12 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Force hermes on
+ENV['USE_HERMES'] = '1'
+
+# Disable new architecture
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -20,7 +26,9 @@ target 'MatrixAI' do
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    # Enable hermes explicitly
+    :hermes_enabled => true
   )
   
   # Add react-native-vector-icons pod
@@ -30,13 +38,50 @@ target 'MatrixAI' do
   pod 'RNGoogleSignin', :path => '../node_modules/@react-native-google-signin/google-signin'
   pod 'VisionCamera', :path => '../node_modules/react-native-vision-camera'
   
+  # Explicitly add yoga
+  pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
+  
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
-      :mac_catalyst_enabled => false,
+      :mac_catalyst_enabled => false
       # :ccache_enabled => true
     )
+    
+    # Fix Xcode 15 warnings and build issues
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Fix warnings
+        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        config.build_settings['CLANG_WARN_EMPTY_BODY'] = 'NO'
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+        
+        # Fix permissions issues
+        config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+        
+        # Fix modular includes
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        
+        # Fix architecture issues for M1 Macs
+        if config.build_settings['SDKROOT'] == 'iphonesimulator'
+          config.build_settings["EXCLUDED_ARCHS[sdk=iphonesimulator*]"] = "arm64"
+        end
+        
+        # Additional build settings to fix React Native issues
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'RCT_NEW_ARCH_ENABLED=0'
+        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1'
+        
+        # Add header search paths for yoga
+        config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['HEADER_SEARCH_PATHS'] << '${PODS_ROOT}/Headers/Public/Yoga'
+        config.build_settings['HEADER_SEARCH_PATHS'] << '${PODS_ROOT}/Headers/Public/React-Core'
+        
+        # Disable bitcode
+        config.build_settings['ENABLE_BITCODE'] = 'NO'
+      end
+    end
   end
 end
