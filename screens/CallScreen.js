@@ -184,104 +184,39 @@ const CallScreen = () => {
   // Initialize TTS and Voice
   useEffect(() => {
     const setupVoice = async () => {
-      // Set up Voice listeners
-      Voice.onSpeechStart = onSpeechStart;
-      Voice.onSpeechEnd = onSpeechEnd;
-      Voice.onSpeechResults = onSpeechResults;
-      Voice.onSpeechPartialResults = onSpeechPartialResults;
-      Voice.onSpeechError = onSpeechError;
-    };
-    
-    const setupTts = async () => {
       try {
-        // Initialize TTS
-        await Tts.getInitStatus();
+        // First destroy any existing instance
+        await Voice.destroy();
         
-        // Configure TTS settings
-        if (Platform.OS === 'ios') {
-          // iOS-specific settings
-          await Tts.setDefaultLanguage('en-US');
-          
-          // Get available voices
-          const voices = await Tts.voices();
-          console.log('Available voices:', voices);
-          
-          // Find a female voice - look for specific keywords in voice ID or name
-          let femaleVoice = voices.find(voice => 
-            voice.language?.includes('en') && 
-            (voice.id?.toLowerCase().includes('female') || 
-             voice.id?.toLowerCase().includes('samantha') ||
-             voice.id?.toLowerCase().includes('karen') ||
-             voice.id?.toLowerCase().includes('tessa') ||
-             voice.name?.toLowerCase().includes('female'))
-          );
-          
-          // If no specific female voice found, try to find any voice with 'f' in the ID
-          if (!femaleVoice) {
-            femaleVoice = voices.find(voice => 
-              voice.language?.includes('en') && voice.id?.toLowerCase().includes('f')
-            );
-          }
-          
-          if (femaleVoice) {
-            console.log('Setting female voice:', femaleVoice.id);
-            await Tts.setDefaultVoice(femaleVoice.id);
-          } else {
-            console.log('No female voice found, using default voice');
-          }
-          
-          // iOS uses rate values between 0.0 and 1.0
-          // Don't use await with setDefaultRate on iOS - it causes the BOOL error
-          Tts.setDefaultRate(0.5);
-          Tts.setDefaultPitch(1.2);
-        } else {
-          // Android settings
-          await Tts.setDefaultLanguage('en-US');
-          
-          // Find female voice on Android
-          const voices = await Tts.voices();
-          const femaleVoice = voices.find(voice => 
-            voice.language?.includes('en') && 
-            (voice.id?.toLowerCase().includes('female') || voice.name?.toLowerCase().includes('female'))
-          );
-          
-          if (femaleVoice) {
-            await Tts.setDefaultVoice(femaleVoice.id);
-          }
-          
-          // Android uses different rate values
-          await Tts.setDefaultRate(0.5);
-          await Tts.setDefaultPitch(1.2);
+        // Set up Voice listeners
+        Voice.onSpeechStart = onSpeechStart;
+        Voice.onSpeechEnd = onSpeechEnd;
+        Voice.onSpeechResults = onSpeechResults;
+        Voice.onSpeechPartialResults = onSpeechPartialResults;
+        Voice.onSpeechError = onSpeechError;
+        
+        // Set additional options if available
+        if (Platform.OS === 'android') {
+          // Android-specific settings
+          Voice.setSpeechRecognitionOptions({
+            EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 500,
+            EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+            EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 1000
+          });
         }
         
-        // Add event listeners for TTS
-        Tts.addEventListener('tts-start', () => {
-          console.log('TTS started speaking');
-          startSpeakingAnimation();
-        });
-        
-        ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
-          console.log('TTS finished speaking');
-          stopSpeakingAnimation();
-        });
-        
-        // Add error listener
-        Tts.addEventListener('tts-error', (err) => {
-          console.error('TTS error:', err);
-          stopSpeakingAnimation();
-        });
-        
+        // Set TTS ready state
         setTtsReady(true);
-        console.log('TTS initialized successfully');
-      } catch (err) {
-        console.error('TTS initialization error:', err);
-        // Still mark as ready to continue with the app
-        setTtsReady(true);
+        
+        return true;
+      } catch (error) {
+        console.error('Error setting up Voice:', error);
+        Alert.alert('Error', 'Failed to initialize voice recognition. Please restart the app.');
+        return false;
       }
     };
     
     setupVoice();
-    setupTts();
     
     // Clean up on unmount
     return () => {
@@ -328,13 +263,19 @@ const CallScreen = () => {
     }
   }, [ttsReady]);
 
-  // Effect to monitor countdown and stop recording when it reaches zero
+  // Update the useEffect for countdown to prevent premature stopping
   useEffect(() => {
-    if (countdownSeconds === 0 && isListening && !isProcessing.current) {
-      console.log('Countdown reached zero in useEffect, stopping recording');
+    // Only stop recording if countdown reaches zero AND we have some transcribed text
+    // This prevents stopping when no speech has been detected yet
+    if (countdownSeconds === 0 && isListening && !isProcessing.current && transcribedText.trim() !== '') {
+      console.log('Countdown reached zero with text, stopping recording');
       stopRecording();
+    } else if (countdownSeconds === 0 && isListening && !isProcessing.current) {
+      console.log('Countdown reached zero but no text detected, resetting timer');
+      // Reset the timer to give more time for speech detection
+      startSilenceDetection();
     }
-  }, [countdownSeconds, isListening]);
+  }, [countdownSeconds, isListening, transcribedText]);
 
   const startCall = async () => {
     // Wait a moment before greeting to ensure TTS is ready
@@ -350,8 +291,8 @@ const CallScreen = () => {
         content: greeting
       });
       
-      // Set animation to normal when AI is speaking
-      setAnimationSpeed(1.0);
+      // Start speaking animation for AI greeting
+      startSpeakingAnimation();
       
       // Remove any existing TTS finish listener before speaking
       if (ttsFinishListener.current) {
@@ -362,6 +303,9 @@ const CallScreen = () => {
       // Set up the TTS finish listener BEFORE speaking
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
         console.log('TTS finished speaking greeting');
+        
+        // Stop speaking animation
+        stopSpeakingAnimation();
         
         // Make sure processing flag is reset
         isProcessing.current = false;
@@ -378,6 +322,11 @@ const CallScreen = () => {
           
           // Make sure we're in a clean state before starting recording
           setIsListening(false);
+          
+          // Clear transcribed text
+          setTranscribedText('');
+          lastTranscribedText.current = '';
+          lastProcessedText.current = '';
           
           setTimeout(async () => {
             // Double check that we're still not processing before starting
@@ -412,7 +361,14 @@ const CallScreen = () => {
     setConversation(prev => [...prev, { speaker, text }]);
   };
 
+  // Update the onSpeechPartialResults function to better handle speech detection
   const onSpeechPartialResults = (event) => {
+    // Only process partial results if we're not already processing a request
+    if (isProcessing.current) {
+      console.log('Ignoring partial results while processing a request');
+      return;
+    }
+
     const partialText = event.value[0] || '';
     console.log('Partial speech results:', partialText);
     
@@ -434,25 +390,8 @@ const CallScreen = () => {
       lastTextChangeTime.current = Date.now();
       lastTranscribedText.current = partialText;
       
-      // If countdown is at 0 or not running, restart the silence detection
-      if (countdownSeconds <= 0) {
-        console.log('Speech detected after timer expired, restarting timer');
-        startSilenceDetection();
-      } else {
-        // Just reset the countdown value and restart the timer
-        setCountdownSeconds(8);
-        
-        // Clear existing timers
-        clearTimeout(silenceTimer.current);
-        
-        // Create a new timeout
-        silenceTimer.current = setTimeout(() => {
-          if (isListening && !isProcessing.current) {
-            console.log('Silence timeout reached, stopping recording');
-            stopRecording();
-          }
-        }, 8000);
-      }
+      // Always restart the silence detection when new speech is detected
+      startSilenceDetection();
     }
   };
 
@@ -482,23 +421,32 @@ const CallScreen = () => {
     }
   };
 
+  // Update the startSilenceDetection function to be more reliable
   const startSilenceDetection = () => {
     // Clear any existing timers
     clearTimeout(silenceTimer.current);
     clearInterval(silenceTimer.current);
     clearInterval(countdownInterval.current);
+    clearInterval(countdownEffectInterval.current);
+    clearInterval(silenceCheckInterval.current);
     
-    // Set initial countdown value (8 seconds)
-    setCountdownSeconds(8);
+    // Set initial countdown value (3 seconds)
+    setCountdownSeconds(3);
     
-    // Create a timeout that will definitely stop recording after 8 seconds
+    // Create a timeout that will stop recording after 3 seconds of silence
     silenceTimer.current = setTimeout(() => {
       if (isListening && !isProcessing.current) {
-        console.log('Silence timeout reached, stopping recording');
-        stopRecording();
-        // Don't set isListening to false here, let stopRecording handle it
+        // Only stop recording if we have some text
+        if (transcribedText && transcribedText.trim() !== '') {
+          console.log('Silence timeout reached with text, stopping recording');
+          stopRecording();
+        } else {
+          console.log('Silence timeout reached but no text detected, resetting timer');
+          // Reset the timer to give more time for speech detection
+          startSilenceDetection();
+        }
       }
-    }, 8000);
+    }, 3000);
     
     // Start countdown timer that updates every second for UI display
     countdownInterval.current = setInterval(() => {
@@ -511,27 +459,15 @@ const CallScreen = () => {
       });
     }, 1000);
     
-    // Add a separate effect to monitor countdown and trigger stop
-    const countdownEffect = setInterval(() => {
-      if (countdownSeconds <= 0 && isListening && !isProcessing.current) {
-        console.log('Countdown reached zero, stopping recording');
-        clearInterval(countdownEffect);
-        stopRecording();
-      }
-    }, 200);
-    
-    // Store the countdown effect so we can clear it later
-    countdownEffectInterval.current = countdownEffect;
-    
     // Also set up a recurring check for silence based on text changes
-    // This is a backup to the main timer
     const checkInterval = setInterval(() => {
       const now = Date.now();
       const timeSinceLastTextChange = now - lastTextChangeTime.current;
       
-      // If text hasn't changed for 8 seconds and we have some text
-      if (transcribedText && timeSinceLastTextChange > 8000 && isListening && !isProcessing.current) {
-        console.log('No text changes for 8 seconds, stopping recording');
+      // If text hasn't changed for 3 seconds and we have some text
+      if (transcribedText && transcribedText.trim() !== '' && 
+          timeSinceLastTextChange > 3000 && isListening && !isProcessing.current) {
+        console.log('No text changes for 3 seconds with text, stopping recording');
         clearInterval(checkInterval);
         stopRecording();
       }
@@ -541,6 +477,7 @@ const CallScreen = () => {
     silenceCheckInterval.current = checkInterval;
   };
 
+  // Update the onSpeechEnd function to better handle speech ending
   const onSpeechEnd = () => {
     console.log('Speech ended');
     
@@ -556,9 +493,13 @@ const CallScreen = () => {
     console.log('Speech ended with text:', currentText, 'Time since last change:', timeSinceLastChange);
     
     // If we have text and it's been stable for a short time, process it
-    if (currentText && timeSinceLastChange > 500 && !isProcessing.current) {
+    if (currentText && currentText.trim() !== '' && timeSinceLastChange > 500 && !isProcessing.current) {
       console.log('Processing text on speech end');
       stopRecording();
+    } else if (!currentText || currentText.trim() === '') {
+      console.log('No text detected on speech end, continuing to listen');
+      // Reset the timer to give more time for speech detection
+      startSilenceDetection();
     } else {
       console.log('Not processing text on speech end - conditions not met');
     }
@@ -566,6 +507,12 @@ const CallScreen = () => {
 
   const onSpeechResults = (event) => {
     console.log('onSpeechResults event:', event);
+    
+    // If we're already processing, don't process again
+    if (isProcessing.current) {
+      console.log('Already processing, not processing speech results');
+      return;
+    }
     
     // Get the recognized text
     const results = event.value;
@@ -582,17 +529,14 @@ const CallScreen = () => {
       // Update the last text change time
       lastTextChangeTime.current = Date.now();
       
-      // If we're already processing, don't send to API again
-      if (isProcessing.current) {
-        console.log('Already processing, not sending to API');
-        return;
-      }
-      
       // Check if the text is different enough from the last processed text
       if (recognizedText.trim() === lastProcessedText.current.trim()) {
         console.log('Text is the same as last processed text, not sending to API');
         return;
       }
+      
+      // Set processing flag to prevent multiple requests
+      isProcessing.current = true;
       
       // Update the last processed text ref
       lastProcessedText.current = recognizedText;
@@ -620,21 +564,29 @@ const CallScreen = () => {
     }
   };
 
+  // Update the startRecording function to ensure it works properly
   const startRecording = async () => {
-    // Ensure isListening is false before checking conditions
-    setIsListening(false);
-    
-    // Use a local variable to track the state we just set
-    const currentlyListening = false;
-    
-    console.log('startRecording called - isListening:', currentlyListening, 'isProcessing:', isProcessing.current, 'callActive:', callActive);
-    
-    // First check if we can start recording - use the local value we just set
-    if (currentlyListening || isProcessing.current || !callActive) {
-      console.log('Cannot start recording - conditions not met');
+    // Don't start recording if AI is speaking or we're processing
+    if (isSpeaking || isProcessing.current || !callActive) {
+      console.log('Cannot start recording - AI is speaking or processing or call not active');
       return;
     }
 
+    // Ensure isListening is false before starting
+    if (isListening) {
+      console.log('Already listening, stopping before starting again');
+      try {
+        await Voice.stop();
+        await Voice.destroy();
+        await Voice.removeAllListeners();
+      } catch (error) {
+        console.error('Error stopping voice before restart:', error);
+      }
+      setIsListening(false);
+    }
+    
+    console.log('startRecording called - isProcessing:', isProcessing.current, 'callActive:', callActive);
+    
     try {
       // Reset state - make sure to clear transcribed text first
       console.log('Clearing transcribed text before starting recording. Current text:', transcribedText);
@@ -646,15 +598,29 @@ const CallScreen = () => {
       lastTranscribedText.current = '';
       lastTextChangeTime.current = Date.now();
       
+      // Reset the last processed text reference to prevent duplicate detection
+      lastProcessedText.current = '';
+      
       // Reset countdown timer
-      setCountdownSeconds(8);
+      setCountdownSeconds(3);
       
       // Set animation state for user speaking
       setAnimationSpeed(1.0);
       
+      // Ensure Voice is completely reset before starting
+      await ensureVoiceStopped();
+      
+      // Add a small delay before starting Voice to ensure it's ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       console.log('Starting voice recognition...');
-      // Start voice recognition
-      await Voice.start('en-US');
+      // Start voice recognition with options to improve recognition
+      await Voice.start('en-US', {
+        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 500,
+        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 1000,
+        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000
+      });
       console.log('Voice recognition started successfully');
       
       // Set isListening to true AFTER successfully starting Voice
@@ -672,10 +638,18 @@ const CallScreen = () => {
       setIsListening(false);
       clearInterval(silenceTimer.current);
       clearInterval(countdownInterval.current);
-      Alert.alert('Error', `Failed to start listening: ${error.message}`);
+      
+      // Try again after a short delay if there was an error
+      setTimeout(() => {
+        if (callActive && !isProcessing.current && !isSpeaking) {
+          console.log('Retrying voice recognition after error');
+          startRecording();
+        }
+      }, 1000);
     }
   };
 
+  // Update the stopRecording function to better handle the recording state
   const stopRecording = async () => {
     console.log('Stopping recording...');
     
@@ -714,20 +688,31 @@ const CallScreen = () => {
       const currentText = transcribedText;
       console.log('Current transcribed text before processing:', currentText);
       
-      // Check if the current text is the same as the last processed text
-      if (currentText === lastProcessedText.current) {
-        console.log('Detected repeated text, ignoring:', currentText);
+      // Check if the current text is empty or the same as the last processed text
+      if (!currentText || currentText.trim() === '' || currentText === lastProcessedText.current) {
+        console.log('Detected empty or repeated text, ignoring:', currentText);
         // Clear the transcribed text
         setTranscribedText('');
-        console.log('Cleared transcribed text (repeated)');
+        console.log('Cleared transcribed text (empty or repeated)');
         // Reset processing flag
         isProcessing.current = false;
+        
+        // Start listening again if we stopped due to silence but didn't get any text
+        if (callActive && !isSpeaking) {
+          console.log('No text detected, starting recording again');
+          setTimeout(() => {
+            startRecording();
+          }, 500);
+        }
         return;
       }
       
       // Only process if we have text and we're not already processing
       if (currentText && !isProcessing.current) {
         console.log('Processing transcribed text:', currentText);
+        
+        // Set processing flag to prevent multiple requests
+        isProcessing.current = true;
         
         // Store this text as the last processed text
         lastProcessedText.current = currentText;
@@ -755,6 +740,14 @@ const CallScreen = () => {
         // Clear the transcribed text even if we're not processing it
         setTranscribedText('');
         console.log('Cleared transcribed text (no processing)');
+        
+        // Start listening again if appropriate
+        if (callActive && !isSpeaking) {
+          console.log('No valid text to process, starting recording again');
+          setTimeout(() => {
+            startRecording();
+          }, 500);
+        }
       }
 
       // Stop the AudioWaves animation when recording stops
@@ -768,7 +761,14 @@ const CallScreen = () => {
       // Clear the transcribed text on error
       setTranscribedText('');
       console.log('Cleared transcribed text (error)');
-      Alert.alert('Error', `Failed to process speech: ${error.message}`);
+      
+      // Try to restart recording after error
+      if (callActive && !isSpeaking) {
+        console.log('Error in stopRecording, trying to restart recording');
+        setTimeout(() => {
+          startRecording();
+        }, 1000);
+      }
     }
   };
 
@@ -782,19 +782,17 @@ const CallScreen = () => {
     console.log('Clearing transcribed text in sendToApi. Current text:', transcribedText);
     setTranscribedText('');
     
-    // Set a timeout to reset the lastProcessedText after 30 seconds
-    // This allows the same text to be processed again after a while
-    setTimeout(() => {
-      if (lastProcessedText.current === text) {
-        console.log('Resetting lastProcessedText after timeout from:', lastProcessedText.current, 'to empty string');
-        lastProcessedText.current = '';
-      }
-    }, 30000); // 30 seconds
+    // Start a timer to track response time
+    const responseStartTime = Date.now();
+    let showThinkingMessage = false;
+    let thinkingTimer = null;
     
-    // Set animation to thinking mode for AI thinking
-    startThinkingAnimation();
-    
-    try {
+    // Set a timer to show "Let me think" only if response takes more than 4 seconds
+    thinkingTimer = setTimeout(() => {
+      showThinkingMessage = true;
+      // Set animation to thinking mode for AI thinking
+      startThinkingAnimation();
+      
       // Show thinking message
       const thinkingMessage = "Let me think...";
       setResponseText(thinkingMessage);
@@ -805,16 +803,12 @@ const CallScreen = () => {
         ttsFinishListener.current = null;
       }
       
-      // Clear any existing backup timer
-      if (responseTimer.current) {
-        clearTimeout(responseTimer.current);
-        responseTimer.current = null;
-      }
-      
       // Speak thinking message
       Tts.speak(thinkingMessage);
-      
-      // Get AI response while thinking message is being spoken
+    }, 4000); // Only show "Let me think" if response takes more than 4 seconds
+    
+    try {
+      // Get AI response
       console.log('Sending request to DeepSeek API...');
       const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
         method: 'POST',
@@ -829,6 +823,12 @@ const CallScreen = () => {
         }),
       });
       
+      // Clear the thinking timer since we got a response
+      if (thinkingTimer) {
+        clearTimeout(thinkingTimer);
+        thinkingTimer = null;
+      }
+      
       const data = await response.json();
       console.log('Received response from DeepSeek API');
       setIsListening(false);
@@ -842,12 +842,27 @@ const CallScreen = () => {
         content: aiResponse
       });
       
+      // If we were showing the thinking message, wait a moment before speaking the real response
+      if (showThinkingMessage) {
+        // Wait a moment to ensure the thinking message finishes
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Stop any ongoing TTS
+        Tts.stop();
+        
+        // Remove any existing TTS listener
+        if (ttsFinishListener.current) {
+          ttsFinishListener.current.remove();
+          ttsFinishListener.current = null;
+        }
+      }
+      
       // Start speaking animation for AI response
       startSpeakingAnimation();
       
       // Set up TTS finish listener
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
-        console.log('TTS finished speaking greeting');
+        console.log('TTS finished speaking response');
         
         // Stop the speaking animation when TTS finishes
         stopSpeakingAnimation();
@@ -861,10 +876,10 @@ const CallScreen = () => {
           ttsFinishListener.current = null;
         }
         
-        // Start listening after greeting
+        // Start listening after AI response, but only if call is still active
         if (callActive) {
           setTimeout(() => {
-            if (callActive) {
+            if (callActive && !isProcessing.current && !isSpeaking) {
               startRecording();
             }
           }, 500);
@@ -877,6 +892,12 @@ const CallScreen = () => {
     } catch (error) {
       console.error('API error:', error);
       
+      // Clear the thinking timer
+      if (thinkingTimer) {
+        clearTimeout(thinkingTimer);
+        thinkingTimer = null;
+      }
+      
       // Stop the speaking animation in case of error
       stopSpeakingAnimation();
       
@@ -885,9 +906,6 @@ const CallScreen = () => {
       setResponseText(errorMessage);
       addToConversation('AI', errorMessage);
       
-      // Function to start listening again after error
-      
-      // Speak error message with the same pattern for continuation
       // Clear any previous TTS listener
       if (ttsFinishListener.current) {
         ttsFinishListener.current.remove();
@@ -896,7 +914,7 @@ const CallScreen = () => {
       
       // Set up TTS finish listener for error case
       ttsFinishListener.current = Tts.addEventListener('tts-finish', () => {
-        console.log('TTS finished speaking greeting');
+        console.log('TTS finished speaking error message');
         
         // Make sure processing flag is reset
         isProcessing.current = false;
@@ -907,9 +925,9 @@ const CallScreen = () => {
           ttsFinishListener.current = null;
         }
         
-        // Start listening after greeting
+        // Start listening after error message, but only if call is still active
         if (callActive) {
-          console.log('AI finished greeting, starting to listen...');
+          console.log('AI finished error message, starting to listen...');
           
           // Make sure we're in a clean state before starting recording
           setIsListening(false);
@@ -930,53 +948,13 @@ const CallScreen = () => {
             // Ensure Voice is stopped before starting again
             await ensureVoiceStopped();
             
-            // Now start recording
-            startRecording();
+            // Now start recording, but only if AI is not speaking
+            if (!isSpeaking) {
+              startRecording();
+            }
           }, 1000); // Increased delay to ensure everything is reset properly
         }
       });
-      
-      // Set backup timer for error message
-      setTimeout(() => {
-        console.log('TTS finished speaking greeting');
-        
-        // Make sure processing flag is reset
-        isProcessing.current = false;
-        
-        // Remove listener to prevent multiple triggers
-        if (ttsFinishListener.current) {
-          ttsFinishListener.current.remove();
-          ttsFinishListener.current = null;
-        }
-        
-        // Start listening after greeting
-        if (callActive) {
-          console.log('AI finished greeting, starting to listen...');
-          
-          // Make sure we're in a clean state before starting recording
-          setIsListening(false);
-          
-          // Make sure transcribed text is cleared
-          console.log('Clearing transcribed text in error case backup timer. Current text:', transcribedText);
-          setTranscribedText('');
-          lastTranscribedText.current = '';
-          
-          // Force reset the lastProcessedText to allow new recordings
-          console.log('Force resetting lastProcessedText in error case backup timer from:', lastProcessedText.current, 'to empty string');
-          lastProcessedText.current = '';
-          
-          setTimeout(async () => {
-            // Double check that we're still not processing before starting
-            isProcessing.current = false;
-            
-            // Ensure Voice is stopped before starting again
-            await ensureVoiceStopped();
-            
-            // Now start recording
-            startRecording();
-          }, 1000); // Increased delay to ensure everything is reset properly
-        }
-      }, 5000); // 5 seconds should be enough for the error message
       
       // Speak error message
       Tts.speak(errorMessage);
@@ -986,43 +964,48 @@ const CallScreen = () => {
     }
   };
 
-  // Helper function to ensure Voice is stopped before starting again
+  // Update the ensureVoiceStopped function to be more robust
   const ensureVoiceStopped = async () => {
     try {
       console.log('Ensuring Voice is stopped before starting again');
+      
+      // First try to stop any ongoing recognition
+      try {
+        await Voice.stop();
+      } catch (e) {
+        console.log('Voice.stop() error (expected if not running):', e);
+      }
+      
+      // Then destroy and recreate
       await Voice.destroy();
-      await Voice.removeAllListeners();
+      
+      // Re-initialize Voice with our listeners
+      Voice.onSpeechStart = onSpeechStart;
+      Voice.onSpeechEnd = onSpeechEnd;
+      Voice.onSpeechResults = onSpeechResults;
+      Voice.onSpeechPartialResults = onSpeechPartialResults;
+      Voice.onSpeechError = onSpeechError;
+      
+      // Reset state
       setIsListening(false);
       isProcessing.current = false;
       
       console.log('Clearing transcribed text in ensureVoiceStopped. Current text:', transcribedText);
       setTranscribedText('');
       lastTranscribedText.current = '';
-      lastTextChangeTime.current = Date.now();
       
-      // Reset the last processed text after a certain number of calls
-      // This allows new recordings to use the same text after a while
-      if (Math.random() < 0.3) { // 30% chance to reset
-        console.log('Resetting lastProcessedText from:', lastProcessedText.current, 'to empty string');
-        lastProcessedText.current = '';
-      }
+      // Reset the lastProcessedText to allow new recordings with the same text
+      console.log('Resetting lastProcessedText from:', lastProcessedText.current, 'to empty string');
+      lastProcessedText.current = '';
+      
+      // Add a small delay to ensure Voice is ready
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       console.log('Voice successfully stopped and cleaned up');
-    } catch (err) {
-      console.log('Error stopping Voice:', err);
-      // Try again with basic stop if destroy fails
-      try {
-        await Voice.stop();
-        setIsListening(false);
-        isProcessing.current = false;
-        
-        console.log('Clearing transcribed text in ensureVoiceStopped (fallback). Current text:', transcribedText);
-        setTranscribedText('');
-        lastTranscribedText.current = '';
-        lastTextChangeTime.current = Date.now();
-      } catch (err2) {
-        console.log('Error with basic Voice stop:', err2);
-      }
+      return true;
+    } catch (error) {
+      console.error('Error ensuring Voice is stopped:', error);
+      return false;
     }
   };
 

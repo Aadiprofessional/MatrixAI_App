@@ -31,31 +31,31 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0EF2C9FADF424F60BECED758 /* model.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = model.conf; path = ../android/app/src/main/assets/model/conf/model.conf; sourceTree = "<group>"; };
+		0EF2C9FADF424F60BECED758 /* model.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = model.conf; path = ../android/app/src/main/assets/model/conf/model.conf; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* MatrixAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MatrixAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MatrixAI/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MatrixAI/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = MatrixAI/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = yolov8n.onnx; path = ../android/app/src/main/assets/yolov8n.onnx; sourceTree = "<group>"; };
-		31D1A25BC03F4268AD4D30E3 /* mfcc.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = mfcc.conf; path = ../android/app/src/main/assets/model/conf/mfcc.conf; sourceTree = "<group>"; };
-		3F102C5F572C468594F18F93 /* Gr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Gr.fst; path = ../android/app/src/main/assets/model/graph/Gr.fst; sourceTree = "<group>"; };
-		671B4B2BB5E1429DB5044B0F /* word_boundary.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = word_boundary.int; path = ../android/app/src/main/assets/model/graph/phones/word_boundary.int; sourceTree = "<group>"; };
-		68F14CDF19C44CAFA232F544 /* final.ie */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.ie; path = ../android/app/src/main/assets/model/ivector/final.ie; sourceTree = "<group>"; };
-		6B124BFB54654BA88BA2F597 /* README */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = README; path = ../android/app/src/main/assets/model/README; sourceTree = "<group>"; };
+		2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = yolov8n.onnx; path = ../android/app/src/main/assets/yolov8n.onnx; sourceTree = "<group>"; };
+		31D1A25BC03F4268AD4D30E3 /* mfcc.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = mfcc.conf; path = ../android/app/src/main/assets/model/conf/mfcc.conf; sourceTree = "<group>"; };
+		3F102C5F572C468594F18F93 /* Gr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Gr.fst; path = ../android/app/src/main/assets/model/graph/Gr.fst; sourceTree = "<group>"; };
+		671B4B2BB5E1429DB5044B0F /* word_boundary.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = word_boundary.int; path = ../android/app/src/main/assets/model/graph/phones/word_boundary.int; sourceTree = "<group>"; };
+		68F14CDF19C44CAFA232F544 /* final.ie */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = final.ie; path = ../android/app/src/main/assets/model/ivector/final.ie; sourceTree = "<group>"; };
+		6B124BFB54654BA88BA2F597 /* README */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = README; path = ../android/app/src/main/assets/model/README; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MatrixAI/AppDelegate.swift; sourceTree = "<group>"; };
-		7CFCCD029E1743ABAFE762DC /* HCLr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = HCLr.fst; path = ../android/app/src/main/assets/model/graph/HCLr.fst; sourceTree = "<group>"; };
+		7CFCCD029E1743ABAFE762DC /* HCLr.fst */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = HCLr.fst; path = ../android/app/src/main/assets/model/graph/HCLr.fst; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MatrixAI/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		936DF5C4E4384884A9D5D7C1 /* uuid */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = uuid; path = ../android/app/src/main/assets/model/uuid; sourceTree = "<group>"; };
-		96E084F6F6424B5CBAD8C6BD /* final.dubm */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.dubm; path = ../android/app/src/main/assets/model/ivector/final.dubm; sourceTree = "<group>"; };
-		9AC9DCEBBA6843058F95594B /* final.mdl */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.mdl; path = ../android/app/src/main/assets/model/am/final.mdl; sourceTree = "<group>"; };
-		A316500FE2D94626B4877014 /* final.mat */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = final.mat; path = ../android/app/src/main/assets/model/ivector/final.mat; sourceTree = "<group>"; };
+		936DF5C4E4384884A9D5D7C1 /* uuid */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = uuid; path = ../android/app/src/main/assets/model/uuid; sourceTree = "<group>"; };
+		96E084F6F6424B5CBAD8C6BD /* final.dubm */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = final.dubm; path = ../android/app/src/main/assets/model/ivector/final.dubm; sourceTree = "<group>"; };
+		9AC9DCEBBA6843058F95594B /* final.mdl */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = final.mdl; path = ../android/app/src/main/assets/model/am/final.mdl; sourceTree = "<group>"; };
+		A316500FE2D94626B4877014 /* final.mat */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = final.mat; path = ../android/app/src/main/assets/model/ivector/final.mat; sourceTree = "<group>"; };
 		A4982562DA235B0AF6C61C77 /* Pods-MatrixAI.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MatrixAI.debug.xcconfig"; path = "Target Support Files/Pods-MatrixAI/Pods-MatrixAI.debug.xcconfig"; sourceTree = "<group>"; };
 		AA2A05E4CE744B4A7EA2AD17 /* libPods-MatrixAI.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MatrixAI.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = disambig_tid.int; path = ../android/app/src/main/assets/model/graph/disambig_tid.int; sourceTree = "<group>"; };
-		CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = online_cmvn.conf; path = ../android/app/src/main/assets/model/ivector/online_cmvn.conf; sourceTree = "<group>"; };
-		DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = global_cmvn.stats; path = ../android/app/src/main/assets/model/ivector/global_cmvn.stats; sourceTree = "<group>"; };
+		B4782A4DEB204E22B4DF8A43 /* disambig_tid.int */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = disambig_tid.int; path = ../android/app/src/main/assets/model/graph/disambig_tid.int; sourceTree = "<group>"; };
+		CB5B5FF0ECCD4950A8419FF2 /* online_cmvn.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = online_cmvn.conf; path = ../android/app/src/main/assets/model/ivector/online_cmvn.conf; sourceTree = "<group>"; };
+		DE2CEFD80AC44CAE971F0342 /* global_cmvn.stats */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = global_cmvn.stats; path = ../android/app/src/main/assets/model/ivector/global_cmvn.stats; sourceTree = "<group>"; };
 		EAF830AA3C60C5035ACCF92C /* Pods-MatrixAI.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MatrixAI.release.xcconfig"; path = "Target Support Files/Pods-MatrixAI/Pods-MatrixAI.release.xcconfig"; sourceTree = "<group>"; };
-		EC7D8247F5BE440EBB39BBA1 /* splice.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = splice.conf; path = ../android/app/src/main/assets/model/ivector/splice.conf; sourceTree = "<group>"; };
+		EC7D8247F5BE440EBB39BBA1 /* splice.conf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = splice.conf; path = ../android/app/src/main/assets/model/ivector/splice.conf; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -104,7 +104,6 @@
 				2FEA160C9FD9434FAA21AD81 /* yolov8n.onnx */,
 			);
 			name = Resources;
-			path = "";
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -185,7 +184,8 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1210;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1120;
@@ -333,6 +333,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 82GZ29M7BA;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MatrixAI/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -361,6 +362,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 82GZ29M7BA;
 				INFOPLIST_FILE = MatrixAI/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -413,6 +415,7 @@
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -449,10 +452,7 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -493,6 +493,7 @@
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -521,12 +522,10 @@
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
